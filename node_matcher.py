@@ -5,7 +5,18 @@ Matches workflow nodes to template parameters using class_type and title keyword
 """
 
 import copy
+import json
+from pathlib import Path
 from dataclasses import dataclass
+
+# Debug log file path
+DEBUG_LOG = Path(__file__).parent / "debug_apply.log"
+
+
+def _log_debug(message: str):
+    """Write debug message to log file."""
+    with open(DEBUG_LOG, "a", encoding="utf-8") as f:
+        f.write(message + "\n")
 
 
 @dataclass
@@ -31,6 +42,11 @@ def _find_nodes_by_class(workflow: dict, class_type: str, synonyms: dict) -> lis
     """
     matches = []
     for node_id, node_data in workflow.items():
+        # Debug: check node_data type
+        if not isinstance(node_data, dict):
+            _log_debug(f"[DEBUG] node {node_id} has non-dict value: type={type(node_data)}, value={str(node_data)[:100]}")
+            continue
+        
         effective_type = _get_effective_class_type(node_data, synonyms)
         if effective_type == class_type:
             matches.append((node_id, node_data))
@@ -139,9 +155,23 @@ def apply_preset(workflow: dict, template: dict, preset_params: dict) -> dict:
     Returns:
         Modified workflow dict (original unchanged)
     """
+    # Clear previous debug log and write header
+    with open(DEBUG_LOG, "w", encoding="utf-8") as f:
+        f.write("=" * 60 + "\n")
+        f.write("PresetManager Apply Debug Log\n")
+        f.write("=" * 60 + "\n\n")
+    
+    # Debug: print input types
+    _log_debug(f"workflow type: {type(workflow)}")
+    _log_debug(f"template type: {type(template)}")
+    _log_debug(f"preset_params type: {type(preset_params)}")
+    _log_debug(f"workflow keys: {list(workflow.keys()) if isinstance(workflow, dict) else 'N/A'}")
+    _log_debug(f"template: {json.dumps(template, ensure_ascii=False, indent=2)}")
+    _log_debug(f"preset_params: {json.dumps(preset_params, ensure_ascii=False, indent=2)}")
+    
     # Deep copy to avoid modifying original
     workflow_copy = copy.deepcopy(workflow)
-
+    
     # Match nodes to parameters
     matches = match_nodes(workflow, template)
 
