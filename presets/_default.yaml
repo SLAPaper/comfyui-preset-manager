@@ -1,0 +1,22 @@
+# SDXL 默认采样配置
+# 提供开箱即用的 SDXL 文生图参数默认值
+
+name: "默认配置"
+description: "SDXL 默认采样配置"
+workflow_template: "sdxl-txt2img"
+
+# 参数默认值 —— 与 workflow template 中 node_mapping 的 8 个参数一一对应
+params:
+  # 提示词
+  positive_prompt: "masterpiece, best quality, ultra detailed"
+  negative_prompt: "worst quality, low quality, blurry"
+
+  # 输出尺寸（SDXL 推荐 1024×1024）
+  width: 1024
+  height: 1024
+
+  # 采样参数
+  steps: 20
+  cfg: 7.0
+  sampler: "euler_ancestral"
+  scheduler: "normal"

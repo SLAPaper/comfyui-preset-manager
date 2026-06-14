@@ -1,0 +1,67 @@
+# SDXL Text-to-Image Workflow Template
+# 定义 SDXL 文生图 workflow 的参数映射关系
+
+name: "SDXL Text to Image"
+description: "SDXL 基础文生图 workflow"
+version: "1.0"
+
+# 节点映射：定义每个参数如何在 workflow JSON 中定位
+# match_strategy:
+#   - "title_keyword": 通过节点标题关键词匹配（用于区分同类型的多个节点）
+#   - "unique_class": 通过 class_type 唯一匹配（适用于场景中只有一个该类型节点）
+node_mapping:
+  # 正向提示词 —— 通过标题关键词 "positive"/"正向" 定位 CLIPTextEncode 节点
+  positive_prompt:
+    match_strategy: "title_keyword"
+    class_type: "CLIPTextEncode"
+    title_keywords: ["positive", "正向"]
+    widget: "text"
+
+  # 负向提示词 —— 通过标题关键词 "negative"/"负向" 定位 CLIPTextEncode 节点
+  negative_prompt:
+    match_strategy: "title_keyword"
+    class_type: "CLIPTextEncode"
+    title_keywords: ["negative", "负向"]
+    widget: "text"
+
+  # 采样器名称 —— KSampler 节点的 sampler_name 下拉框
+  sampler:
+    match_strategy: "unique_class"
+    class_type: "KSampler"
+    widget: "sampler_name"
+
+  # 调度器 —— KSampler 节点的 scheduler 下拉框
+  scheduler:
+    match_strategy: "unique_class"
+    class_type: "KSampler"
+    widget: "scheduler"
+
+  # 采样步数 —— KSampler 节点的 steps 数值
+  steps:
+    match_strategy: "unique_class"
+    class_type: "KSampler"
+    widget: "steps"
+
+  # CFG 引导系数 —— KSampler 节点的 cfg 数值
+  cfg:
+    match_strategy: "unique_class"
+    class_type: "KSampler"
+    widget: "cfg"
+
+  # 图像宽度 —— EmptyLatentImage 节点的 width
+  width:
+    match_strategy: "unique_class"
+    class_type: "EmptyLatentImage"
+    widget: "width"
+
+  # 图像高度 —— EmptyLatentImage 节点的 height
+  height:
+    match_strategy: "unique_class"
+    class_type: "EmptyLatentImage"
+    widget: "height"
+
+# 同义节点映射：将派生节点类型统一到标准类型
+# 当 workflow 中使用 KSamplerAdvanced 或 KSamplerEfficient 时，等价于 KSampler
+synonyms:
+  KSamplerAdvanced: "KSampler"
+  KSamplerEfficient: "KSampler"
