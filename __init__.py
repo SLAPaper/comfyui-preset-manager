@@ -7,6 +7,7 @@ from server import PromptServer
 from .workflow_parser import load_templates, get_template
 from .node_matcher import match_nodes, apply_preset
 from .preset_manager import load_presets, get_preset, save_preset, delete_preset
+from .mapping_manager import load_mapping, save_mapping
 
 PLUGIN_DIR = Path(__file__).parent
 
@@ -124,4 +125,40 @@ async def apply_preset_endpoint(request):
         })
     except Exception as e:
         print(f"[PresetManager] API: 应用预设异常: {e}")
+        return web.json_response({"error": str(e)}, status=500)
+
+
+# === Mapping API Routes ===
+
+@PromptServer.instance.routes.get("/preset-manager/mapping")
+async def get_mapping_endpoint(request):
+    """Get all workflow name → template ID mappings."""
+    print("[PresetManager] API: 获取映射列表")
+    mapping = load_mapping()
+    return web.json_response(mapping)
+
+
+@PromptServer.instance.routes.post("/preset-manager/mapping")
+async def save_mapping_endpoint(request):
+    """Save workflow name → template ID mapping."""
+    try:
+        data = await request.json()
+        workflow_name = data.get("workflow_name")
+        template_id = data.get("template_id")
+        print(f"[PresetManager] API: 保存映射 ({workflow_name} -> {template_id})")
+        
+        if not workflow_name or not template_id:
+            return web.json_response({"error": "Missing workflow_name or template_id"}, status=400)
+        
+        # Load existing mapping, update, and save
+        mapping = load_mapping()
+        mapping[workflow_name] = template_id
+        success = save_mapping(mapping)
+        
+        if success:
+            return web.json_response({"status": "ok"})
+        else:
+            return web.json_response({"error": "Failed to save mapping"}, status=500)
+    except Exception as e:
+        print(f"[PresetManager] API: 保存映射异常: {e}")
         return web.json_response({"error": str(e)}, status=500)
