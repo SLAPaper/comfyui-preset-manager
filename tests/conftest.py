@@ -223,3 +223,9 @@ def node_matcher():
 def preset_manager():
     """Import and return the preset_manager module."""
     return _import_module_from_file("preset_manager", PLUGIN_DIR / "preset_manager.py")
+
+
+@pytest.fixture
+def mapping_manager():
+    """Import and return the mapping_manager module."""
+    return _import_module_from_file("mapping_manager", PLUGIN_DIR / "mapping_manager.py")
