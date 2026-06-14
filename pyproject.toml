@@ -1,0 +1,12 @@
+[project]
+name = "comfyui-preset-manager"
+description = "配置预设管理器 - 用于底模评测的采样配置复用工具"
+version = "0.1.0"
+license = {text = "MIT"}
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/user/comfyui-preset-manager"
+
+[tool.comfy]
+web = "web"
