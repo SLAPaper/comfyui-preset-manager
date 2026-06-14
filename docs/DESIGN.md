@@ -396,8 +396,364 @@ class NodeMatcher {
 
 ---
 
+## Iteration 2: 参数扫描功能（Parameter Sweep）
+
+### 背景
+
+在底模评测场景中，经常需要固定其他参数，只扫描单个参数（如 CFG Scale）来观察效果差异。A1111 的 XYZ Grid + sd_grid_add_image_number 插件提供了类似功能，但 ComfyUI 缺乏原生支持。
+
+### 需求分析
+
+| 需求 | 优先级 | 说明 |
+|------|--------|------|
+| 单参数扫描 | P0 | 固定其他参数，扫描单个参数（如 cfg=1.5,3,5.5,8,11.5） |
+| 按顺序产出 | P0 | 不需要拼接 grid，逐个输出结果图片 |
+| 保留 ComfyUI 输出结构 | P0 | 不绑定输出节点，用户自行决定输出方式 |
+| 叠加信息到图片 | P1 | 可选功能，在图片上叠加参数信息 |
+| 多参数组合扫描 | P2 | 未来扩展，支持 cfg × steps 等组合 |
+
+### 设计决策
+
+| 决策 | 理由 |
+|------|------|
+| 作为 Preset Manager 子功能 | 与预设配合使用，复用节点匹配逻辑 |
+| 先支持单参数扫描 | 满足主要使用场景（固定其他参数扫 CFG） |
+| 保留 ComfyUI 输出结构 | 不绑定输出节点，用户可自行添加 grid/标注节点 |
+| 叠加信息可选且位置可选 | 灵活适配不同评测需求 |
+| 基于 API 脚本实现 | ComfyUI 不原生支持参数迭代循环 |
+
+### 功能流程
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  参数扫描流程                                                    │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. 用户选择基础预设                                             │
+│     └─→ 复用 Preset Manager 的预设                              │
+│                                                                 │
+│  2. 配置扫描参数                                                 │
+│     ├─→ 选择要扫描的参数（如 cfg）                               │
+│     ├─→ 输入扫描值（如 1.5,3,5.5,8,11.5）                       │
+│     └─→ 可选：配置叠加信息                                       │
+│                                                                 │
+│  3. 生成扫描脚本                                                 │
+│     ├─→ 基于当前 workflow + 基础预设                              │
+│     ├─→ 替换扫描参数为变量                                       │
+│     └─→ 输出 Python 脚本到 user/preset-manager/scripts/         │
+│                                                                 │
+│  4. 执行扫描                                                     │
+│     ├─→ 方式 A: 在 ComfyUI 外部运行脚本                          │
+│     └─→ 方式 B: 通过 API 触发执行（未来）                         │
+│                                                                 │
+│  5. 输出结果                                                     │
+│     ├─→ 保留 ComfyUI 默认输出结构                                │
+│     ├─→ 可选：在图片上叠加参数信息                                │
+│     └─→ 生成扫描摘要（JSON）                                     │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 扫描配置格式
+
+```yaml
+# user/preset-manager/sweeps/cfg-sweep.yaml
+name: "CFG Scale 扫参测试"
+description: "固定其他参数，扫描 CFG Scale"
+
+# 基础预设
+base_preset: "high-quality"
+base_workflow: "sdxl-txt2img"
+
+# 扫描参数（单参数扫描）
+sweep_param:
+  name: "cfg"                        # 参数名（对应 workflow 模板中的 param name）
+  values: [1.5, 3.0, 5.5, 8.0, 11.5]  # 扫描值列表
+  # 或者使用范围定义
+  # range:
+  #   start: 1.0
+  #   end: 12.0
+  #   step: 1.0
+
+# 输出选项
+output:
+  # 保留 ComfyUI 输出结构，不额外处理
+  keep_comfyui_output: true
+  
+  # 可选：叠加参数信息到图片
+  annotate:
+    enabled: false                   # 是否启用
+    position: "top-left"             # 位置：top-left, top-right, bottom-left, bottom-right, bottom-center
+    format: "[{index}] {param}: {value}"  # 格式模板
+    font_size: 24
+    font_color: "white"
+    background_color: "black"
+    background_opacity: 128
+
+  # 输出目录（可选，默认使用 ComfyUI 输出目录）
+  # output_dir: "E:/workspace/ComfyUI/output/sweeps/"
+```
+
+### 目录结构更新
+
+```
+E:\workspace\ComfyUI\
+├── user/
+│   └── preset-manager/
+│       ├── workflows/               # Workflow 模板
+│       ├── presets/                 # 预设文件
+│       ├── sweeps/                  # 扫描配置（新增）
+│       │   ├── cfg-sweep.yaml
+│       │   ├── steps-sweep.yaml
+│       │   └── sampler-sweep.yaml
+│       ├── scripts/                 # 生成的扫描脚本（新增）
+│       │   ├── cfg-sweep_20260614_120000.py
+│       │   └── ...
+│       └── media/
+```
+
+### 后端 API 扩展
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/preset_manager/sweeps` | 获取所有扫描配置 |
+| GET | `/preset_manager/sweep/{sweep_id}` | 获取扫描配置详情 |
+| POST | `/preset_manager/sweep` | 保存扫描配置 |
+| POST | `/preset_manager/sweep/generate` | 生成扫描脚本 |
+| POST | `/preset_manager/sweep/execute` | 执行扫描（可选，通过 API 触发） |
+
+### 前端 UI 扩展
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  配置预设管理器                                        [X]       │
+├─────────────────────────────────────────────────────────────────┤
+│  [预设管理]  [参数扫描]  [设置]                                   │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  参数扫描                                                        │
+│  ─────────────────────────────────────────────────────────────  │
+│                                                                 │
+│  基础预设: [高质量出图 ▼]                                        │
+│                                                                 │
+│  扫描参数: [cfg ▼]                                               │
+│  扫描值:   [1.5, 3, 5.5, 8, 11.5]                               │
+│                                                                 │
+│  ☑ 叠加参数信息到图片                                            │
+│  位置: [左上角 ▼]                                                │
+│  格式: [{index}] {param}: {value}                                │
+│                                                                 │
+│  [生成脚本]  [执行扫描]  [保存配置]                               │
+│                                                                 │
+│  ─────────────────────────────────────────────────────────────  │
+│  已保存的扫描配置:                                               │
+│  ├─ CFG Scale 扫参测试          [加载] [删除]                    │
+│  ├─ Steps 扫参测试              [加载] [删除]                    │
+│  └─ Sampler 扫参测试            [加载] [删除]                    │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 扫描脚本生成逻辑
+
+```python
+# 生成的脚本结构示例
+
+#!/usr/bin/env python3
+"""
+Parameter Sweep Script
+Generated by ComfyUI Preset Manager
+Sweep: CFG Scale 扫参测试
+Base Preset: high-quality
+Generated: 2026-06-14 12:00:00
+"""
+
+import json
+import uuid
+import urllib.request
+import time
+from pathlib import Path
+from PIL import Image, ImageDraw, ImageFont
+from io import BytesIO
+
+# ============ 配置 ============
+
+SERVER_ADDRESS = "127.0.0.1:8188"
+
+# 扫描参数
+SWEEP_PARAM = "cfg"
+SWEEP_VALUES = [1.5, 3.0, 5.5, 8.0, 11.5]
+
+# 基础 workflow（从当前 workflow 导出，已应用基础预设）
+BASE_WORKFLOW = {
+    # ... workflow JSON ...
+}
+
+# 输出选项
+ANNOTATE_ENABLED = False
+ANNOTATE_POSITION = "top-left"
+
+# ============ 核心函数 ============
+
+def queue_prompt(prompt):
+    """提交 workflow"""
+    # ... 实现 ...
+
+def wait_for_completion(prompt_id):
+    """等待执行完成"""
+    # ... 实现 ...
+
+def annotate_image(image_data, text, position):
+    """叠加参数信息"""
+    # ... 实现 ...
+
+# ============ 主逻辑 ============
+
+def run_sweep():
+    """执行参数扫描"""
+    for i, value in enumerate(SWEEP_VALUES):
+        print(f"[{i+1}/{len(SWEEP_VALUES)}] {SWEEP_PARAM}={value}")
+        
+        # 深拷贝 workflow
+        wf = json.loads(json.dumps(BASE_WORKFLOW))
+        
+        # 修改扫描参数
+        # 需要根据节点匹配结果找到正确的节点 ID
+        wf["3"]["inputs"][SWEEP_PARAM] = value  # 示例，实际需要动态查找
+        
+        # 提交执行
+        result = queue_prompt(wf)
+        history = wait_for_completion(result["prompt_id"])
+        
+        # 处理输出（保留 ComfyUI 默认输出）
+        # 如果启用了叠加信息，则额外保存一份带标注的图片
+        if ANNOTATE_ENABLED:
+            # ... 叠加逻辑 ...
+            pass
+
+if __name__ == "__main__":
+    run_sweep()
+```
+
+### 叠加信息实现
+
+```python
+# 叠加信息位置定义
+ANNOTATE_POSITIONS = {
+    "top-left": {"x": 10, "y": 10, "anchor": "la"},
+    "top-right": {"x": "width-10", "y": 10, "anchor": "ra"},
+    "bottom-left": {"x": 10, "y": "height-10", "anchor": "ld"},
+    "bottom-right": {"x": "width-10", "y": "height-10", "anchor": "rd"},
+    "bottom-center": {"x": "width/2", "y": "height-10", "anchor": "md"},
+}
+
+def annotate_image(image_data, params, index, position="top-left"):
+    """
+    给图片叠加参数信息
+    
+    Args:
+        image_data: 图片二进制数据
+        params: 参数字典 {"cfg": 7.0, "steps": 30}
+        index: 当前扫描序号
+        position: 位置（top-left, top-right, bottom-left, bottom-right, bottom-center）
+    """
+    image = Image.open(BytesIO(image_data))
+    draw = ImageDraw.Draw(image)
+    
+    # 加载字体
+    try:
+        font = ImageFont.truetype("arial.ttf", 24)
+    except:
+        font = ImageFont.load_default()
+    
+    # 构建标注文本
+    lines = [f"[{index}]"]
+    for key, value in params.items():
+        lines.append(f"{key}: {value}")
+    text = "\n".join(lines)
+    
+    # 计算位置
+    pos_config = ANNOTATE_POSITIONS.get(position, ANNOTATE_POSITIONS["top-left"])
+    # ... 位置计算逻辑 ...
+    
+    # 绘制背景和文字
+    # ...
+    
+    return image
+```
+
+### 实现阶段
+
+#### Iteration 2.1: 核心扫描功能
+
+1. 扫描配置文件格式定义
+2. 扫描脚本生成逻辑
+3. 基础扫描执行功能
+4. 扫描结果摘要生成
+
+#### Iteration 2.2: 叠加信息功能
+
+1. 叠加信息配置选项
+2. 多位置支持
+3. 格式模板解析
+4. 字体和样式配置
+
+#### Iteration 2.3: UI 集成
+
+1. 参数扫描面板
+2. 扫描配置管理
+3. 脚本生成和执行触发
+4. 扫描历史记录
+
+### 待讨论问题
+
+#### Iteration 2.1 相关
+
+1. **扫描脚本的执行方式**
+   - 用户手动运行脚本？
+   - 还是通过 API 在 ComfyUI 进程内执行？
+   - 手动运行更灵活，但 API 执行更集成
+
+2. **节点 ID 的动态查找**
+   - 生成脚本时如何确定要修改的节点 ID？
+   - 使用节点匹配算法的结果？
+   - 还是让用户手动指定？
+
+3. **执行状态反馈**
+   - 如何让用户知道扫描进度？
+   - 输出到控制台？
+   - 还是通过 WebSocket 反馈到 UI？
+
+#### Iteration 2.2 相关
+
+4. **叠加信息的字体支持**
+   - 使用系统字体？
+   - 还是内置字体？
+   - 中文字体支持？
+
+5. **叠加信息的样式**
+   - 背景透明度？
+   - 边框？
+   - 阴影？
+
+#### Iteration 2.3 相关
+
+6. **扫描配置的管理**
+   - 与预设配置分开管理？
+   - 还是集成到预设中？
+
+7. **UI 交互**
+   - 扫描参数的选择方式？
+   - 扫描值的输入方式（列表 vs 范围）？
+
+---
+
 ## 参考资源
 
 - [A1111 Config-Presets 插件](https://github.com/Zyin055/Config-Presets)
+- [A1111 sd_grid_add_image_number 插件](https://github.com/pkuliyi2015/sd-webui-stablesr)
 - [ComfyUI 插件开发文档](https://docs.comfy.org/custom-nodes/overview)
 - [ComfyUI API 示例](https://github.com/comfyanonymous/ComfyUI/blob/master/script_examples/basic_api_example.py)
+- [ComfyUI WebSocket API 示例](https://github.com/comfyanonymous/ComfyUI/blob/master/script_examples/websockets_api_example.py)
+- [KJNodes AddLabel 节点](https://github.com/kijai/ComfyUI-KJNodes) - 图片叠加文字
+- [images-grid-comfy-plugin](https://github.com/Smoothlikehai/images-grid-comfy-plugin) - 网格拼接
