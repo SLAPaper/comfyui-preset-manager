@@ -7,6 +7,8 @@ build/
 *.log
 .DS_Store
 Thumbs.db
+.pytest_cache/
+e2e_debug_*.png
 
 # AI files
 AGENTS.md
