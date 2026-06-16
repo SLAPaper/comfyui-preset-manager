@@ -18,6 +18,16 @@ export async function getWorkflows() {
 }
 
 /**
+ * Get a workflow template with full node_mapping.
+ * @param {string} templateId
+ * @returns {Promise<{name: string, description: string, node_mapping: Object, synonyms: Object}>}
+ */
+export async function getTemplateDetail(templateId) {
+    const response = await api.fetchApi(`${API_BASE}/template/${templateId}`);
+    return await response.json();
+}
+
+/**
  * Get all presets for a template.
  * @param {string} templateId
  * @returns {Promise<Array<{id: string, name: string, description: string}>>}
@@ -100,77 +110,67 @@ export async function savePreset(presetData) {
 }
 
 /**
- * Get the current workflow parameters grouped by node type.
- * @returns {Array<{name: string, nodeType: string, nodeId: string, value: any}>}
+ * Find a node in the graph using a template parameter definition.
+ * Generic matching that supports unique_class and title_keyword strategies.
+ * 
+ * @param {Object} graph - ComfyUI LiteGraph instance
+ * @param {Object} paramDef - Parameter definition from template node_mapping
+ *   {match_strategy, class_type, widget, title_keywords?}
+ * @param {Object} synonyms - Node type synonym mapping
+ * @returns {{node: Object, widgetName: string} | null}
  */
-export function getCurrentWorkflowParams() {
+export function findNodeByTemplate(graph, paramDef, synonyms) {
+    const effectiveType = synonyms[paramDef.class_type] || paramDef.class_type;
+    const nodes = graph.nodes.filter(n => n.type === effectiveType);
+
+    if (nodes.length === 0) return null;
+
+    if (paramDef.match_strategy === "unique_class") {
+        if (nodes.length === 1) {
+            return { node: nodes[0], widgetName: paramDef.widget };
+        }
+        return null;
+    }
+
+    if (paramDef.match_strategy === "title_keyword") {
+        const keywords = (paramDef.title_keywords || []).map(kw => kw.toLowerCase());
+        for (const node of nodes) {
+            const title = (node.title || "").toLowerCase();
+            if (keywords.some(kw => title.includes(kw))) {
+                return { node, widgetName: paramDef.widget };
+            }
+        }
+        return null;
+    }
+
+    return null;
+}
+
+/**
+ * Get the current workflow parameters using a template's node_mapping.
+ * @param {string} templateId - The template ID to use for parameter extraction
+ * @returns {Promise<Array<{name: string, nodeType: string, nodeId: string, value: any}>>}
+ */
+export async function getCurrentWorkflowParams(templateId) {
+    const template = await getTemplateDetail(templateId);
     const graph = app.graph;
     const params = [];
-    
-    // Parameter definitions (same as in preset-dialog.js)
-    const paramDefs = [
-        { name: "positive_prompt", nodeType: "CLIPTextEncode", widgetName: "text", matchBy: "connection-positive" },
-        { name: "negative_prompt", nodeType: "CLIPTextEncode", widgetName: "text", matchBy: "connection-negative" },
-        { name: "steps", nodeType: "KSampler", widgetName: "steps", matchBy: "unique" },
-        { name: "cfg", nodeType: "KSampler", widgetName: "cfg", matchBy: "unique" },
-        { name: "sampler", nodeType: "KSampler", widgetName: "sampler_name", matchBy: "unique" },
-        { name: "scheduler", nodeType: "KSampler", widgetName: "scheduler", matchBy: "unique" },
-        { name: "width", nodeType: "EmptyLatentImage", widgetName: "width", matchBy: "unique" },
-        { name: "height", nodeType: "EmptyLatentImage", widgetName: "height", matchBy: "unique" }
-    ];
-    
-    // Find nodes and extract values
-    for (const def of paramDefs) {
-        const nodes = graph.nodes.filter(n => n.type === def.nodeType);
-        if (nodes.length === 0) continue;
-        
-        let targetNode = nodes[0];
-        let widgetValue = null;
-        
-        // For CLIPTextEncode, find by connection
-        if (def.matchBy === "connection-positive" || def.matchBy === "connection-negative") {
-            const ksampler = graph.nodes.find(n => n.type === "KSampler");
-            if (ksampler) {
-                const inputName = def.matchBy === "connection-positive" ? "positive" : "negative";
-                const inputSlot = ksampler.inputs?.findIndex(i => i.name === inputName);
-                
-                if (inputSlot >= 0) {
-                    for (const node of nodes) {
-                        if (node.outputs && node.outputs[0] && node.outputs[0].links) {
-                            for (const linkId of node.outputs[0].links) {
-                                const link = graph.links[linkId];
-                                if (link && link.target_id === ksampler.id && link.target_slot === inputSlot) {
-                                    targetNode = node;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        // Find widget value
-        const widget = targetNode.widgets?.find(w => w.name === def.widgetName);
+    const synonyms = template.synonyms || {};
+
+    for (const [name, def] of Object.entries(template.node_mapping)) {
+        const result = findNodeByTemplate(graph, def, synonyms);
+        if (!result) continue;
+
+        const widget = result.node.widgets?.find(w => w.name === def.widget);
         if (widget) {
-            widgetValue = widget.value;
-        } else if (targetNode.widgets_values) {
-            // Fallback to widgets_values
-            const widgetIndex = targetNode.widgets?.findIndex(w => w.name === def.widgetName) || 0;
-            if (widgetIndex < targetNode.widgets_values.length) {
-                widgetValue = targetNode.widgets_values[widgetIndex];
-            }
-        }
-        
-        if (widgetValue !== null) {
             params.push({
-                name: def.name,
-                nodeType: def.nodeType,
-                nodeId: String(targetNode.id),
-                value: widgetValue
+                name,
+                nodeType: def.class_type,
+                nodeId: String(result.node.id),
+                value: widget.value
             });
         }
     }
-    
+
     return params;
 }

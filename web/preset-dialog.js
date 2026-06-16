@@ -9,7 +9,7 @@
  */
 
 import { app } from "../../scripts/app.js";
-import { getWorkflows, getPresets, getPresetDetail, applyPreset, getMapping, saveMapping, getCurrentWorkflowParams } from "./preset-api.js";
+import { getWorkflows, getPresets, getPresetDetail, applyPreset, getMapping, saveMapping, getCurrentWorkflowParams, getTemplateDetail, findNodeByTemplate } from "./preset-api.js";
 import { PresetEditorDialog } from "./preset-editor.js";
 
 // Use new API to avoid deprecation warnings
@@ -24,6 +24,7 @@ export class PresetDialog extends ComfyDialog {
         this.selectedPreset = null;
         this.presetDetail = null;
         this.mapping = {};
+        this.currentTemplate = null;
         
         // Initialize editor dialog
         this.editor = new PresetEditorDialog((data) => {
@@ -394,9 +395,15 @@ export class PresetDialog extends ComfyDialog {
         this.selectedTemplate = templateId;
         this.selectedPreset = null;
         this.presetDetail = null;
+        this.currentTemplate = null;
         
         try {
-            this.presets = await getPresets(templateId);
+            const [presets, template] = await Promise.all([
+                getPresets(templateId),
+                getTemplateDetail(templateId)
+            ]);
+            this.presets = presets;
+            this.currentTemplate = template;
             this.renderPresetList();
             this.presetPreview.textContent = "Select a preset to preview";
         } catch (error) {
@@ -417,7 +424,7 @@ export class PresetDialog extends ComfyDialog {
             const item = $el("div.preset-item", [
                 $el("span.preset-item-name", {
                     textContent: `${preset.name} (${preset.id})`,
-                    onclick: () => this.onPresetSelect(preset)
+                    onclick: (e) => this.onPresetSelect(preset, e)
                 }),
                 $el("button.comfy-btn.small", {
                     textContent: "编辑",
@@ -434,14 +441,14 @@ export class PresetDialog extends ComfyDialog {
     /**
      * Handle create new preset button click.
      */
-    onCreatePreset() {
+    async onCreatePreset() {
         if (!this.selectedTemplate) {
             alert("请先选择一个 Workflow 模板");
             return;
         }
         
-        // Get current workflow parameters
-        const params = getCurrentWorkflowParams();
+        // Get current workflow parameters using template
+        const params = await getCurrentWorkflowParams(this.selectedTemplate);
         if (params.length === 0) {
             alert("当前 workflow 没有可保存的参数");
             return;
@@ -456,7 +463,7 @@ export class PresetDialog extends ComfyDialog {
     async onEditPreset(preset) {
         try {
             const presetData = await getPresetDetail(this.selectedTemplate, preset.id);
-            const params = getCurrentWorkflowParams();
+            const params = await getCurrentWorkflowParams(this.selectedTemplate);
             this.editor.showForEdit(this.selectedTemplate, preset.id, presetData, params);
         } catch (error) {
             console.error("[PresetManager] Error loading preset for edit:", error);
@@ -464,13 +471,15 @@ export class PresetDialog extends ComfyDialog {
         }
     }
     
-    async onPresetSelect(preset) {
+    async onPresetSelect(preset, event) {
         this.selectedPreset = preset;
         
         // Update UI selection
         const items = this.presetList.querySelectorAll(".preset-item");
         items.forEach(item => item.classList.remove("selected"));
-        event.target.classList.add("selected");
+        if (event?.target) {
+            event.target.closest(".preset-item")?.classList.add("selected");
+        }
         
         // Load and display preset detail
         try {
@@ -492,9 +501,12 @@ export class PresetDialog extends ComfyDialog {
         this.presetPreview.innerHTML = "";
         
         const graph = app.graph;
+        const template = this.currentTemplate;
+        const synonyms = template?.synonyms || {};
         
         for (const [key, value] of Object.entries(params)) {
-            const matchResult = this.findNodeAndWidget(graph, key);
+            const paramDef = template?.node_mapping?.[key];
+            const matchResult = paramDef ? findNodeByTemplate(graph, paramDef, synonyms) : null;
             
             let status, statusClass, nodeIdText;
             if (matchResult) {
@@ -507,7 +519,7 @@ export class PresetDialog extends ComfyDialog {
                 nodeIdText = "未匹配";
             }
             
-            const row = $el("div.preview-row", { className: statusClass }, [
+            const row = $el("div", { className: `preview-row ${statusClass}` }, [
                 $el("span.preview-status", { textContent: status }),
                 $el("span.preview-key", { textContent: key }),
                 $el("span.preview-value", { textContent: JSON.stringify(value) }),
@@ -532,6 +544,13 @@ export class PresetDialog extends ComfyDialog {
             const presetDetail = await getPresetDetail(this.selectedTemplate, this.selectedPreset.id);
             const params = presetDetail.params || {};
             
+            // Ensure template is loaded
+            if (!this.currentTemplate) {
+                this.currentTemplate = await getTemplateDetail(this.selectedTemplate);
+            }
+            const template = this.currentTemplate;
+            const synonyms = template.synonyms || {};
+            
             // Apply preset directly to current graph
             const graph = app.graph;
             let successCount = 0;
@@ -540,51 +559,31 @@ export class PresetDialog extends ComfyDialog {
             // For each parameter in preset, find the matching node and update it
             for (const [paramName, value] of Object.entries(params)) {
                 totalCount++;
-                console.log(`[PresetManager] Processing param: ${paramName} = ${value}`);
                 
-                // Find the node in current graph that matches this parameter
-                const result = this.findNodeAndWidget(graph, paramName);
+                const paramDef = template.node_mapping[paramName];
+                if (!paramDef) {
+                    console.warn(`[PresetManager] No mapping definition for ${paramName}`);
+                    continue;
+                }
+                
+                const result = findNodeByTemplate(graph, paramDef, synonyms);
                 if (result) {
-                    const { node, widgetIndex } = result;
-                    
-                    // Update widgets_values array and widget object
-                    if (node.widgets_values && widgetIndex < node.widgets_values.length) {
-                        const oldValue = node.widgets_values[widgetIndex];
-                        node.widgets_values[widgetIndex] = value;
-                        
-                        // Also update the widget object if it exists
-                        const widgetName = this.getWidgetName(paramName);
-                        console.log(`[PresetManager] Looking for widget: ${widgetName} in ${node.widgets?.length} widgets`);
-                        if (node.widgets) {
-                            for (let i = 0; i < node.widgets.length; i++) {
-                                const w = node.widgets[i];
-                                console.log(`[PresetManager] Widget ${i}: name=${w.name}, type=${w.type}, value=${w.value}`);
-                            }
-                            const widget = node.widgets.find(w => w.name === widgetName);
-                            if (widget) {
-                                console.log(`[PresetManager] Found widget: ${widget.name}, old value: ${widget.value}, new value: ${value}`);
-                                widget.value = value;
-                                console.log(`[PresetManager] Widget value after update: ${widget.value}`);
-                            } else {
-                                console.warn(`[PresetManager] Widget ${widgetName} not found!`);
-                            }
-                        }
-                        
+                    const { node, widgetName } = result;
+                    const widget = node.widgets?.find(w => w.name === widgetName);
+                    if (widget) {
+                        widget.value = value;
                         successCount++;
-                        console.log(`[PresetManager] SUCCESS: Set ${paramName} = ${value} on node ${node.id} (was: ${oldValue})`);
+                        console.log(`[PresetManager] Set ${paramName} = ${value} on node ${node.id}`);
                     } else {
-                        console.warn(`[PresetManager] FAIL: widgets_values not found or index out of range for ${paramName}`);
-                        console.warn(`[PresetManager] widgets_values:`, node.widgets_values);
-                        console.warn(`[PresetManager] widgetIndex:`, widgetIndex);
+                        console.warn(`[PresetManager] Widget ${widgetName} not found on node ${node.id}`);
                     }
                 } else {
-                    console.warn(`[PresetManager] FAIL: Node not found for param ${paramName}`);
+                    console.warn(`[PresetManager] Node not found for ${paramName}`);
                 }
             }
             
             // Force graph refresh
             graph.setDirtyCanvas(true, true);
-            // Also try to force node update
             for (const node of graph.nodes) {
                 if (node.setDirtyCanvas) {
                     node.setDirtyCanvas(true, true);
@@ -608,128 +607,4 @@ export class PresetDialog extends ComfyDialog {
         }
     }
     
-    /**
-     * Find a node and widget index for the given parameter name.
-     * Returns { node, widgetIndex } or null.
-     */
-    findNodeAndWidget(graph, paramName) {
-        // Parameter to node type mapping
-        const nodeTypeMap = {
-            'positive_prompt': 'CLIPTextEncode',
-            'negative_prompt': 'CLIPTextEncode',
-            'sampler': 'KSampler',
-            'scheduler': 'KSampler',
-            'steps': 'KSampler',
-            'cfg': 'KSampler',
-            'width': 'EmptyLatentImage',
-            'height': 'EmptyLatentImage'
-        };
-        
-        // Parameter to widget index mapping (based on standard node structure)
-        const widgetIndexMap = {
-            'positive_prompt': 0,  // CLIPTextEncode: text is first widget
-            'negative_prompt': 0,  // CLIPTextEncode: text is first widget
-            'sampler': 4,          // KSampler: sampler_name is 5th widget (index 4)
-            'scheduler': 5,        // KSampler: scheduler is 6th widget (index 5)
-            'steps': 2,            // KSampler: steps is 3rd widget (index 2)
-            'cfg': 3,              // KSampler: cfg is 4th widget (index 3)
-            'width': 0,            // EmptyLatentImage: width is 1st widget (index 0)
-            'height': 1            // EmptyLatentImage: height is 2nd widget (index 1)
-        };
-        
-        const targetType = nodeTypeMap[paramName];
-        if (!targetType) {
-            console.log(`[PresetManager] No node type mapping for ${paramName}`);
-            return null;
-        }
-        
-        // Find all nodes of this type
-        const nodes = graph.nodes.filter(n => n.type === targetType);
-        console.log(`[PresetManager] Found ${nodes.length} nodes of type ${targetType} for ${paramName}`);
-        
-        if (nodes.length === 0) return null;
-        
-        let targetNode = nodes[0];
-        
-        // For CLIPTextEncode, need to disambiguate by connection or title
-        if (targetType === 'CLIPTextEncode' && nodes.length > 1) {
-            const titleKeywords = paramName === 'positive_prompt' 
-                ? ['positive', '正向', '正面'] 
-                : ['negative', '负向', '负面'];
-            
-            // First try: find by title keywords
-            for (const node of nodes) {
-                const title = (node.title || '').toLowerCase();
-                console.log(`[PresetManager] Checking CLIPTextEncode node ${node.id} with title: "${node.title}"`);
-                if (titleKeywords.some(kw => title.includes(kw))) {
-                    targetNode = node;
-                    console.log(`[PresetManager] Found by title keyword: node ${node.id}`);
-                    break;
-                }
-            }
-            
-            // If title matching failed, try to find by connection to KSampler
-            if (targetNode === nodes[0]) {
-                console.log(`[PresetManager] Title matching failed, trying connection-based lookup...`);
-                const ksampler = graph.nodes.find(n => n.type === 'KSampler');
-                console.log(`[PresetManager] Found KSampler:`, ksampler ? ksampler.id : 'none');
-                
-                if (ksampler) {
-                    const inputName = paramName === 'positive_prompt' ? 'positive' : 'negative';
-                    console.log(`[PresetManager] Looking for input: ${inputName}`);
-                    console.log(`[PresetManager] KSampler inputs:`, ksampler.inputs);
-                    
-                    const inputSlot = ksampler.inputs?.findIndex(i => i.name === inputName);
-                    console.log(`[PresetManager] Input slot for ${inputName}: ${inputSlot}`);
-                    
-                    if (inputSlot >= 0) {
-                        console.log(`[PresetManager] Graph links:`, graph.links);
-                        
-                        // Find which CLIPTextEncode connects to this input
-                        for (const node of nodes) {
-                            console.log(`[PresetManager] Checking node ${node.id} outputs:`, node.outputs);
-                            if (node.outputs && node.outputs[0] && node.outputs[0].links) {
-                                console.log(`[PresetManager] Node ${node.id} links:`, node.outputs[0].links);
-                                for (const linkId of node.outputs[0].links) {
-                                    const link = graph.links[linkId];
-                                    console.log(`[PresetManager] Link ${linkId}:`, link);
-                                    if (link && link.target_id === ksampler.id && link.target_slot === inputSlot) {
-                                        targetNode = node;
-                                        console.log(`[PresetManager] Found by connection: node ${node.id} -> KSampler.${inputName}`);
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        const widgetIndex = widgetIndexMap[paramName] || 0;
-        console.log(`[PresetManager] Selected node ${targetNode.id} (${targetType}) for ${paramName}, widgetIndex=${widgetIndex}`);
-        console.log(`[PresetManager] Node widgets_values:`, targetNode.widgets_values);
-        
-        return {
-            node: targetNode,
-            widgetIndex: widgetIndex
-        };
-    }
-    
-    /**
-     * Get the actual widget name for a parameter.
-     */
-    getWidgetName(paramName) {
-        const widgetNameMap = {
-            'positive_prompt': 'text',
-            'negative_prompt': 'text',
-            'sampler': 'sampler_name',
-            'scheduler': 'scheduler',
-            'steps': 'steps',
-            'cfg': 'cfg',
-            'width': 'width',
-            'height': 'height'
-        };
-        return widgetNameMap[paramName] || paramName;
-    }
 }
