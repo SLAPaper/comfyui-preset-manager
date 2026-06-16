@@ -4,10 +4,25 @@ from pathlib import Path
 from aiohttp import web
 from server import PromptServer
 
-from .workflow_parser import load_templates, get_template
-from .node_matcher import match_nodes, apply_preset
-from .preset_manager import load_presets, get_preset, save_preset, delete_preset
-from .mapping_manager import load_mapping, save_mapping
+try:
+    from .workflow_parser import load_templates, get_template
+    from .node_matcher import match_nodes, apply_preset
+    from .preset_manager import load_presets, get_preset, save_preset, delete_preset
+    from .mapping_manager import load_mapping, save_mapping
+except ImportError:
+    # Fallback for testing outside ComfyUI (relative import without package context)
+    import importlib.util as _ilu
+    import sys
+    _dir = Path(__file__).parent
+    for _name in ("workflow_parser", "node_matcher", "preset_manager", "mapping_manager"):
+        _spec = _ilu.spec_from_file_location(_name, str(_dir / f"{_name}.py"))
+        _mod = _ilu.module_from_spec(_spec)
+        _spec.loader.exec_module(_mod)
+        sys.modules[_name] = _mod
+    from workflow_parser import load_templates, get_template
+    from node_matcher import match_nodes, apply_preset
+    from preset_manager import load_presets, get_preset, save_preset, delete_preset
+    from mapping_manager import load_mapping, save_mapping
 
 PLUGIN_DIR = Path(__file__).parent
 
@@ -18,147 +33,143 @@ WEB_DIRECTORY = "./web"
 
 __all__ = ['NODE_CLASS_MAPPINGS', 'NODE_DISPLAY_NAME_MAPPINGS', 'WEB_DIRECTORY']
 
-# === API Routes ===
 
-@PromptServer.instance.routes.get("/preset-manager/workflows")
-async def get_workflows(request):
-    """Get all workflow templates."""
-    print("[PresetManager] API: 获取模板列表")
-    templates = load_templates()
-    # Return list of {id, name, description} for each template
-    result = [
-        {"id": tid, "name": t.get("name", tid), "description": t.get("description", "")}
-        for tid, t in templates.items()
-    ]
-    return web.json_response(result)
+def _register_routes():
+    """Register API routes with ComfyUI's PromptServer."""
+    routes = PromptServer.instance.routes
 
-@PromptServer.instance.routes.get("/preset-manager/presets/{template_id}")
-async def get_presets_list(request):
-    """Get all presets for a template."""
-    template_id = request.match_info["template_id"]
-    print(f"[PresetManager] API: 获取预设列表 ({template_id})")
-    presets = load_presets(template_id)
-    # Return list of {id, name, description} for each preset
-    result = [
-        {"id": p["id"], "name": p.get("name", p["id"]), "description": p.get("description", "")}
-        for p in presets
-    ]
-    return web.json_response(result)
+    @routes.get("/preset-manager/workflows")
+    async def get_workflows(request):
+        """Get all workflow templates."""
+        print("[PresetManager] API: 获取模板列表")
+        templates = load_templates()
+        result = [
+            {"id": tid, "name": t.get("name", tid), "description": t.get("description", "")}
+            for tid, t in templates.items()
+        ]
+        return web.json_response(result)
 
-@PromptServer.instance.routes.get("/preset-manager/preset/{template_id}/{preset_id}")
-async def get_preset_detail(request):
-    """Get a single preset detail."""
-    template_id = request.match_info["template_id"]
-    preset_id = request.match_info["preset_id"]
-    print(f"[PresetManager] API: 获取预设详情 ({template_id}/{preset_id})")
-    preset = get_preset(template_id, preset_id)
-    if preset is None:
-        return web.json_response({"error": "Preset not found"}, status=404)
-    return web.json_response(preset)
+    @routes.get("/preset-manager/presets/{template_id}")
+    async def get_presets_list(request):
+        """Get all presets for a template."""
+        template_id = request.match_info["template_id"]
+        print(f"[PresetManager] API: 获取预设列表 ({template_id})")
+        presets = load_presets(template_id)
+        result = [
+            {"id": p["id"], "name": p.get("name", p["id"]), "description": p.get("description", "")}
+            for p in presets
+        ]
+        return web.json_response(result)
 
-@PromptServer.instance.routes.post("/preset-manager/preset")
-async def save_preset_endpoint(request):
-    """Save a new preset."""
-    try:
-        data = await request.json()
-        template_id = data.get("workflow_template")
-        preset_id = data.get("id")
-        print(f"[PresetManager] API: 保存预设 ({template_id}/{preset_id})")
-        if not template_id or not preset_id:
-            return web.json_response({"error": "Missing workflow_template or id"}, status=400)
-        
-        success = save_preset(template_id, preset_id, data)
-        if success:
-            return web.json_response({"status": "ok"})
-        else:
-            return web.json_response({"error": "Failed to save"}, status=500)
-    except Exception as e:
-        print(f"[PresetManager] API: 保存预设异常: {e}")
-        return web.json_response({"error": str(e)}, status=500)
-
-@PromptServer.instance.routes.delete("/preset-manager/preset/{template_id}/{preset_id}")
-async def delete_preset_endpoint(request):
-    """Delete a preset."""
-    template_id = request.match_info["template_id"]
-    preset_id = request.match_info["preset_id"]
-    print(f"[PresetManager] API: 删除预设 ({template_id}/{preset_id})")
-    success = delete_preset(template_id, preset_id)
-    if success:
-        return web.json_response({"status": "ok"})
-    else:
-        return web.json_response({"error": "Preset not found"}, status=404)
-
-@PromptServer.instance.routes.post("/preset-manager/apply")
-async def apply_preset_endpoint(request):
-    """Apply a preset to the current workflow."""
-    try:
-        data = await request.json()
-        template_id = data.get("workflow")
-        preset_id = data.get("preset")
-        print(f"[PresetManager] API: 应用预设 ({template_id}/{preset_id})")
-        
-        if not template_id or not preset_id:
-            return web.json_response({"error": "Missing workflow or preset"}, status=400)
-        
-        # Load template and preset
-        template = get_template(template_id)
-        if template is None:
-            return web.json_response({"error": f"Template '{template_id}' not found"}, status=404)
-        
+    @routes.get("/preset-manager/preset/{template_id}/{preset_id}")
+    async def get_preset_detail(request):
+        """Get a single preset detail."""
+        template_id = request.match_info["template_id"]
+        preset_id = request.match_info["preset_id"]
+        print(f"[PresetManager] API: 获取预设详情 ({template_id}/{preset_id})")
         preset = get_preset(template_id, preset_id)
         if preset is None:
-            return web.json_response({"error": f"Preset '{preset_id}' not found"}, status=404)
-        
-        # Get current workflow from ComfyUI
-        # Note: This requires the frontend to send the current workflow
-        current_workflow = data.get("current_workflow")
-        if not current_workflow:
-            return web.json_response({"error": "Missing current_workflow"}, status=400)
-        
-        # Apply preset
-        modified_workflow = apply_preset(current_workflow, template, preset.get("params", {}))
-        
-        # Return the modified workflow for frontend to apply
-        return web.json_response({
-            "status": "ok",
-            "workflow": modified_workflow
-        })
-    except Exception as e:
-        print(f"[PresetManager] API: 应用预设异常: {e}")
-        return web.json_response({"error": str(e)}, status=500)
+            return web.json_response({"error": "Preset not found"}, status=404)
+        return web.json_response(preset)
 
+    @routes.post("/preset-manager/preset")
+    async def save_preset_endpoint(request):
+        """Save a new preset."""
+        try:
+            data = await request.json()
+            template_id = data.get("workflow_template")
+            preset_id = data.get("id")
+            print(f"[PresetManager] API: 保存预设 ({template_id}/{preset_id})")
+            if not template_id or not preset_id:
+                return web.json_response({"error": "Missing workflow_template or id"}, status=400)
 
-# === Mapping API Routes ===
+            success = save_preset(template_id, preset_id, data)
+            if success:
+                return web.json_response({"status": "ok"})
+            else:
+                return web.json_response({"error": "Failed to save"}, status=500)
+        except Exception as e:
+            print(f"[PresetManager] API: 保存预设异常: {e}")
+            return web.json_response({"error": str(e)}, status=500)
 
-@PromptServer.instance.routes.get("/preset-manager/mapping")
-async def get_mapping_endpoint(request):
-    """Get all workflow name → template ID mappings."""
-    print("[PresetManager] API: 获取映射列表")
-    mapping = load_mapping()
-    return web.json_response(mapping)
-
-
-@PromptServer.instance.routes.post("/preset-manager/mapping")
-async def save_mapping_endpoint(request):
-    """Save workflow name → template ID mapping."""
-    try:
-        data = await request.json()
-        workflow_name = data.get("workflow_name")
-        template_id = data.get("template_id")
-        print(f"[PresetManager] API: 保存映射 ({workflow_name} -> {template_id})")
-        
-        if not workflow_name or not template_id:
-            return web.json_response({"error": "Missing workflow_name or template_id"}, status=400)
-        
-        # Load existing mapping, update, and save
-        mapping = load_mapping()
-        mapping[workflow_name] = template_id
-        success = save_mapping(mapping)
-        
+    @routes.delete("/preset-manager/preset/{template_id}/{preset_id}")
+    async def delete_preset_endpoint(request):
+        """Delete a preset."""
+        template_id = request.match_info["template_id"]
+        preset_id = request.match_info["preset_id"]
+        print(f"[PresetManager] API: 删除预设 ({template_id}/{preset_id})")
+        success = delete_preset(template_id, preset_id)
         if success:
             return web.json_response({"status": "ok"})
         else:
-            return web.json_response({"error": "Failed to save mapping"}, status=500)
-    except Exception as e:
-        print(f"[PresetManager] API: 保存映射异常: {e}")
-        return web.json_response({"error": str(e)}, status=500)
+            return web.json_response({"error": "Preset not found"}, status=404)
+
+    @routes.post("/preset-manager/apply")
+    async def apply_preset_endpoint(request):
+        """Apply a preset to the current workflow."""
+        try:
+            data = await request.json()
+            template_id = data.get("workflow")
+            preset_id = data.get("preset")
+            print(f"[PresetManager] API: 应用预设 ({template_id}/{preset_id})")
+
+            if not template_id or not preset_id:
+                return web.json_response({"error": "Missing workflow or preset"}, status=400)
+
+            template = get_template(template_id)
+            if template is None:
+                return web.json_response({"error": f"Template '{template_id}' not found"}, status=404)
+
+            preset = get_preset(template_id, preset_id)
+            if preset is None:
+                return web.json_response({"error": f"Preset '{preset_id}' not found"}, status=404)
+
+            current_workflow = data.get("current_workflow")
+            if not current_workflow:
+                return web.json_response({"error": "Missing current_workflow"}, status=400)
+
+            modified_workflow = apply_preset(current_workflow, template, preset.get("params", {}))
+
+            return web.json_response({
+                "status": "ok",
+                "workflow": modified_workflow
+            })
+        except Exception as e:
+            print(f"[PresetManager] API: 应用预设异常: {e}")
+            return web.json_response({"error": str(e)}, status=500)
+
+    @routes.get("/preset-manager/mapping")
+    async def get_mapping_endpoint(request):
+        """Get all workflow name → template ID mappings."""
+        print("[PresetManager] API: 获取映射列表")
+        mapping = load_mapping()
+        return web.json_response(mapping)
+
+    @routes.post("/preset-manager/mapping")
+    async def save_mapping_endpoint(request):
+        """Save workflow name → template ID mapping."""
+        try:
+            data = await request.json()
+            workflow_name = data.get("workflow_name")
+            template_id = data.get("template_id")
+            print(f"[PresetManager] API: 保存映射 ({workflow_name} -> {template_id})")
+
+            if not workflow_name or not template_id:
+                return web.json_response({"error": "Missing workflow_name or template_id"}, status=400)
+
+            mapping = load_mapping()
+            mapping[workflow_name] = template_id
+            success = save_mapping(mapping)
+
+            if success:
+                return web.json_response({"status": "ok"})
+            else:
+                return web.json_response({"error": "Failed to save mapping"}, status=500)
+        except Exception as e:
+            print(f"[PresetManager] API: 保存映射异常: {e}")
+            return web.json_response({"error": str(e)}, status=500)
+
+
+# Register routes when loaded by ComfyUI (skip during testing)
+if hasattr(PromptServer.instance.routes, 'get'):
+    _register_routes()

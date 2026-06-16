@@ -12,7 +12,8 @@ aiohttp.web = types.ModuleType("aiohttp.web")
 sys.modules["aiohttp"] = aiohttp
 sys.modules["aiohttp.web"] = aiohttp.web
 
-# Mock server module
+# Mock server module (routes doesn't need get/post/delete since
+# __init__.py guards _register_routes() with hasattr check)
 server = types.ModuleType("server")
 server.PromptServer = types.ModuleType("server.PromptServer")
 server.PromptServer.instance = types.ModuleType("server.PromptServer.instance")
