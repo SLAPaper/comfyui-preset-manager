@@ -61,6 +61,16 @@ def _register_routes():
         ]
         return web.json_response(result)
 
+    @routes.get("/preset-manager/template/{template_id}")
+    async def get_template_detail(request):
+        """Get a workflow template with full node_mapping."""
+        template_id = request.match_info["template_id"]
+        print(f"[PresetManager] API: 获取模板详情 ({template_id})")
+        template = get_template(template_id)
+        if template is None:
+            return web.json_response({"error": "Template not found"}, status=404)
+        return web.json_response(template)
+
     @routes.get("/preset-manager/preset/{template_id}/{preset_id}")
     async def get_preset_detail(request):
         """Get a single preset detail."""
