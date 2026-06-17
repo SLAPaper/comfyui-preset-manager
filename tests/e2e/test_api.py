@@ -54,3 +54,51 @@ class TestTemplateAPI:
         data = resp.json()
         assert "params" in data
         assert "positive_prompt" in data["params"]
+
+
+@pytest.mark.e2e
+class TestQwenImageTemplate:
+    """Test that Qwen Image template works alongside SDXL."""
+
+    def test_workflows_include_qwen_image(self, api_base):
+        """GET /preset-manager/workflows should include qwen-image-txt2img."""
+        resp = httpx.get(f"{api_base}/preset-manager/workflows", timeout=10)
+        assert resp.status_code == 200
+
+        data = resp.json()
+        ids = [t["id"] for t in data]
+        assert "qwen-image-txt2img" in ids
+
+    def test_qwen_image_template_has_correct_mapping(self, api_base):
+        """Qwen Image template should use EmptySD3LatentImage for width/height."""
+        resp = httpx.get(f"{api_base}/preset-manager/template/qwen-image-txt2img", timeout=10)
+        assert resp.status_code == 200
+
+        data = resp.json()
+        mapping = data["node_mapping"]
+
+        assert mapping["width"]["class_type"] == "EmptySD3LatentImage"
+        assert mapping["height"]["class_type"] == "EmptySD3LatentImage"
+        assert mapping["steps"]["class_type"] == "KSampler"
+        assert "Positive Prompt" in mapping["positive_prompt"]["title_keywords"]
+
+    def test_qwen_image_has_presets(self, api_base):
+        """GET /preset-manager/presets/qwen-image-txt2img should return presets."""
+        resp = httpx.get(f"{api_base}/preset-manager/presets/qwen-image-txt2img", timeout=10)
+        assert resp.status_code == 200
+
+        data = resp.json()
+        assert isinstance(data, list)
+        assert any(p["id"] == "_default" for p in data)
+
+    def test_qwen_image_default_preset_values(self, api_base):
+        """Qwen Image default preset should have correct values."""
+        resp = httpx.get(f"{api_base}/preset-manager/preset/qwen-image-txt2img/_default", timeout=10)
+        assert resp.status_code == 200
+
+        data = resp.json()
+        params = data["params"]
+        assert params["width"] == 1328
+        assert params["height"] == 1328
+        assert params["steps"] == 8
+        assert params["cfg"] == 1.5
