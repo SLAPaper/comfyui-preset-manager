@@ -1,0 +1,16 @@
+# Qwen Image 默认采样配置
+# Provides default values for Qwen Image text-to-image generation
+
+name: "默认配置"
+description: "Qwen Image 默认采样配置"
+workflow_template: "qwen-image-txt2img"
+
+params:
+  positive_prompt: "anime style picture, best quality, ultra detailed"
+  negative_prompt: "worst quality, low quality, blurry"
+  width: 1328
+  height: 1328
+  steps: 8
+  cfg: 1.5
+  sampler: "euler_ancestral"
+  scheduler: "bong_tangent"

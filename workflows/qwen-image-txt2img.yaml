@@ -1,0 +1,53 @@
+# Qwen Image Text-to-Image Workflow Template
+# Defines parameter mapping for Qwen Image workflows
+
+name: "Qwen Image Text to Image"
+description: "Qwen Image 基础文生图 workflow"
+version: "1.0"
+
+node_mapping:
+  positive_prompt:
+    match_strategy: "title_keyword"
+    class_type: "CLIPTextEncode"
+    title_keywords: ["positive", "正向", "Positive Prompt"]
+    widget: "text"
+
+  negative_prompt:
+    match_strategy: "title_keyword"
+    class_type: "CLIPTextEncode"
+    title_keywords: ["negative", "负向", "Negative Prompt"]
+    widget: "text"
+
+  sampler:
+    match_strategy: "unique_class"
+    class_type: "KSampler"
+    widget: "sampler_name"
+
+  scheduler:
+    match_strategy: "unique_class"
+    class_type: "KSampler"
+    widget: "scheduler"
+
+  steps:
+    match_strategy: "unique_class"
+    class_type: "KSampler"
+    widget: "steps"
+
+  cfg:
+    match_strategy: "unique_class"
+    class_type: "KSampler"
+    widget: "cfg"
+
+  width:
+    match_strategy: "unique_class"
+    class_type: "EmptySD3LatentImage"
+    widget: "width"
+
+  height:
+    match_strategy: "unique_class"
+    class_type: "EmptySD3LatentImage"
+    widget: "height"
+
+synonyms:
+  KSamplerAdvanced: "KSampler"
+  KSamplerEfficient: "KSampler"
