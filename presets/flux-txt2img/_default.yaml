@@ -1,0 +1,17 @@
+# Flux 默认采样配置
+# Provides default values for Flux text-to-image generation
+
+name: "默认配置"
+description: "Flux 默认采样配置"
+workflow_template: "flux-txt2img"
+
+params:
+  positive_prompt: "masterpiece, best quality, ultra detailed"
+  width: 768
+  height: 1280
+  steps: 20
+  cfg: 3.5
+  sampler: "euler"
+  scheduler: "simple"
+  seed: 0
+  denoise: 1.0

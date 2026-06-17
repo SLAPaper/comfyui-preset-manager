@@ -1,0 +1,63 @@
+# Flux Text-to-Image Workflow Template
+# Defines parameter mapping for Flux workflows
+# Flux uses different node architecture: BasicScheduler + KSamplerSelect + FluxGuidance
+
+name: "Flux Text to Image"
+description: "Flux 基础文生图 workflow"
+version: "1.0"
+
+node_mapping:
+  positive_prompt:
+    match_strategy: "title_keyword"
+    class_type: "CLIPTextEncode"
+    title_keywords: ["positive", "正向"]
+    widget: "text"
+
+  negative_prompt:
+    match_strategy: "title_keyword"
+    class_type: "CLIPTextEncode"
+    title_keywords: ["negative", "负向"]
+    widget: "text"
+    optional: true
+
+  steps:
+    match_strategy: "unique_class"
+    class_type: "BasicScheduler"
+    widget: "steps"
+
+  sampler:
+    match_strategy: "unique_class"
+    class_type: "KSamplerSelect"
+    widget: "sampler_name"
+
+  cfg:
+    match_strategy: "unique_class"
+    class_type: "FluxGuidance"
+    widget: "guidance"
+
+  scheduler:
+    match_strategy: "unique_class"
+    class_type: "BasicScheduler"
+    widget: "scheduler"
+
+  seed:
+    match_strategy: "unique_class"
+    class_type: "RandomNoise"
+    widget: "noise_seed"
+
+  denoise:
+    match_strategy: "unique_class"
+    class_type: "BasicScheduler"
+    widget: "denoise"
+
+  width:
+    match_strategy: "title_keyword"
+    class_type: "PrimitiveInt"
+    title_keywords: ["宽度", "width"]
+    widget: "value"
+
+  height:
+    match_strategy: "title_keyword"
+    class_type: "PrimitiveInt"
+    title_keywords: ["高度", "height"]
+    widget: "value"
