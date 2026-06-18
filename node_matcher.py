@@ -101,6 +101,45 @@ def _match_title_keyword(workflow: dict, param_def: dict, synonyms: dict) -> Mat
     return None
 
 
+def _match_output_connection(workflow: dict, param_def: dict, synonyms: dict) -> MatchResult | None:
+    """
+    Match using output_connection strategy.
+    Finds a target node, then traces a specific input connection back to the source node.
+    Falls back to the target node's own widget if the input is not connected.
+
+    Args:
+        workflow: ComfyUI workflow dict {node_id: {class_type, inputs, _meta}}
+        param_def: Must have target_class_type, target_input, widget
+        synonyms: Node type synonym mapping
+
+    Returns:
+        MatchResult pointing to the source node (or target node as fallback), or None.
+    """
+    target_class = param_def.get("target_class_type", "")
+    target_input = param_def.get("target_input", "")
+    widget_name = param_def.get("widget", "")
+
+    target_nodes = _find_nodes_by_class(workflow, target_class, synonyms)
+    if len(target_nodes) != 1:
+        return None
+
+    target_id, target_data = target_nodes[0]
+    inputs = target_data.get("inputs", {})
+    input_val = inputs.get(target_input)
+
+    # API format: connected input is [source_node_id, source_output_slot]
+    if isinstance(input_val, list) and len(input_val) == 2:
+        source_id = str(input_val[0])
+        source_data = workflow.get(source_id)
+        if source_data:
+            current_value = source_data.get("inputs", {}).get(widget_name)
+            return MatchResult(node_id=source_id, widget_name=widget_name, current_value=current_value)
+
+    # Fallback: use the target node's own widget
+    current_value = target_data.get("inputs", {}).get(widget_name)
+    return MatchResult(node_id=target_id, widget_name=widget_name, current_value=current_value)
+
+
 def match_nodes(workflow: dict, template: dict) -> dict[str, MatchResult | None]:
     """
     Match workflow nodes to template parameters.
@@ -128,6 +167,8 @@ def match_nodes(workflow: dict, template: dict) -> dict[str, MatchResult | None]
             result = _match_unique_class(workflow, param_def, synonyms)
         elif match_strategy == "title_keyword":
             result = _match_title_keyword(workflow, param_def, synonyms)
+        elif match_strategy == "output_connection":
+            result = _match_output_connection(workflow, param_def, synonyms)
         else:
             print(f"[PresetManager] [WARN] 未知匹配策略: {match_strategy}")
             continue

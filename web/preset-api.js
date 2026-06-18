@@ -111,18 +111,39 @@ export async function savePreset(presetData) {
 
 /**
  * Find a node in the graph using a template parameter definition.
- * Generic matching that supports unique_class and title_keyword strategies.
+ * Generic matching that supports unique_class, title_keyword, and output_connection strategies.
  * 
  * @param {Object} graph - ComfyUI LiteGraph instance
  * @param {Object} paramDef - Parameter definition from template node_mapping
- *   {match_strategy, class_type, widget, title_keywords?}
  * @param {Object} synonyms - Node type synonym mapping
  * @returns {{node: Object, widgetName: string} | null}
  */
 export function findNodeByTemplate(graph, paramDef, synonyms) {
-    const effectiveType = synonyms[paramDef.class_type] || paramDef.class_type;
-    const nodes = graph.nodes.filter(n => n.type === effectiveType);
+    const classType = paramDef.class_type || paramDef.target_class_type;
+    const effectiveType = synonyms[classType] || classType;
 
+    if (paramDef.match_strategy === "output_connection") {
+        const targetNodes = graph.nodes.filter(n => n.type === effectiveType);
+        if (targetNodes.length !== 1) return null;
+
+        const target = targetNodes[0];
+        const input = target.inputs?.find(i => i.name === paramDef.target_input);
+
+        if (input?.link != null) {
+            const link = graph.links[input.link];
+            if (link) {
+                const sourceNode = graph.nodes.find(n => n.id === link.origin_id);
+                if (sourceNode) {
+                    return { node: sourceNode, widgetName: paramDef.widget };
+                }
+            }
+        }
+
+        // Fallback: use target node's own widget
+        return { node: target, widgetName: paramDef.widget };
+    }
+
+    const nodes = graph.nodes.filter(n => n.type === effectiveType);
     if (nodes.length === 0) return null;
 
     if (paramDef.match_strategy === "unique_class") {

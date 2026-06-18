@@ -41,8 +41,9 @@ node_mapping:
     widget: "scheduler"
 
   seed:
-    match_strategy: "unique_class"
-    class_type: "RandomNoise"
+    match_strategy: "output_connection"
+    target_class_type: "RandomNoise"
+    target_input: "noise_seed"
     widget: "noise_seed"
 
   denoise:
@@ -51,13 +52,13 @@ node_mapping:
     widget: "denoise"
 
   width:
-    match_strategy: "title_keyword"
-    class_type: "PrimitiveInt"
-    title_keywords: ["宽度", "width"]
+    match_strategy: "output_connection"
+    target_class_type: "ModelSamplingFlux"
+    target_input: "width"
     widget: "value"
 
   height:
-    match_strategy: "title_keyword"
-    class_type: "PrimitiveInt"
-    title_keywords: ["高度", "height"]
+    match_strategy: "output_connection"
+    target_class_type: "ModelSamplingFlux"
+    target_input: "height"
     widget: "value"

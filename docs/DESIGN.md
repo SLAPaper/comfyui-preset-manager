@@ -35,9 +35,9 @@
 
 | 策略 | 说明 | 适用场景 |
 |------|------|---------|
-| `unique_class` | 唯一 class_type，只有一个同类型节点时直接匹配 | KSampler、EmptyLatentImage |
+| `unique_class` | 唯一 class_type，只有一个同类型节点时直接匹配 | KSampler、EmptyLatentImage、BasicScheduler |
 | `title_keyword` | class_type + 标题关键词匹配 | CLIPTextEncode（positive/negative） |
-| `output_connection` | 通过输出连接关系判断（待实现） | 复杂 workflow |
+| `output_connection` | 通过输入连接关系追溯源节点 | Flux 的 PrimitiveInt 宽高、RandomNoise 种子 |
 
 ---
 

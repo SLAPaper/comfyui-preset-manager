@@ -128,24 +128,27 @@ class TestFluxTemplate:
         assert mapping["steps"]["class_type"] == "BasicScheduler"
         assert mapping["sampler"]["class_type"] == "KSamplerSelect"
         assert mapping["cfg"]["class_type"] == "FluxGuidance"
-        assert mapping["seed"]["class_type"] == "RandomNoise"
         assert mapping["denoise"]["class_type"] == "BasicScheduler"
 
-    def test_flux_template_uses_title_keyword_for_size(self, api_base):
-        """Flux template should use title_keyword for width/height on PrimitiveInt."""
+    def test_flux_template_uses_output_connection(self, api_base):
+        """Flux template should use output_connection for seed, width, height."""
         resp = httpx.get(f"{api_base}/preset-manager/template/flux-txt2img", timeout=10)
         assert resp.status_code == 200
 
         data = resp.json()
         mapping = data["node_mapping"]
 
-        assert mapping["width"]["match_strategy"] == "title_keyword"
-        assert mapping["width"]["class_type"] == "PrimitiveInt"
-        assert "宽度" in mapping["width"]["title_keywords"]
+        assert mapping["seed"]["match_strategy"] == "output_connection"
+        assert mapping["seed"]["target_class_type"] == "RandomNoise"
+        assert mapping["seed"]["target_input"] == "noise_seed"
 
-        assert mapping["height"]["match_strategy"] == "title_keyword"
-        assert mapping["height"]["class_type"] == "PrimitiveInt"
-        assert "高度" in mapping["height"]["title_keywords"]
+        assert mapping["width"]["match_strategy"] == "output_connection"
+        assert mapping["width"]["target_class_type"] == "ModelSamplingFlux"
+        assert mapping["width"]["target_input"] == "width"
+
+        assert mapping["height"]["match_strategy"] == "output_connection"
+        assert mapping["height"]["target_class_type"] == "ModelSamplingFlux"
+        assert mapping["height"]["target_input"] == "height"
 
     def test_flux_template_negative_prompt_optional(self, api_base):
         """Flux template should mark negative_prompt as optional."""

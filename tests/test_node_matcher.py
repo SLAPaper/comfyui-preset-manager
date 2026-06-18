@@ -167,3 +167,132 @@ def test_apply_preset_handles_missing_params_gracefully(node_matcher, sample_wor
     assert result["3"]["inputs"]["steps"] == 30
     # Other params should remain unchanged
     assert result["3"]["inputs"]["sampler_name"] == "euler"
+
+
+# === Tests for output_connection strategy ===
+
+
+FLUX_WORKFLOW = {
+    "10": {
+        "class_type": "RandomNoise",
+        "inputs": {"noise_seed": 12345},
+        "_meta": {"title": "RandomNoise"}
+    },
+    "20": {
+        "class_type": "BasicScheduler",
+        "inputs": {"steps": 20, "scheduler": "simple", "denoise": 1.0},
+        "_meta": {"title": "BasicScheduler"}
+    },
+    "30": {
+        "class_type": "KSamplerSelect",
+        "inputs": {"sampler_name": "euler"},
+        "_meta": {"title": "KSamplerSelect"}
+    },
+    "40": {
+        "class_type": "FluxGuidance",
+        "inputs": {"guidance": 3.5},
+        "_meta": {"title": "FluxGuidance"}
+    },
+    "50": {
+        "class_type": "PrimitiveInt",
+        "inputs": {"value": 768},
+        "_meta": {"title": "宽度"}
+    },
+    "51": {
+        "class_type": "PrimitiveInt",
+        "inputs": {"value": 1280},
+        "_meta": {"title": "高度"}
+    },
+    "60": {
+        "class_type": "ModelSamplingFlux",
+        "inputs": {
+            "max_shift": 1.15,
+            "base_shift": 0.5,
+            "width": ["50", 0],   # connected to PrimitiveInt id=50
+            "height": ["51", 0],  # connected to PrimitiveInt id=51
+        },
+        "_meta": {"title": "ModelSamplingFlux"}
+    },
+}
+
+FLUX_TEMPLATE = {
+    "name": "Flux Test",
+    "node_mapping": {
+        "seed": {
+            "match_strategy": "output_connection",
+            "target_class_type": "RandomNoise",
+            "target_input": "noise_seed",
+            "widget": "noise_seed"
+        },
+        "width": {
+            "match_strategy": "output_connection",
+            "target_class_type": "ModelSamplingFlux",
+            "target_input": "width",
+            "widget": "value"
+        },
+        "height": {
+            "match_strategy": "output_connection",
+            "target_class_type": "ModelSamplingFlux",
+            "target_input": "height",
+            "widget": "value"
+        },
+    },
+    "synonyms": {}
+}
+
+
+def test_match_output_connection_follows_link(node_matcher):
+    """output_connection should trace connected input back to source node."""
+    result = node_matcher.match_nodes(FLUX_WORKFLOW, FLUX_TEMPLATE)
+    # width input on ModelSamplingFlux is connected to PrimitiveInt id=50
+    assert result["width"] is not None
+    assert result["width"].node_id == "50"
+    assert result["width"].widget_name == "value"
+    assert result["width"].current_value == 768
+
+
+def test_match_output_connection_follows_link_for_height(node_matcher):
+    """output_connection should trace height input back to source node."""
+    result = node_matcher.match_nodes(FLUX_WORKFLOW, FLUX_TEMPLATE)
+    assert result["height"] is not None
+    assert result["height"].node_id == "51"
+    assert result["height"].widget_name == "value"
+    assert result["height"].current_value == 1280
+
+
+def test_match_output_connection_fallback_when_unconnected(node_matcher):
+    """output_connection should fall back to target node's own widget when input is not connected."""
+    result = node_matcher.match_nodes(FLUX_WORKFLOW, FLUX_TEMPLATE)
+    # seed input on RandomNoise is not connected (direct value)
+    assert result["seed"] is not None
+    assert result["seed"].node_id == "10"
+    assert result["seed"].widget_name == "noise_seed"
+    assert result["seed"].current_value == 12345
+
+
+def test_match_output_connection_returns_none_for_missing_target(node_matcher):
+    """output_connection should return None when target node doesn't exist."""
+    template = {
+        "name": "Test",
+        "node_mapping": {
+            "param": {
+                "match_strategy": "output_connection",
+                "target_class_type": "NonExistentNode",
+                "target_input": "some_input",
+                "widget": "value"
+            }
+        },
+        "synonyms": {}
+    }
+    result = node_matcher.match_nodes(FLUX_WORKFLOW, template)
+    assert result["param"] is None
+
+
+def test_apply_preset_with_output_connection(node_matcher):
+    """apply_preset() should inject values through output_connection strategy."""
+    params = {"width": 1024, "height": 1024}
+    result = node_matcher.apply_preset(FLUX_WORKFLOW, FLUX_TEMPLATE, params)
+    # width should be injected into PrimitiveInt id=50
+    assert result["50"]["inputs"]["value"] == 1024
+    # height should be injected into PrimitiveInt id=51
+    assert result["51"]["inputs"]["value"] == 1024
