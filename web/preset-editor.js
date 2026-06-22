@@ -106,10 +106,14 @@ export class PresetEditorDialog extends ComfyDialog {
                 border: 1px solid #45475a;
                 border-radius: 8px;
                 box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-                min-width: 500px;
-                max-width: 650px;
+                width: 600px;
                 max-height: 85vh;
                 overflow-y: auto;
+            }
+
+            .comfy-preset-editor .comfy-modal-content {
+                width: 100%;
+                box-sizing: border-box;
             }
             
             .preset-editor-section {

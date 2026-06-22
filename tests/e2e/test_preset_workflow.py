@@ -126,3 +126,41 @@ class TestPresetWorkflow:
         # Verify dialog closes
         await dialog.wait_for(state="hidden", timeout=5000)
         assert not await dialog.is_visible(), "Dialog should close after applying preset"
+
+    @pytest.mark.asyncio
+    async def test_editor_width_consistent_between_modes(self, page):
+        """Editor dialog width should not change when switching between form and code mode."""
+        await page.wait_for_timeout(3000)
+
+        # Open Preset Manager dialog
+        presets_btn = page.locator("button", has_text="Presets")
+        await presets_btn.click()
+        dialog = page.locator(".comfy-preset-manager")
+        await dialog.wait_for(state="visible", timeout=5000)
+
+        # Click + 新建 to open editor
+        create_btn = dialog.locator("button", has_text="+ 新建")
+        await create_btn.click()
+        editor = page.locator(".comfy-preset-editor")
+        await editor.wait_for(state="visible", timeout=5000)
+
+        # Measure content width in form mode
+        form_content_width = await page.evaluate(
+            "document.querySelector('.comfy-preset-editor .comfy-modal-content').getBoundingClientRect().width"
+        )
+
+        # Switch to code mode
+        code_btn = editor.locator("button", has_text="代码模式")
+        await code_btn.click()
+        await page.wait_for_timeout(500)
+
+        # Measure content width in code mode
+        code_content_width = await page.evaluate(
+            "document.querySelector('.comfy-preset-editor .comfy-modal-content').getBoundingClientRect().width"
+        )
+
+        # Content width should be consistent between modes (allow 2px tolerance for sub-pixel rounding)
+        assert abs(form_content_width - code_content_width) <= 2, (
+            f"Editor content width changed between modes: "
+            f"form={form_content_width}px, code={code_content_width}px"
+        )

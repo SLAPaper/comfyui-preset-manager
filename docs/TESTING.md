@@ -98,7 +98,7 @@ await page.evaluate(() => {
 
 ### 测试流程
 
-1. 打开页面 → `page.goto('http://127.0.0.1:8188')`
+1. 打开页面 → `page.goto('http://127.0.0.1:18188')`
 2. 点击 Presets 按钮 → `page.locator('button', has_text='Presets')`
 3. 选择预设 → `page.locator('.preset-item-name').first().click()`
 4. 点击 Apply → `page.locator('button', has_text='Apply Preset')`

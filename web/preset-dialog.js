@@ -106,8 +106,10 @@ export class PresetDialog extends ComfyDialog {
                 overflow-y: auto;
             }
             
-            .comfy-modal-content {
+            .comfy-preset-manager .comfy-modal-content {
                 padding: 20px;
+                width: 100%;
+                box-sizing: border-box;
             }
             
             .comfy-modal-header {
