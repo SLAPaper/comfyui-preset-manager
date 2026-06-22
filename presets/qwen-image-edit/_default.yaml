@@ -1,0 +1,7 @@
+name: "Default"
+description: "Qwen Image Edit 默认参数"
+params:
+  steps: 20
+  cfg: 2.5
+  sampler: "euler"
+  scheduler: "simple"

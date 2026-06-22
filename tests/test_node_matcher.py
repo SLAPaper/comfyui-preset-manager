@@ -523,3 +523,160 @@ def test_apply_preset_with_input_slot(node_matcher):
     assert result["3"]["inputs"]["text"] == "new positive"
     assert result["4"]["inputs"]["text"] == "new negative"
     assert result["17"]["inputs"]["steps"] == 20
+
+
+# === Tests for Qwen Image Edit template (input_slot + unique_class, no EmptyLatentImage) ===
+
+QWEN_EDIT_WORKFLOW = {
+    "37": {
+        "class_type": "UNETLoader",
+        "inputs": {"unet_name": "qwen_image_edit_fp8.safetensors", "weight_dtype": "default"},
+        "_meta": {"title": ""}
+    },
+    "38": {
+        "class_type": "CLIPLoader",
+        "inputs": {"clip_name": "qwen_2.5_vl_7b.safetensors", "type": "qwen_image", "device": "default"},
+        "_meta": {"title": ""}
+    },
+    "39": {
+        "class_type": "VAELoader",
+        "inputs": {"vae_name": "qwen_image_vae.safetensors"},
+        "_meta": {"title": ""}
+    },
+    "76": {
+        "class_type": "TextEncodeQwenImageEdit",
+        "inputs": {"prompt": "Put this logo onto a cardboard", "clip": ["38", 0], "vae": ["39", 0], "image": ["78", 0]},
+        "_meta": {"title": ""}
+    },
+    "77": {
+        "class_type": "TextEncodeQwenImageEdit",
+        "inputs": {"prompt": "", "clip": ["38", 0], "vae": ["39", 0], "image": ["78", 0]},
+        "_meta": {"title": ""}
+    },
+    "78": {
+        "class_type": "LoadImage",
+        "inputs": {"image": "logo1.png"},
+        "_meta": {"title": ""}
+    },
+    "3": {
+        "class_type": "KSampler",
+        "inputs": {
+            "seed": 976480016588017,
+            "steps": 20,
+            "cfg": 2.5,
+            "sampler_name": "euler",
+            "scheduler": "simple",
+            "denoise": 1,
+            "model": ["37", 0],
+            "positive": ["76", 0],
+            "negative": ["77", 0],
+            "latent_image": ["88", 0]
+        },
+        "_meta": {"title": ""}
+    },
+    "88": {
+        "class_type": "VAEEncode",
+        "inputs": {"pixels": ["93", 0], "vae": ["39", 0]},
+        "_meta": {"title": ""}
+    },
+}
+
+QWEN_EDIT_TEMPLATE = {
+    "name": "Qwen Image Edit",
+    "node_mapping": {
+        "positive_prompt": {
+            "match_strategy": "input_slot",
+            "class_type": "KSampler",
+            "input_name": "positive",
+            "widget": "prompt"
+        },
+        "negative_prompt": {
+            "match_strategy": "input_slot",
+            "class_type": "KSampler",
+            "input_name": "negative",
+            "widget": "prompt"
+        },
+        "steps": {
+            "match_strategy": "unique_class",
+            "class_type": "KSampler",
+            "widget": "steps"
+        },
+        "cfg": {
+            "match_strategy": "unique_class",
+            "class_type": "KSampler",
+            "widget": "cfg"
+        },
+        "sampler": {
+            "match_strategy": "unique_class",
+            "class_type": "KSampler",
+            "widget": "sampler_name"
+        },
+        "scheduler": {
+            "match_strategy": "unique_class",
+            "class_type": "KSampler",
+            "widget": "scheduler"
+        },
+    },
+    "synonyms": {}
+}
+
+
+def test_qwen_edit_positive_prompt_via_input_slot(node_matcher):
+    """Qwen Edit: input_slot traces KSampler positive to TextEncodeQwenImageEdit."""
+    result = node_matcher.match_nodes(QWEN_EDIT_WORKFLOW, QWEN_EDIT_TEMPLATE)
+    assert result["positive_prompt"] is not None
+    assert result["positive_prompt"].node_id == "76"
+    assert result["positive_prompt"].widget_name == "prompt"
+    assert result["positive_prompt"].current_value == "Put this logo onto a cardboard"
+
+
+def test_qwen_edit_negative_prompt_via_input_slot(node_matcher):
+    """Qwen Edit: input_slot traces KSampler negative to TextEncodeQwenImageEdit."""
+    result = node_matcher.match_nodes(QWEN_EDIT_WORKFLOW, QWEN_EDIT_TEMPLATE)
+    assert result["negative_prompt"] is not None
+    assert result["negative_prompt"].node_id == "77"
+    assert result["negative_prompt"].widget_name == "prompt"
+    assert result["negative_prompt"].current_value == ""
+
+
+def test_qwen_edit_sampler_params(node_matcher):
+    """Qwen Edit: unique_class matches KSampler params correctly."""
+    result = node_matcher.match_nodes(QWEN_EDIT_WORKFLOW, QWEN_EDIT_TEMPLATE)
+    assert result["steps"].current_value == 20
+    assert result["cfg"].current_value == 2.5
+    assert result["sampler"].current_value == "euler"
+    assert result["scheduler"].current_value == "simple"
+
+
+def test_qwen_edit_no_width_height(node_matcher):
+    """Qwen Edit template should NOT have width/height (uses VAEEncode, not EmptyLatentImage)."""
+    result = node_matcher.match_nodes(QWEN_EDIT_WORKFLOW, QWEN_EDIT_TEMPLATE)
+    assert "width" not in QWEN_EDIT_TEMPLATE["node_mapping"]
+    assert "height" not in QWEN_EDIT_TEMPLATE["node_mapping"]
+
+
+def test_qwen_edit_input_slot_ignores_source_class_type(node_matcher):
+    """input_slot should work regardless of source node class_type (TextEncodeQwenImageEdit vs CLIPTextEncode)."""
+    result = node_matcher.match_nodes(QWEN_EDIT_WORKFLOW, QWEN_EDIT_TEMPLATE)
+    # The source is TextEncodeQwenImageEdit, not CLIPTextEncode — input_slot doesn't care
+    assert result["positive_prompt"] is not None
+    assert result["positive_prompt"].node_id == "76"
+
+
+def test_qwen_edit_apply_preset(node_matcher):
+    """apply_preset should inject values into Qwen Edit workflow."""
+    params = {
+        "positive_prompt": "new edit instruction",
+        "negative_prompt": "bad quality",
+        "steps": 30,
+        "cfg": 3.0,
+        "sampler": "euler_ancestral",
+        "scheduler": "normal",
+    }
+    result = node_matcher.apply_preset(QWEN_EDIT_WORKFLOW, QWEN_EDIT_TEMPLATE, params)
+    assert result["76"]["inputs"]["prompt"] == "new edit instruction"
+    assert result["77"]["inputs"]["prompt"] == "bad quality"
+    assert result["3"]["inputs"]["steps"] == 30
+    assert result["3"]["inputs"]["cfg"] == 3.0
+    assert result["3"]["inputs"]["sampler_name"] == "euler_ancestral"
+    assert result["3"]["inputs"]["scheduler"] == "normal"

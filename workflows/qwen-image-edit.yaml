@@ -1,0 +1,48 @@
+# Qwen Image Edit Workflow Template
+# Supports both TextEncodeQwenImageEdit and TextEncodeQwenImageEditPlus
+# Uses VAEEncode (not EmptyLatentImage), so width/height are not extractable
+# Reference image (LoadImage) is not managed by presets
+
+name: "Qwen Image Edit"
+description: "Qwen Image Edit 图像编辑 workflow（支持文生图和图生图）"
+version: "1.0"
+
+node_mapping:
+  # 提示词 —— 通过 KSampler 的输入连接定位
+  positive_prompt:
+    match_strategy: "input_slot"
+    class_type: "KSampler"
+    input_name: "positive"
+    widget: "prompt"
+
+  negative_prompt:
+    match_strategy: "input_slot"
+    class_type: "KSampler"
+    input_name: "negative"
+    widget: "prompt"
+
+  # 采样参数 —— KSampler 节点
+  sampler:
+    match_strategy: "unique_class"
+    class_type: "KSampler"
+    widget: "sampler_name"
+
+  scheduler:
+    match_strategy: "unique_class"
+    class_type: "KSampler"
+    widget: "scheduler"
+
+  steps:
+    match_strategy: "unique_class"
+    class_type: "KSampler"
+    widget: "steps"
+
+  cfg:
+    match_strategy: "unique_class"
+    class_type: "KSampler"
+    widget: "cfg"
+
+# 同义节点映射
+synonyms:
+  KSamplerAdvanced: "KSampler"
+  KSamplerEfficient: "KSampler"

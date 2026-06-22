@@ -270,3 +270,80 @@ class TestAnimaTemplate:
         data = resp.json()
         assert "KSamplerAdvanced" in data["synonyms"]
         assert data["synonyms"]["KSamplerAdvanced"] == "KSampler"
+
+
+@pytest.mark.e2e
+class TestQwenImageEditTemplate:
+    """Test that Qwen Image Edit template works with input_slot strategy (no width/height)."""
+
+    def test_workflows_include_qwen_image_edit(self, api_base):
+        """GET /preset-manager/workflows should include qwen-image-edit."""
+        resp = httpx.get(f"{api_base}/preset-manager/workflows", timeout=10)
+        assert resp.status_code == 200
+
+        data = resp.json()
+        ids = [t["id"] for t in data]
+        assert "qwen-image-edit" in ids
+
+    def test_qwen_image_edit_template_uses_input_slot(self, api_base):
+        """Qwen Image Edit template should use input_slot for positive/negative prompts."""
+        resp = httpx.get(f"{api_base}/preset-manager/template/qwen-image-edit", timeout=10)
+        assert resp.status_code == 200
+
+        data = resp.json()
+        mapping = data["node_mapping"]
+
+        assert mapping["positive_prompt"]["match_strategy"] == "input_slot"
+        assert mapping["positive_prompt"]["class_type"] == "KSampler"
+        assert mapping["positive_prompt"]["input_name"] == "positive"
+        assert mapping["positive_prompt"]["widget"] == "prompt"
+
+        assert mapping["negative_prompt"]["match_strategy"] == "input_slot"
+        assert mapping["negative_prompt"]["input_name"] == "negative"
+
+    def test_qwen_image_edit_template_has_sampler_params(self, api_base):
+        """Qwen Image Edit template should have steps/cfg/sampler/scheduler via unique_class."""
+        resp = httpx.get(f"{api_base}/preset-manager/template/qwen-image-edit", timeout=10)
+        assert resp.status_code == 200
+
+        data = resp.json()
+        mapping = data["node_mapping"]
+
+        assert mapping["steps"]["match_strategy"] == "unique_class"
+        assert mapping["steps"]["class_type"] == "KSampler"
+        assert mapping["cfg"]["match_strategy"] == "unique_class"
+        assert mapping["sampler"]["match_strategy"] == "unique_class"
+        assert mapping["scheduler"]["match_strategy"] == "unique_class"
+
+    def test_qwen_image_edit_no_width_height(self, api_base):
+        """Qwen Image Edit template should NOT have width/height parameters."""
+        resp = httpx.get(f"{api_base}/preset-manager/template/qwen-image-edit", timeout=10)
+        assert resp.status_code == 200
+
+        data = resp.json()
+        mapping = data["node_mapping"]
+        assert "width" not in mapping
+        assert "height" not in mapping
+
+    def test_qwen_image_edit_has_presets(self, api_base):
+        """GET /preset-manager/presets/qwen-image-edit should return presets."""
+        resp = httpx.get(f"{api_base}/preset-manager/presets/qwen-image-edit", timeout=10)
+        assert resp.status_code == 200
+
+        data = resp.json()
+        assert isinstance(data, list)
+        assert any(p["id"] == "_default" for p in data)
+
+    def test_qwen_image_edit_default_preset_values(self, api_base):
+        """Qwen Image Edit default preset should have correct sampler values."""
+        resp = httpx.get(f"{api_base}/preset-manager/preset/qwen-image-edit/_default", timeout=10)
+        assert resp.status_code == 200
+
+        data = resp.json()
+        params = data["params"]
+        assert params["steps"] == 20
+        assert params["cfg"] == 2.5
+        assert params["sampler"] == "euler"
+        assert params["scheduler"] == "simple"
+        assert "width" not in params
+        assert "height" not in params
