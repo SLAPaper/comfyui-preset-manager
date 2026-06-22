@@ -144,7 +144,8 @@ def _match_input_slot(workflow: dict, param_def: dict, synonyms: dict) -> MatchR
     """
     Match using input_slot strategy.
     Finds a hub node by class_type, then follows a named input connection to the source node.
-    Unlike output_connection, does NOT fall back to the hub node — returns None if not connected.
+    If the source node doesn't have the target widget, recursively follows conditioning-type
+    inputs to handle intermediate nodes (e.g. ReferenceLatent, FluxKontextMultiReferenceLatentMethod).
 
     Args:
         workflow: ComfyUI workflow dict {node_id: {class_type, inputs, _meta}}
@@ -167,14 +168,37 @@ def _match_input_slot(workflow: dict, param_def: dict, synonyms: dict) -> MatchR
     input_val = inputs.get(input_name)
 
     # API format: connected input is [source_node_id, source_output_slot]
-    if isinstance(input_val, list) and len(input_val) == 2:
-        source_id = str(input_val[0])
-        source_data = workflow.get(source_id)
-        if source_data:
-            current_value = source_data.get("inputs", {}).get(widget_name)
-            return MatchResult(node_id=source_id, widget_name=widget_name, current_value=current_value)
+    if not (isinstance(input_val, list) and len(input_val) == 2):
+        return None
 
-    # No fallback — input_slot requires a connection
+    # Follow the connection chain to find the node with the target widget
+    return _follow_to_widget(workflow, str(input_val[0]), widget_name, max_depth=5)
+
+
+def _follow_to_widget(workflow: dict, node_id: str, widget_name: str, max_depth: int) -> MatchResult | None:
+    """
+    Follow connection chain from node_id to find a node that has widget_name.
+    Recursively follows conditioning-type inputs when intermediate nodes lack the widget.
+    """
+    if max_depth <= 0:
+        return None
+
+    source_data = workflow.get(node_id)
+    if not source_data:
+        return None
+
+    # Check if this node has the target widget
+    current_value = source_data.get("inputs", {}).get(widget_name)
+    if current_value is not None:
+        return MatchResult(node_id=node_id, widget_name=widget_name, current_value=current_value)
+
+    # Follow conditioning-type inputs to find the widget source
+    for input_name, input_val in source_data.get("inputs", {}).items():
+        if isinstance(input_val, list) and len(input_val) == 2:
+            result = _follow_to_widget(workflow, str(input_val[0]), widget_name, max_depth - 1)
+            if result is not None:
+                return result
+
     return None
 
 

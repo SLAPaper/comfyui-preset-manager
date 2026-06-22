@@ -680,3 +680,134 @@ def test_qwen_edit_apply_preset(node_matcher):
     assert result["3"]["inputs"]["cfg"] == 3.0
     assert result["3"]["inputs"]["sampler_name"] == "euler_ancestral"
     assert result["3"]["inputs"]["scheduler"] == "normal"
+
+
+# === Tests for input_slot multi-hop (recursive) matching ===
+
+# Qwen Image Edit 2511-like workflow: KSampler ← IntermediateNode ← TextEncode
+QWEN_EDIT_2511_WORKFLOW = {
+    "68": {
+        "class_type": "TextEncodeQwenImageEditPlus",
+        "inputs": {"prompt": "positive edit instruction", "clip": ["61", 0], "image1": ["79", 0]},
+        "_meta": {"title": ""}
+    },
+    "69": {
+        "class_type": "TextEncodeQwenImageEditPlus",
+        "inputs": {"prompt": "", "clip": ["61", 0], "image1": ["79", 0]},
+        "_meta": {"title": ""}
+    },
+    "91": {
+        "class_type": "ReferenceLatent",
+        "inputs": {"conditioning": ["68", 0], "latent": ["75", 0]},
+        "_meta": {"title": ""}
+    },
+    "92": {
+        "class_type": "ReferenceLatent",
+        "inputs": {"conditioning": ["69", 0], "latent": ["75", 0]},
+        "_meta": {"title": ""}
+    },
+    "70": {
+        "class_type": "FluxKontextMultiReferenceLatentMethod",
+        "inputs": {"conditioning": ["91", 0]},
+        "_meta": {"title": ""}
+    },
+    "71": {
+        "class_type": "FluxKontextMultiReferenceLatentMethod",
+        "inputs": {"conditioning": ["92", 0]},
+        "_meta": {"title": ""}
+    },
+    "65": {
+        "class_type": "KSampler",
+        "inputs": {
+            "seed": 374470990866512,
+            "steps": 20,
+            "cfg": 4,
+            "sampler_name": "euler_ancestral",
+            "scheduler": "bong_tangent",
+            "denoise": 1,
+            "model": ["64", 0],
+            "positive": ["70", 0],
+            "negative": ["71", 0],
+            "latent_image": ["98", 0]
+        },
+        "_meta": {"title": ""}
+    },
+}
+
+
+def test_input_slot_follows_multi_hop_to_widget(node_matcher):
+    """input_slot should recursively follow conditioning chain to find the widget source."""
+    template = {
+        "name": "Test Multi-Hop",
+        "node_mapping": {
+            "positive_prompt": {
+                "match_strategy": "input_slot",
+                "class_type": "KSampler",
+                "input_name": "positive",
+                "widget": "prompt"
+            },
+        },
+        "synonyms": {}
+    }
+    result = node_matcher.match_nodes(QWEN_EDIT_2511_WORKFLOW, template)
+    assert result["positive_prompt"] is not None
+    # Should find node 68 (TextEncodeQwenImageEditPlus), NOT node 70 (FluxKontextMultiReferenceLatentMethod)
+    assert result["positive_prompt"].node_id == "68"
+    assert result["positive_prompt"].widget_name == "prompt"
+    assert result["positive_prompt"].current_value == "positive edit instruction"
+
+
+def test_input_slot_multi_hop_negative(node_matcher):
+    """input_slot should follow multi-hop chain for negative prompt too."""
+    template = {
+        "name": "Test Multi-Hop",
+        "node_mapping": {
+            "negative_prompt": {
+                "match_strategy": "input_slot",
+                "class_type": "KSampler",
+                "input_name": "negative",
+                "widget": "prompt"
+            },
+        },
+        "synonyms": {}
+    }
+    result = node_matcher.match_nodes(QWEN_EDIT_2511_WORKFLOW, template)
+    assert result["negative_prompt"] is not None
+    assert result["negative_prompt"].node_id == "69"
+
+
+def test_input_slot_multi_hop_respects_depth_limit(node_matcher):
+    """input_slot should stop at max_depth and return None if chain is too long."""
+    # Create a 6-level deep chain (exceeds max_depth=5)
+    deep_workflow = {
+        "99": {
+            "class_type": "TextEncodeQwenImageEditPlus",
+            "inputs": {"prompt": "deep prompt"},
+            "_meta": {"title": ""}
+        },
+        "98": {"class_type": "Intermediate1", "inputs": {"conditioning": ["99", 0]}, "_meta": {"title": ""}},
+        "97": {"class_type": "Intermediate2", "inputs": {"conditioning": ["98", 0]}, "_meta": {"title": ""}},
+        "96": {"class_type": "Intermediate3", "inputs": {"conditioning": ["97", 0]}, "_meta": {"title": ""}},
+        "95": {"class_type": "Intermediate4", "inputs": {"conditioning": ["96", 0]}, "_meta": {"title": ""}},
+        "94": {"class_type": "Intermediate5", "inputs": {"conditioning": ["95", 0]}, "_meta": {"title": ""}},
+        "93": {"class_type": "Intermediate6", "inputs": {"conditioning": ["94", 0]}, "_meta": {"title": ""}},
+        "3": {
+            "class_type": "KSampler",
+            "inputs": {"positive": ["93", 0], "steps": 20},
+            "_meta": {"title": ""}
+        },
+    }
+    template = {
+        "name": "Test Deep",
+        "node_mapping": {
+            "prompt": {
+                "match_strategy": "input_slot",
+                "class_type": "KSampler",
+                "input_name": "positive",
+                "widget": "prompt"
+            },
+        },
+        "synonyms": {}
+    }
+    result = node_matcher.match_nodes(deep_workflow, template)
+    assert result["prompt"] is None
