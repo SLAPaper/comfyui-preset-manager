@@ -140,6 +140,44 @@ def _match_output_connection(workflow: dict, param_def: dict, synonyms: dict) ->
     return MatchResult(node_id=target_id, widget_name=widget_name, current_value=current_value)
 
 
+def _match_input_slot(workflow: dict, param_def: dict, synonyms: dict) -> MatchResult | None:
+    """
+    Match using input_slot strategy.
+    Finds a hub node by class_type, then follows a named input connection to the source node.
+    Unlike output_connection, does NOT fall back to the hub node — returns None if not connected.
+
+    Args:
+        workflow: ComfyUI workflow dict {node_id: {class_type, inputs, _meta}}
+        param_def: Must have class_type (hub), input_name, widget
+        synonyms: Node type synonym mapping
+
+    Returns:
+        MatchResult pointing to the source node, or None.
+    """
+    hub_class = param_def.get("class_type", "")
+    input_name = param_def.get("input_name", "")
+    widget_name = param_def.get("widget", "")
+
+    hub_nodes = _find_nodes_by_class(workflow, hub_class, synonyms)
+    if len(hub_nodes) != 1:
+        return None
+
+    hub_id, hub_data = hub_nodes[0]
+    inputs = hub_data.get("inputs", {})
+    input_val = inputs.get(input_name)
+
+    # API format: connected input is [source_node_id, source_output_slot]
+    if isinstance(input_val, list) and len(input_val) == 2:
+        source_id = str(input_val[0])
+        source_data = workflow.get(source_id)
+        if source_data:
+            current_value = source_data.get("inputs", {}).get(widget_name)
+            return MatchResult(node_id=source_id, widget_name=widget_name, current_value=current_value)
+
+    # No fallback — input_slot requires a connection
+    return None
+
+
 def match_nodes(workflow: dict, template: dict) -> dict[str, MatchResult | None]:
     """
     Match workflow nodes to template parameters.
@@ -169,6 +207,8 @@ def match_nodes(workflow: dict, template: dict) -> dict[str, MatchResult | None]
             result = _match_title_keyword(workflow, param_def, synonyms)
         elif match_strategy == "output_connection":
             result = _match_output_connection(workflow, param_def, synonyms)
+        elif match_strategy == "input_slot":
+            result = _match_input_slot(workflow, param_def, synonyms)
         else:
             print(f"[PresetManager] [WARN] 未知匹配策略: {match_strategy}")
             continue

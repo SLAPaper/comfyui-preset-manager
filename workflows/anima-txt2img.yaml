@@ -1,0 +1,58 @@
+# Anima Text-to-Image Workflow Template
+# Anima uses UNETLoader + CLIPLoader + VAELoader (not CheckpointLoaderSimple)
+# CLIPTextEncode nodes have no titles, so we use input_slot strategy
+
+name: "Anima Text to Image"
+description: "Anima 基础文生图 workflow"
+version: "1.0"
+
+node_mapping:
+  # 提示词 —— 通过 KSampler 的输入连接定位（CLIPTextEncode 无标题）
+  positive_prompt:
+    match_strategy: "input_slot"
+    class_type: "KSampler"
+    input_name: "positive"
+    widget: "text"
+
+  negative_prompt:
+    match_strategy: "input_slot"
+    class_type: "KSampler"
+    input_name: "negative"
+    widget: "text"
+
+  # 采样参数 —— KSampler 节点
+  sampler:
+    match_strategy: "unique_class"
+    class_type: "KSampler"
+    widget: "sampler_name"
+
+  scheduler:
+    match_strategy: "unique_class"
+    class_type: "KSampler"
+    widget: "scheduler"
+
+  steps:
+    match_strategy: "unique_class"
+    class_type: "KSampler"
+    widget: "steps"
+
+  cfg:
+    match_strategy: "unique_class"
+    class_type: "KSampler"
+    widget: "cfg"
+
+  # 输出尺寸 —— EmptyLatentImage
+  width:
+    match_strategy: "unique_class"
+    class_type: "EmptyLatentImage"
+    widget: "width"
+
+  height:
+    match_strategy: "unique_class"
+    class_type: "EmptyLatentImage"
+    widget: "height"
+
+# 同义节点映射
+synonyms:
+  KSamplerAdvanced: "KSampler"
+  KSamplerEfficient: "KSampler"

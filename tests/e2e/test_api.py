@@ -182,3 +182,91 @@ class TestFluxTemplate:
         assert params["width"] == 768
         assert params["height"] == 1280
         assert params["denoise"] == 1.0
+
+
+@pytest.mark.e2e
+class TestAnimaTemplate:
+    """Test that Anima template works with input_slot strategy."""
+
+    def test_workflows_include_anima(self, api_base):
+        """GET /preset-manager/workflows should include anima-txt2img."""
+        resp = httpx.get(f"{api_base}/preset-manager/workflows", timeout=10)
+        assert resp.status_code == 200
+
+        data = resp.json()
+        ids = [t["id"] for t in data]
+        assert "anima-txt2img" in ids
+
+    def test_anima_template_uses_input_slot_for_prompts(self, api_base):
+        """Anima template should use input_slot strategy for positive/negative prompts."""
+        resp = httpx.get(f"{api_base}/preset-manager/template/anima-txt2img", timeout=10)
+        assert resp.status_code == 200
+
+        data = resp.json()
+        mapping = data["node_mapping"]
+
+        assert mapping["positive_prompt"]["match_strategy"] == "input_slot"
+        assert mapping["positive_prompt"]["class_type"] == "KSampler"
+        assert mapping["positive_prompt"]["input_name"] == "positive"
+        assert mapping["positive_prompt"]["widget"] == "text"
+
+        assert mapping["negative_prompt"]["match_strategy"] == "input_slot"
+        assert mapping["negative_prompt"]["class_type"] == "KSampler"
+        assert mapping["negative_prompt"]["input_name"] == "negative"
+
+    def test_anima_template_uses_unique_class_for_sampler(self, api_base):
+        """Anima template should use unique_class for sampler params."""
+        resp = httpx.get(f"{api_base}/preset-manager/template/anima-txt2img", timeout=10)
+        assert resp.status_code == 200
+
+        data = resp.json()
+        mapping = data["node_mapping"]
+
+        assert mapping["steps"]["match_strategy"] == "unique_class"
+        assert mapping["steps"]["class_type"] == "KSampler"
+        assert mapping["cfg"]["match_strategy"] == "unique_class"
+        assert mapping["sampler"]["match_strategy"] == "unique_class"
+        assert mapping["scheduler"]["match_strategy"] == "unique_class"
+
+    def test_anima_template_uses_empty_latent_image(self, api_base):
+        """Anima template should use EmptyLatentImage for width/height."""
+        resp = httpx.get(f"{api_base}/preset-manager/template/anima-txt2img", timeout=10)
+        assert resp.status_code == 200
+
+        data = resp.json()
+        mapping = data["node_mapping"]
+
+        assert mapping["width"]["class_type"] == "EmptyLatentImage"
+        assert mapping["height"]["class_type"] == "EmptyLatentImage"
+
+    def test_anima_has_presets(self, api_base):
+        """GET /preset-manager/presets/anima-txt2img should return presets."""
+        resp = httpx.get(f"{api_base}/preset-manager/presets/anima-txt2img", timeout=10)
+        assert resp.status_code == 200
+
+        data = resp.json()
+        assert isinstance(data, list)
+        assert any(p["id"] == "_default" for p in data)
+
+    def test_anima_default_preset_values(self, api_base):
+        """Anima default preset should have correct values."""
+        resp = httpx.get(f"{api_base}/preset-manager/preset/anima-txt2img/_default", timeout=10)
+        assert resp.status_code == 200
+
+        data = resp.json()
+        params = data["params"]
+        assert params["width"] == 1024
+        assert params["height"] == 1024
+        assert params["steps"] == 35
+        assert params["cfg"] == 5
+        assert params["sampler"] == "euler_ancestral"
+        assert params["scheduler"] == "bong_tangent"
+
+    def test_anima_template_has_synonyms(self, api_base):
+        """Anima template should have KSamplerAdvanced synonym."""
+        resp = httpx.get(f"{api_base}/preset-manager/template/anima-txt2img", timeout=10)
+        assert resp.status_code == 200
+
+        data = resp.json()
+        assert "KSamplerAdvanced" in data["synonyms"]
+        assert data["synonyms"]["KSamplerAdvanced"] == "KSampler"

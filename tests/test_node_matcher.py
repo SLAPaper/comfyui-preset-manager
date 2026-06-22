@@ -296,3 +296,230 @@ def test_apply_preset_with_output_connection(node_matcher):
     assert result["50"]["inputs"]["value"] == 1024
     # height should be injected into PrimitiveInt id=51
     assert result["51"]["inputs"]["value"] == 1024
+
+
+# === Tests for input_slot strategy ===
+
+
+# Anima-like workflow: CLIPTextEncode nodes have NO titles
+ANIMA_WORKFLOW = {
+    "1": {
+        "class_type": "UNETLoader",
+        "inputs": {"unet_name": "anima/model.safetensors", "weight_dtype": "default"},
+        "_meta": {"title": ""}
+    },
+    "2": {
+        "class_type": "CLIPLoader",
+        "inputs": {"clip_name": "qwen_3_06b_base.safetensors", "type": "stable_diffusion", "device": "default"},
+        "_meta": {"title": ""}
+    },
+    "3": {
+        "class_type": "CLIPTextEncode",
+        "inputs": {"text": "positive prompt text", "clip": ["2", 0]},
+        "_meta": {"title": ""}
+    },
+    "4": {
+        "class_type": "CLIPTextEncode",
+        "inputs": {"text": "negative prompt text", "clip": ["2", 0]},
+        "_meta": {"title": ""}
+    },
+    "5": {
+        "class_type": "EmptyLatentImage",
+        "inputs": {"width": 1024, "height": 1024, "batch_size": 1},
+        "_meta": {"title": ""}
+    },
+    "17": {
+        "class_type": "KSampler",
+        "inputs": {
+            "seed": 783399240628280,
+            "steps": 35,
+            "cfg": 5,
+            "sampler_name": "euler_ancestral",
+            "scheduler": "bong_tangent",
+            "denoise": 1,
+            "model": ["1", 0],
+            "positive": ["3", 0],
+            "negative": ["4", 0],
+            "latent_image": ["5", 0]
+        },
+        "_meta": {"title": ""}
+    },
+}
+
+ANIMA_TEMPLATE = {
+    "name": "Anima Test",
+    "node_mapping": {
+        "positive_prompt": {
+            "match_strategy": "input_slot",
+            "class_type": "KSampler",
+            "input_name": "positive",
+            "widget": "text"
+        },
+        "negative_prompt": {
+            "match_strategy": "input_slot",
+            "class_type": "KSampler",
+            "input_name": "negative",
+            "widget": "text"
+        },
+        "steps": {
+            "match_strategy": "unique_class",
+            "class_type": "KSampler",
+            "widget": "steps"
+        },
+        "cfg": {
+            "match_strategy": "unique_class",
+            "class_type": "KSampler",
+            "widget": "cfg"
+        },
+        "sampler": {
+            "match_strategy": "unique_class",
+            "class_type": "KSampler",
+            "widget": "sampler_name"
+        },
+        "scheduler": {
+            "match_strategy": "unique_class",
+            "class_type": "KSampler",
+            "widget": "scheduler"
+        },
+        "width": {
+            "match_strategy": "unique_class",
+            "class_type": "EmptyLatentImage",
+            "widget": "width"
+        },
+        "height": {
+            "match_strategy": "unique_class",
+            "class_type": "EmptyLatentImage",
+            "widget": "height"
+        },
+    },
+    "synonyms": {
+        "KSamplerAdvanced": "KSampler"
+    }
+}
+
+
+def test_match_input_slot_follows_positive_input(node_matcher):
+    """input_slot should trace KSampler's positive input to CLIPTextEncode."""
+    result = node_matcher.match_nodes(ANIMA_WORKFLOW, ANIMA_TEMPLATE)
+    assert result["positive_prompt"] is not None
+    assert result["positive_prompt"].node_id == "3"
+    assert result["positive_prompt"].widget_name == "text"
+    assert result["positive_prompt"].current_value == "positive prompt text"
+
+
+def test_match_input_slot_follows_negative_input(node_matcher):
+    """input_slot should trace KSampler's negative input to CLIPTextEncode."""
+    result = node_matcher.match_nodes(ANIMA_WORKFLOW, ANIMA_TEMPLATE)
+    assert result["negative_prompt"] is not None
+    assert result["negative_prompt"].node_id == "4"
+    assert result["negative_prompt"].widget_name == "text"
+    assert result["negative_prompt"].current_value == "negative prompt text"
+
+
+def test_match_input_slot_returns_none_for_missing_hub(node_matcher):
+    """input_slot should return None when hub node (KSampler) doesn't exist."""
+    template = {
+        "name": "Test",
+        "node_mapping": {
+            "prompt": {
+                "match_strategy": "input_slot",
+                "class_type": "NonExistentHub",
+                "input_name": "positive",
+                "widget": "text"
+            }
+        },
+        "synonyms": {}
+    }
+    result = node_matcher.match_nodes(ANIMA_WORKFLOW, template)
+    assert result["prompt"] is None
+
+
+def test_match_input_slot_returns_none_when_not_connected(node_matcher):
+    """input_slot should return None when the input slot has no connection."""
+    workflow = {
+        "17": {
+            "class_type": "KSampler",
+            "inputs": {
+                "positive": "direct value string",
+                "steps": 20
+            },
+            "_meta": {"title": ""}
+        }
+    }
+    template = {
+        "name": "Test",
+        "node_mapping": {
+            "prompt": {
+                "match_strategy": "input_slot",
+                "class_type": "KSampler",
+                "input_name": "positive",
+                "widget": "text"
+            }
+        },
+        "synonyms": {}
+    }
+    result = node_matcher.match_nodes(workflow, template)
+    assert result["prompt"] is None
+
+
+def test_match_input_slot_with_synonyms(node_matcher):
+    """input_slot should handle synonyms (KSamplerAdvanced -> KSampler)."""
+    workflow = {
+        "17": {
+            "class_type": "KSamplerAdvanced",
+            "inputs": {
+                "positive": ["3", 0],
+                "negative": ["4", 0],
+                "steps": 20
+            },
+            "_meta": {"title": ""}
+        },
+        "3": {
+            "class_type": "CLIPTextEncode",
+            "inputs": {"text": "test prompt"},
+            "_meta": {"title": ""}
+        },
+    }
+    template = {
+        "name": "Test",
+        "node_mapping": {
+            "prompt": {
+                "match_strategy": "input_slot",
+                "class_type": "KSampler",
+                "input_name": "positive",
+                "widget": "text"
+            }
+        },
+        "synonyms": {"KSamplerAdvanced": "KSampler"}
+    }
+    result = node_matcher.match_nodes(workflow, template)
+    assert result["prompt"] is not None
+    assert result["prompt"].node_id == "3"
+
+
+def test_match_input_slot_unique_class_still_works(node_matcher):
+    """unique_class and input_slot should work together in the same template."""
+    result = node_matcher.match_nodes(ANIMA_WORKFLOW, ANIMA_TEMPLATE)
+    assert result["positive_prompt"] is not None
+    assert result["negative_prompt"] is not None
+    assert result["steps"] is not None
+    assert result["steps"].node_id == "17"
+    assert result["cfg"] is not None
+    assert result["sampler"] is not None
+    assert result["scheduler"] is not None
+    assert result["width"] is not None
+    assert result["height"] is not None
+
+
+def test_apply_preset_with_input_slot(node_matcher):
+    """apply_preset() should inject values through input_slot strategy."""
+    params = {
+        "positive_prompt": "new positive",
+        "negative_prompt": "new negative",
+        "steps": 20,
+        "cfg": 7.0,
+    }
+    result = node_matcher.apply_preset(ANIMA_WORKFLOW, ANIMA_TEMPLATE, params)
+    assert result["3"]["inputs"]["text"] == "new positive"
+    assert result["4"]["inputs"]["text"] == "new negative"
+    assert result["17"]["inputs"]["steps"] == 20

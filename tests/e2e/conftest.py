@@ -19,12 +19,25 @@ COMFYUI_DIR = PLUGIN_DIR.parent.parent  # custom_nodes/comfyui-preset-manager ->
 PORT = 18188
 
 
+def _get_comfyui_python() -> str:
+    """Find the ComfyUI venv Python, falling back to sys.executable."""
+    venv_python = COMFYUI_DIR / "venv" / "Scripts" / "python.exe"
+    if venv_python.is_file():
+        return str(venv_python)
+    # Unix-style venv
+    venv_python_unix = COMFYUI_DIR / "venv" / "bin" / "python"
+    if venv_python_unix.is_file():
+        return str(venv_python_unix)
+    return sys.executable
+
+
 @pytest.fixture(scope="session")
 def comfyui_server():
     """Start a lightweight ComfyUI instance with only preset-manager loaded."""
+    python_exe = _get_comfyui_python()
     proc = subprocess.Popen(
         [
-            sys.executable, "main.py",
+            python_exe, "main.py",
             "--cpu", "--port", str(PORT),
             "--disable-all-custom-nodes",
             "--whitelist-custom-nodes", "comfyui-preset-manager",

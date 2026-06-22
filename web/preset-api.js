@@ -143,6 +143,27 @@ export function findNodeByTemplate(graph, paramDef, synonyms) {
         return { node: target, widgetName: paramDef.widget };
     }
 
+    if (paramDef.match_strategy === "input_slot") {
+        const hubNodes = graph.nodes.filter(n => n.type === effectiveType);
+        if (hubNodes.length !== 1) return null;
+
+        const hub = hubNodes[0];
+        const input = hub.inputs?.find(i => i.name === paramDef.input_name);
+
+        if (input?.link != null) {
+            const link = graph.links[input.link];
+            if (link) {
+                const sourceNode = graph.nodes.find(n => n.id === link.origin_id);
+                if (sourceNode) {
+                    return { node: sourceNode, widgetName: paramDef.widget };
+                }
+            }
+        }
+
+        // No fallback — input_slot requires a connection
+        return null;
+    }
+
     const nodes = graph.nodes.filter(n => n.type === effectiveType);
     if (nodes.length === 0) return null;
 

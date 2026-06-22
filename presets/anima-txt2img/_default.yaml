@@ -1,0 +1,21 @@
+# Anima 默认采样配置
+# 提供开箱即用的 Anima 文生图参数默认值
+
+name: "默认配置"
+description: "Anima 默认采样配置"
+workflow_template: "anima-txt2img"
+
+params:
+  # 提示词
+  positive_prompt: "masterpiece, best quality, newest, highres, absurdres, safe"
+  negative_prompt: "low quality, worst quality, normal quality, text, signature, jpeg artifacts"
+
+  # 输出尺寸
+  width: 1024
+  height: 1024
+
+  # 采样参数
+  steps: 35
+  cfg: 5
+  sampler: "euler_ancestral"
+  scheduler: "bong_tangent"
