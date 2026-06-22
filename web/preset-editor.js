@@ -52,11 +52,11 @@ export class PresetEditorDialog extends ComfyDialog {
                 $el("div.preset-editor-mode", [
                     $el("button.comfy-btn.mode-btn.active", {
                         textContent: "表单模式",
-                        onclick: () => this.setMode('form')
+                        onclick: (e) => this.setMode('form', e)
                     }),
                     $el("button.comfy-btn.mode-btn", {
                         textContent: "代码模式",
-                        onclick: () => this.setMode('code')
+                        onclick: (e) => this.setMode('code', e)
                     })
                 ]),
                 
@@ -381,23 +381,25 @@ export class PresetEditorDialog extends ComfyDialog {
     /**
      * Set the editor mode (form or code).
      */
-    setMode(mode) {
+    setMode(mode, evt) {
+        // Sync data to code editor BEFORE switching mode
+        // (getPresetData() reads from form when mode is 'form', from textarea when 'code')
+        if (mode === "code") {
+            const data = this.getPresetData();
+            this.codeEditor.value = JSON.stringify(data, null, 2);
+        }
+        
         this.mode = mode;
         
         // Update button states
         const buttons = this.element.querySelectorAll(".mode-btn");
         buttons.forEach(btn => btn.classList.remove("active"));
-        event.target.classList.add("active");
+        const target = evt?.target?.closest(".mode-btn") || evt?.target;
+        if (target) target.classList.add("active");
         
         // Show/hide containers
         this.formContainer.style.display = mode === "form" ? "block" : "none";
         this.codeContainer.style.display = mode === "code" ? "block" : "none";
-        
-        // Sync data to code editor when switching to code mode
-        if (mode === "code") {
-            const data = this.getPresetData();
-            this.codeEditor.value = JSON.stringify(data, null, 2);
-        }
     }
     
     /**
