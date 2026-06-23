@@ -42,6 +42,19 @@ node_mapping:
     class_type: "KSampler"
     widget: "cfg"
 
+  # 输出尺寸 —— 通过 KSampler 的 latent_image 输入追踪到 EmptySD3LatentImage
+  width:
+    match_strategy: "input_slot"
+    class_type: "KSampler"
+    input_name: "latent_image"
+    widget: "width"
+
+  height:
+    match_strategy: "input_slot"
+    class_type: "KSampler"
+    input_name: "latent_image"
+    widget: "height"
+
 # 同义节点映射
 synonyms:
   KSamplerAdvanced: "KSampler"

@@ -5,3 +5,5 @@ params:
   cfg: 2.5
   sampler: "euler"
   scheduler: "simple"
+  width: 1328
+  height: 1328

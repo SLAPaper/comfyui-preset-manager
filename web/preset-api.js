@@ -118,6 +118,39 @@ export async function savePreset(presetData) {
  * @param {Object} synonyms - Node type synonym mapping
  * @returns {{node: Object, widgetName: string} | null}
  */
+/**
+ * Follow connection chain from nodeId to find a node that has the target widget.
+ * Recursively follows inputs when intermediate nodes lack the widget.
+ * @param {Object} graph - ComfyUI LiteGraph instance
+ * @param {number} nodeId - Starting node ID
+ * @param {string} widgetName - Widget name to find
+ * @param {number} maxDepth - Maximum recursion depth
+ * @returns {{node: Object, widgetName: string} | null}
+ */
+function followToWidget(graph, nodeId, widgetName, maxDepth) {
+    if (maxDepth <= 0) return null;
+
+    const node = graph.nodes.find(n => n.id === nodeId);
+    if (!node) return null;
+
+    // Check if this node has the target widget
+    const widget = node.widgets?.find(w => w.name === widgetName);
+    if (widget) return { node, widgetName };
+
+    // Follow inputs to find the widget source
+    for (const inp of (node.inputs || [])) {
+        if (inp.link != null) {
+            const link = graph.links[inp.link];
+            if (link) {
+                const result = followToWidget(graph, link.origin_id, widgetName, maxDepth - 1);
+                if (result) return result;
+            }
+        }
+    }
+
+    return null;
+}
+
 export function findNodeByTemplate(graph, paramDef, synonyms) {
     const classType = paramDef.class_type || paramDef.target_class_type;
     const effectiveType = synonyms[classType] || classType;
@@ -153,10 +186,8 @@ export function findNodeByTemplate(graph, paramDef, synonyms) {
         if (input?.link != null) {
             const link = graph.links[input.link];
             if (link) {
-                const sourceNode = graph.nodes.find(n => n.id === link.origin_id);
-                if (sourceNode) {
-                    return { node: sourceNode, widgetName: paramDef.widget };
-                }
+                // Follow connection chain to find node with the target widget
+                return followToWidget(graph, link.origin_id, paramDef.widget, 5);
             }
         }
 
@@ -207,7 +238,7 @@ export async function getCurrentWorkflowParams(templateId) {
         if (widget) {
             params.push({
                 name,
-                nodeType: def.class_type,
+                nodeType: result.node.type,
                 nodeId: String(result.node.id),
                 value: widget.value
             });

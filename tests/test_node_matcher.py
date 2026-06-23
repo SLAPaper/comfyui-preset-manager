@@ -570,13 +570,18 @@ QWEN_EDIT_WORKFLOW = {
             "model": ["37", 0],
             "positive": ["76", 0],
             "negative": ["77", 0],
-            "latent_image": ["88", 0]
+            "latent_image": ["89", 0]
         },
         "_meta": {"title": ""}
     },
     "88": {
         "class_type": "VAEEncode",
         "inputs": {"pixels": ["93", 0], "vae": ["39", 0]},
+        "_meta": {"title": ""}
+    },
+    "89": {
+        "class_type": "EmptySD3LatentImage",
+        "inputs": {"width": 1328, "height": 1328, "batch_size": 1},
         "_meta": {"title": ""}
     },
 }
@@ -616,6 +621,18 @@ QWEN_EDIT_TEMPLATE = {
             "class_type": "KSampler",
             "widget": "scheduler"
         },
+        "width": {
+            "match_strategy": "input_slot",
+            "class_type": "KSampler",
+            "input_name": "latent_image",
+            "widget": "width"
+        },
+        "height": {
+            "match_strategy": "input_slot",
+            "class_type": "KSampler",
+            "input_name": "latent_image",
+            "widget": "height"
+        },
     },
     "synonyms": {}
 }
@@ -649,10 +666,14 @@ def test_qwen_edit_sampler_params(node_matcher):
 
 
 def test_qwen_edit_no_width_height(node_matcher):
-    """Qwen Edit template should NOT have width/height (uses VAEEncode, not EmptyLatentImage)."""
+    """Qwen Edit template should use EmptySD3LatentImage for width/height."""
     result = node_matcher.match_nodes(QWEN_EDIT_WORKFLOW, QWEN_EDIT_TEMPLATE)
-    assert "width" not in QWEN_EDIT_TEMPLATE["node_mapping"]
-    assert "height" not in QWEN_EDIT_TEMPLATE["node_mapping"]
+    assert "width" in QWEN_EDIT_TEMPLATE["node_mapping"]
+    assert "height" in QWEN_EDIT_TEMPLATE["node_mapping"]
+    assert result["width"] is not None
+    assert result["width"].current_value == 1328
+    assert result["height"] is not None
+    assert result["height"].current_value == 1328
 
 
 def test_qwen_edit_input_slot_ignores_source_class_type(node_matcher):
@@ -672,6 +693,8 @@ def test_qwen_edit_apply_preset(node_matcher):
         "cfg": 3.0,
         "sampler": "euler_ancestral",
         "scheduler": "normal",
+        "width": 1024,
+        "height": 1024,
     }
     result = node_matcher.apply_preset(QWEN_EDIT_WORKFLOW, QWEN_EDIT_TEMPLATE, params)
     assert result["76"]["inputs"]["prompt"] == "new edit instruction"
@@ -680,6 +703,8 @@ def test_qwen_edit_apply_preset(node_matcher):
     assert result["3"]["inputs"]["cfg"] == 3.0
     assert result["3"]["inputs"]["sampler_name"] == "euler_ancestral"
     assert result["3"]["inputs"]["scheduler"] == "normal"
+    assert result["89"]["inputs"]["width"] == 1024
+    assert result["89"]["inputs"]["height"] == 1024
 
 
 # === Tests for input_slot multi-hop (recursive) matching ===

@@ -315,15 +315,17 @@ class TestQwenImageEditTemplate:
         assert mapping["sampler"]["match_strategy"] == "unique_class"
         assert mapping["scheduler"]["match_strategy"] == "unique_class"
 
-    def test_qwen_image_edit_no_width_height(self, api_base):
-        """Qwen Image Edit template should NOT have width/height parameters."""
+    def test_qwen_image_edit_has_width_height(self, api_base):
+        """Qwen Image Edit template should use input_slot for width/height via latent_image."""
         resp = httpx.get(f"{api_base}/preset-manager/template/qwen-image-edit", timeout=10)
         assert resp.status_code == 200
 
         data = resp.json()
         mapping = data["node_mapping"]
-        assert "width" not in mapping
-        assert "height" not in mapping
+        assert mapping["width"]["match_strategy"] == "input_slot"
+        assert mapping["width"]["input_name"] == "latent_image"
+        assert mapping["height"]["match_strategy"] == "input_slot"
+        assert mapping["height"]["input_name"] == "latent_image"
 
     def test_qwen_image_edit_has_presets(self, api_base):
         """GET /preset-manager/presets/qwen-image-edit should return presets."""
@@ -345,5 +347,5 @@ class TestQwenImageEditTemplate:
         assert params["cfg"] == 2.5
         assert params["sampler"] == "euler"
         assert params["scheduler"] == "simple"
-        assert "width" not in params
-        assert "height" not in params
+        assert params["width"] == 1328
+        assert params["height"] == 1328
