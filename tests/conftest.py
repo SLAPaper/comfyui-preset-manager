@@ -229,3 +229,9 @@ def preset_manager():
 def mapping_manager():
     """Import and return the mapping_manager module."""
     return _import_module_from_file("mapping_manager", PLUGIN_DIR / "mapping_manager.py")
+
+
+@pytest.fixture
+def sweep_manager():
+    """Import and return the sweep_manager module."""
+    return _import_module_from_file("sweep_manager", PLUGIN_DIR / "sweep_manager.py")

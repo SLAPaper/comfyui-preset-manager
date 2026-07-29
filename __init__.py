@@ -9,12 +9,13 @@ try:
     from .node_matcher import match_nodes, apply_preset
     from .preset_manager import load_presets, get_preset, save_preset, delete_preset
     from .mapping_manager import load_mapping, save_mapping
+    from .sweep_manager import load_sweeps, get_sweep, save_sweep, delete_sweep, expand
 except ImportError:
     # Fallback for testing outside ComfyUI (relative import without package context)
     import importlib.util as _ilu
     import sys
     _dir = Path(__file__).parent
-    for _name in ("workflow_parser", "node_matcher", "preset_manager", "mapping_manager"):
+    for _name in ("workflow_parser", "node_matcher", "preset_manager", "mapping_manager", "sweep_manager"):
         _spec = _ilu.spec_from_file_location(_name, str(_dir / f"{_name}.py"))
         _mod = _ilu.module_from_spec(_spec)
         _spec.loader.exec_module(_mod)
@@ -23,6 +24,7 @@ except ImportError:
     from node_matcher import match_nodes, apply_preset
     from preset_manager import load_presets, get_preset, save_preset, delete_preset
     from mapping_manager import load_mapping, save_mapping
+    from sweep_manager import load_sweeps, get_sweep, save_sweep, delete_sweep, expand
 
 PLUGIN_DIR = Path(__file__).parent
 
@@ -146,6 +148,73 @@ def _register_routes():
             })
         except Exception as e:
             print(f"[PresetManager] API: 应用预设异常: {e}")
+            return web.json_response({"error": str(e)}, status=500)
+
+    @routes.get("/preset-manager/sweeps/{template_id}")
+    async def get_sweeps(request):
+        """Get sweep list for a template."""
+        template_id = request.match_info["template_id"]
+        print(f"[PresetManager] API: 获取扫描配置列表 ({template_id})")
+        return web.json_response(load_sweeps(template_id))
+
+    @routes.get("/preset-manager/sweep/{template_id}/{sweep_id}")
+    async def get_sweep_detail(request):
+        """Get a single sweep config."""
+        template_id = request.match_info["template_id"]
+        sweep_id = request.match_info["sweep_id"]
+        print(f"[PresetManager] API: 获取扫描配置详情 ({template_id}/{sweep_id})")
+        sweep = get_sweep(template_id, sweep_id)
+        if sweep is None:
+            return web.json_response({"error": "Sweep not found"}, status=404)
+        return web.json_response(sweep)
+
+    @routes.post("/preset-manager/sweep")
+    async def save_sweep_endpoint(request):
+        """Create or update a sweep config."""
+        try:
+            data = await request.json()
+            template_id = data.get("workflow_template")
+            sweep_id = data.get("id")
+            print(f"[PresetManager] API: 保存扫描配置 ({template_id}/{sweep_id})")
+
+            if not template_id or not sweep_id:
+                return web.json_response({"error": "Missing workflow_template or id"}, status=400)
+
+            save_sweep(template_id, sweep_id, data)
+            return web.json_response({"status": "ok"})
+        except Exception as e:
+            print(f"[PresetManager] API: 保存扫描配置异常: {e}")
+            return web.json_response({"error": str(e)}, status=500)
+
+    @routes.delete("/preset-manager/sweep/{template_id}/{sweep_id}")
+    async def delete_sweep_endpoint(request):
+        """Delete a sweep config."""
+        template_id = request.match_info["template_id"]
+        sweep_id = request.match_info["sweep_id"]
+        print(f"[PresetManager] API: 删除扫描配置 ({template_id}/{sweep_id})")
+        if delete_sweep(template_id, sweep_id):
+            return web.json_response({"status": "ok"})
+        return web.json_response({"error": "Sweep not found"}, status=404)
+
+    @routes.post("/preset-manager/sweep/expand")
+    async def expand_sweep_endpoint(request):
+        """Expand a sweep config into its list of combinations."""
+        try:
+            data = await request.json()
+            template_id = data.get("workflow_template")
+            sweep = data.get("sweep")
+            print(f"[PresetManager] API: 展开扫描配置 ({template_id})")
+
+            if not template_id or sweep is None:
+                return web.json_response({"error": "Missing workflow_template or sweep"}, status=400)
+
+            presets = {p["id"]: get_preset(template_id, p["id"]) for p in load_presets(template_id)}
+            combos = expand(sweep, presets)
+            return web.json_response({"combinations": combos})
+        except KeyError as e:
+            return web.json_response({"error": str(e)}, status=400)
+        except Exception as e:
+            print(f"[PresetManager] API: 展开扫描配置异常: {e}")
             return web.json_response({"error": str(e)}, status=500)
 
     @routes.get("/preset-manager/mapping")
