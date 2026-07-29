@@ -9,7 +9,7 @@
  */
 
 import { app } from "../../scripts/app.js";
-import { getWorkflows, getPresets, getPresetDetail, applyPreset, getMapping, saveMapping, getCurrentWorkflowParams, getTemplateDetail, findNodeByTemplate } from "./preset-api.js";
+import { getWorkflows, getPresets, getPresetDetail, getMapping, saveMapping, getCurrentWorkflowParams, getTemplateDetail, findNodeByTemplate, applyParamsToGraph } from "./preset-api.js";
 import { PresetEditorDialog } from "./preset-editor.js";
 
 // Use new API to avoid deprecation warnings
@@ -550,48 +550,9 @@ export class PresetDialog extends ComfyDialog {
             if (!this.currentTemplate) {
                 this.currentTemplate = await getTemplateDetail(this.selectedTemplate);
             }
-            const template = this.currentTemplate;
-            const synonyms = template.synonyms || {};
-            
-            // Apply preset directly to current graph
-            const graph = app.graph;
-            let successCount = 0;
-            let totalCount = 0;
-            
-            // For each parameter in preset, find the matching node and update it
-            for (const [paramName, value] of Object.entries(params)) {
-                totalCount++;
-                
-                const paramDef = template.node_mapping[paramName];
-                if (!paramDef) {
-                    console.warn(`[PresetManager] No mapping definition for ${paramName}`);
-                    continue;
-                }
-                
-                const result = findNodeByTemplate(graph, paramDef, synonyms);
-                if (result) {
-                    const { node, widgetName } = result;
-                    const widget = node.widgets?.find(w => w.name === widgetName);
-                    if (widget) {
-                        widget.value = value;
-                        successCount++;
-                        console.log(`[PresetManager] Set ${paramName} = ${value} on node ${node.id}`);
-                    } else {
-                        console.warn(`[PresetManager] Widget ${widgetName} not found on node ${node.id}`);
-                    }
-                } else {
-                    console.warn(`[PresetManager] Node not found for ${paramName}`);
-                }
-            }
-            
-            // Force graph refresh
-            graph.setDirtyCanvas(true, true);
-            for (const node of graph.nodes) {
-                if (node.setDirtyCanvas) {
-                    node.setDirtyCanvas(true, true);
-                }
-            }
-            
+            const { successCount, totalCount } = applyParamsToGraph(
+                app.graph, this.currentTemplate, params
+            );
             console.log(`[PresetManager] Applied ${successCount}/${totalCount} parameters`);
             
             // Save mapping for future auto-detection

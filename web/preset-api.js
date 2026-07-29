@@ -220,6 +220,51 @@ export function findNodeByTemplate(graph, paramDef, synonyms) {
 }
 
 /**
+ * Apply a set of parameter values to the graph using a template's node_mapping.
+ * @param {Object} graph - ComfyUI LiteGraph instance
+ * @param {Object} template - Template with node_mapping and synonyms
+ * @param {Object} params - {paramName: value}
+ * @returns {{successCount: number, totalCount: number, failed: string[]}}
+ */
+export function applyParamsToGraph(graph, template, params) {
+    const synonyms = template.synonyms || {};
+    const failed = [];
+    let successCount = 0;
+    let totalCount = 0;
+
+    for (const [paramName, value] of Object.entries(params)) {
+        totalCount++;
+
+        const paramDef = template.node_mapping[paramName];
+        if (!paramDef) {
+            console.warn(`[PresetManager] No mapping definition for ${paramName}`);
+            failed.push(paramName);
+            continue;
+        }
+
+        const result = findNodeByTemplate(graph, paramDef, synonyms);
+        if (!result) {
+            console.warn(`[PresetManager] Node not found for ${paramName}`);
+            failed.push(paramName);
+            continue;
+        }
+
+        const widget = result.node.widgets?.find(w => w.name === result.widgetName);
+        if (!widget) {
+            console.warn(`[PresetManager] Widget ${result.widgetName} not found on node ${result.node.id}`);
+            failed.push(paramName);
+            continue;
+        }
+
+        widget.value = value;
+        successCount++;
+    }
+
+    graph.setDirtyCanvas(true, true);
+    return { successCount, totalCount, failed };
+}
+
+/**
  * Get the current workflow parameters using a template's node_mapping.
  * @param {string} templateId - The template ID to use for parameter extraction
  * @returns {Promise<Array<{name: string, nodeType: string, nodeId: string, value: any}>>}

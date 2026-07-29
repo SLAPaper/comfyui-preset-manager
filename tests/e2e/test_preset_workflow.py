@@ -127,6 +127,54 @@ class TestPresetWorkflow:
         assert not await dialog.is_visible(), "Dialog should close after applying preset"
 
     @pytest.mark.asyncio
+    async def test_apply_params_writes_values_into_graph(self, page):
+        """applyParamsToGraph should write values onto the matched widgets."""
+        await page.wait_for_timeout(3000)
+
+        result = await page.evaluate("""async () => {
+            const api = await import('/extensions/comfyui-preset-manager/preset-api.js');
+            const { app } = await import('/scripts/app.js');
+
+            const template = await api.getTemplateDetail('sdxl-txt2img');
+            const outcome = api.applyParamsToGraph(app.graph, template, {
+                steps: 33,
+                cfg: 6.5,
+            });
+
+            const ks = app.graph.nodes.find(n => n.type === 'KSampler');
+            return {
+                outcome,
+                steps: ks?.widgets?.find(w => w.name === 'steps')?.value,
+                cfg: ks?.widgets?.find(w => w.name === 'cfg')?.value,
+            };
+        }""")
+
+        assert result["outcome"]["failed"] == []
+        assert result["outcome"]["successCount"] == 2
+        assert result["steps"] == 33
+        assert result["cfg"] == 6.5
+
+    @pytest.mark.asyncio
+    async def test_apply_params_reports_unmatched_params(self, page):
+        """Params with no mapping should be reported in failed, not silently dropped."""
+        await page.wait_for_timeout(3000)
+
+        result = await page.evaluate("""async () => {
+            const api = await import('/extensions/comfyui-preset-manager/preset-api.js');
+            const { app } = await import('/scripts/app.js');
+
+            const template = await api.getTemplateDetail('sdxl-txt2img');
+            return api.applyParamsToGraph(app.graph, template, {
+                steps: 12,
+                no_such_param: 1,
+            });
+        }""")
+
+        assert result["failed"] == ["no_such_param"]
+        assert result["successCount"] == 1
+        assert result["totalCount"] == 2
+
+    @pytest.mark.asyncio
     async def test_editor_width_consistent_between_modes(self, page):
         """Editor dialog width should not change when switching between form and code mode."""
         await page.wait_for_timeout(3000)
