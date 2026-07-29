@@ -155,6 +155,48 @@ class TestPresetWorkflow:
         assert result["cfg"] == 6.5
 
     @pytest.mark.asyncio
+    async def test_sweep_button_is_visible(self, page):
+        """The Sweeps top bar button should exist alongside Presets."""
+        await page.wait_for_timeout(3000)
+        sweeps_btn = page.locator("button", has_text="Sweeps")
+        await sweeps_btn.first.wait_for(state="attached", timeout=5000)
+
+    @pytest.mark.asyncio
+    async def test_sweep_dialog_opens_and_lists_templates(self, page):
+        """Opening the sweep dialog should display a template selector."""
+        await page.wait_for_timeout(3000)
+        sweeps_btn = page.locator("button", has_text="Sweeps").first
+        await sweeps_btn.click()
+
+        dialog = page.locator(".comfy-sweep-dialog")
+        await dialog.wait_for(state="visible", timeout=5000)
+        assert await dialog.is_visible()
+
+    @pytest.mark.asyncio
+    async def test_sweep_dialog_adds_axis_and_shows_total(self, page):
+        """Adding a param axis with two values should report 2 runs in the summary."""
+        await page.wait_for_timeout(3000)
+        sweeps_btn = page.locator("button", has_text="Sweeps").first
+        await sweeps_btn.click()
+
+        dialog = page.locator(".comfy-sweep-dialog")
+        await dialog.wait_for(state="visible", timeout=5000)
+
+        # Pick the first available template so the axes area becomes interactive
+        template_options = dialog.locator("select.comfy-select").first.locator("option")
+        await template_options.first.wait_for(state="attached", timeout=5000)
+        first_value = await template_options.first.get_attribute("value")
+        await dialog.locator("select.comfy-select").first.select_option(first_value)
+        await dialog.locator("button", has_text="+ 参数轴").click()
+
+        value_input = dialog.locator(".sweep-axis input").first
+        await value_input.wait_for(state="visible", timeout=5000)
+        await value_input.fill("3, 5")
+
+        summary_text = await dialog.locator(".sweep-summary").text_content()
+        assert "2 次运行" in summary_text
+
+    @pytest.mark.asyncio
     async def test_apply_params_reports_unmatched_params(self, page):
         """Params with no mapping should be reported in failed, not silently dropped."""
         await page.wait_for_timeout(3000)

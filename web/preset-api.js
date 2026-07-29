@@ -110,14 +110,70 @@ export async function savePreset(presetData) {
 }
 
 /**
- * Find a node in the graph using a template parameter definition.
- * Generic matching that supports unique_class, title_keyword, and output_connection strategies.
- * 
- * @param {Object} graph - ComfyUI LiteGraph instance
- * @param {Object} paramDef - Parameter definition from template node_mapping
- * @param {Object} synonyms - Node type synonym mapping
- * @returns {{node: Object, widgetName: string} | null}
+ * Get the sweep list for a template.
+ * @param {string} templateId
+ * @returns {Promise<Array<{id: string, name: string, description: string}>>}
  */
+export async function getSweeps(templateId) {
+    const response = await api.fetchApi(`${API_BASE}/sweeps/${templateId}`);
+    return await response.json();
+}
+
+/**
+ * Get a single sweep config.
+ * @param {string} templateId
+ * @param {string} sweepId
+ * @returns {Promise<Object>}
+ */
+export async function getSweepDetail(templateId, sweepId) {
+    const response = await api.fetchApi(`${API_BASE}/sweep/${templateId}/${sweepId}`);
+    return await response.json();
+}
+
+/**
+ * Save a sweep config.
+ * @param {Object} sweepData - Must include workflow_template and id
+ * @returns {Promise<{status: string}>}
+ */
+export async function saveSweep(sweepData) {
+    const response = await api.fetchApi(`${API_BASE}/sweep`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(sweepData)
+    });
+    return await response.json();
+}
+
+/**
+ * Delete a sweep config.
+ * @param {string} templateId
+ * @param {string} sweepId
+ * @returns {Promise<{status: string}>}
+ */
+export async function deleteSweep(templateId, sweepId) {
+    const response = await api.fetchApi(`${API_BASE}/sweep/${templateId}/${sweepId}`, {
+        method: "DELETE"
+    });
+    return await response.json();
+}
+
+/**
+ * Expand a sweep config into its list of combinations.
+ * @param {string} templateId
+ * @param {Object} sweep - Sweep config with axes
+ * @returns {Promise<Array<{params: Object, label: string}>>}
+ */
+export async function expandSweep(templateId, sweep) {
+    const response = await api.fetchApi(`${API_BASE}/sweep/expand`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workflow_template: templateId, sweep })
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || "展开扫描配置失败");
+    return data.combinations;
+}
+
 /**
  * Follow connection chain from nodeId to find a node that has the target widget.
  * Recursively follows inputs when intermediate nodes lack the widget.
