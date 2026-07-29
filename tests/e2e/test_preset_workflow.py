@@ -36,11 +36,10 @@ class TestPresetWorkflow:
         dialog = page.locator(".comfy-preset-manager")
         await dialog.wait_for(state="visible", timeout=5000)
 
-        # Check template selector has options
-        select = dialog.locator("select.comfy-select")
-        options = select.locator("option")
-        count = await options.count()
-        assert count > 0
+        # Options are filled asynchronously after the template list request
+        option = dialog.locator("select.comfy-select option").first
+        await option.wait_for(state="attached", timeout=10000)
+        assert await dialog.locator("select.comfy-select option").count() > 0
 
     @pytest.mark.asyncio
     async def test_preset_list_populated(self, page):
