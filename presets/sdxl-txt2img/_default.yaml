@@ -20,3 +20,6 @@ params:
   cfg: 7.0
   sampler: "euler_ancestral"
   scheduler: "normal"
+
+  # 模型加载器
+  ckpt_name: "againmixsdxl_v10.safetensors"

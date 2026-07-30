@@ -14,3 +14,8 @@ params:
   cfg: 1.5
   sampler: "euler_ancestral"
   scheduler: "bong_tangent"
+
+  # 模型加载器
+  unet_name: "QwenImage\\qwen_image_fp8_e4m3fn.safetensors"
+  clip_name: "Qwen25VL\\qwen_2.5_vl_7b_fp8_scaled.safetensors"
+  vae_name: "Image\\qwen_image_vae.safetensors"

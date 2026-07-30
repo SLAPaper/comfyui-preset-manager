@@ -379,6 +379,36 @@ class TestQwenImageEditTemplate:
         assert params["clip_name"].endswith(".safetensors")
         assert params["vae_name"].endswith(".safetensors")
 
+    def test_flux_template_has_loaders(self, api_base):
+        """Flux template should declare unet_name/clip_name/vae_name (no ckpt_name)."""
+        resp = httpx.get(f"{api_base}/preset-manager/template/flux-txt2img", timeout=10)
+        assert resp.status_code == 200
+        mapping = resp.json()["node_mapping"]
+        assert mapping["unet_name"]["class_type"] == "UNETLoader"
+        assert mapping["clip_name"]["class_type"] == "CLIPLoader"
+        assert mapping["vae_name"]["class_type"] == "VAELoader"
+        # Workflows may have an unused CheckpointLoaderSimple — template shouldn't claim it
+        assert "ckpt_name" not in mapping
+
+    def test_sdxl_template_has_ckpt(self, api_base):
+        """SDXL template should declare ckpt_name (CheckpointLoaderSimple)."""
+        resp = httpx.get(f"{api_base}/preset-manager/template/sdxl-txt2img", timeout=10)
+        assert resp.status_code == 200
+        mapping = resp.json()["node_mapping"]
+        assert mapping["ckpt_name"]["match_strategy"] == "unique_class"
+        assert mapping["ckpt_name"]["class_type"] == "CheckpointLoaderSimple"
+        assert "unet_name" not in mapping
+        assert "clip_name" not in mapping
+
+    def test_qwen_image_txt2img_template_has_loaders(self, api_base):
+        """Qwen Image text-to-image template should declare unet/clip/vae loaders."""
+        resp = httpx.get(f"{api_base}/preset-manager/template/qwen-image-txt2img", timeout=10)
+        assert resp.status_code == 200
+        mapping = resp.json()["node_mapping"]
+        assert mapping["unet_name"]["class_type"] == "UNETLoader"
+        assert mapping["clip_name"]["class_type"] == "CLIPLoader"
+        assert mapping["vae_name"]["class_type"] == "VAELoader"
+
 
 @pytest.mark.e2e
 class TestSweepAPI:

@@ -62,3 +62,21 @@ node_mapping:
     target_class_type: "ModelSamplingFlux"
     target_input: "height"
     widget: "value"
+
+  # 模型加载器 —— Flux 用 UNETLoader + CLIPLoader + VAELoader
+  # 注：workflow 中可能有未连接的 CheckpointLoaderSimple（备用），unique_class 会被
+  # 其它 loader 干扰，因此 ckpt_name 不在此声明
+  unet_name:
+    match_strategy: "unique_class"
+    class_type: "UNETLoader"
+    widget: "unet_name"
+
+  clip_name:
+    match_strategy: "unique_class"
+    class_type: "CLIPLoader"
+    widget: "clip_name"
+
+  vae_name:
+    match_strategy: "unique_class"
+    class_type: "VAELoader"
+    widget: "vae_name"

@@ -60,6 +60,12 @@ node_mapping:
     class_type: "EmptyLatentImage"
     widget: "height"
 
+  # 模型加载器 —— SDXL 用 CheckpointLoaderSimple
+  ckpt_name:
+    match_strategy: "unique_class"
+    class_type: "CheckpointLoaderSimple"
+    widget: "ckpt_name"
+
 # 同义节点映射：将派生节点类型统一到标准类型
 # 当 workflow 中使用 KSamplerAdvanced 或 KSamplerEfficient 时，等价于 KSampler
 synonyms:

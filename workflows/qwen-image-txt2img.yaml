@@ -48,6 +48,22 @@ node_mapping:
     class_type: "EmptySD3LatentImage"
     widget: "height"
 
+  # 模型加载器 —— Qwen Image 用 UNETLoader + CLIPLoader + VAELoader
+  unet_name:
+    match_strategy: "unique_class"
+    class_type: "UNETLoader"
+    widget: "unet_name"
+
+  clip_name:
+    match_strategy: "unique_class"
+    class_type: "CLIPLoader"
+    widget: "clip_name"
+
+  vae_name:
+    match_strategy: "unique_class"
+    class_type: "VAELoader"
+    widget: "vae_name"
+
 synonyms:
   KSamplerAdvanced: "KSampler"
   KSamplerEfficient: "KSampler"

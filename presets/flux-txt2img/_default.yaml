@@ -15,3 +15,8 @@ params:
   scheduler: "simple"
   seed: 0
   denoise: 1.0
+
+  # 模型加载器
+  unet_name: "FLUX\\artsyVibe_v2FP8.safetensors"
+  clip_name: "t5xxl\\t5xxl_fp8.safetensors"
+  vae_name: "Flux\\flux_ae.safetensors"

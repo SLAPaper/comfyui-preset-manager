@@ -1061,3 +1061,105 @@ def test_loaders_fail_when_duplicates(node_matcher):
     assert result["unet_name"] is None
     assert result["clip_name"] is None
     assert result["vae_name"] is None
+
+
+# === Templates that use CheckpointLoaderSimple only ===
+
+SDXL_LOADER_WORKFLOW = {
+    "413": {
+        "class_type": "CheckpointLoaderSimple",
+        "inputs": {"ckpt_name": "againmixsdxl_v10.safetensors"},
+        "_meta": {"title": ""}
+    },
+    "3": {
+        "class_type": "KSampler",
+        "inputs": {"model": ["413", 0], "positive": [], "negative": [], "latent_image": []},
+        "_meta": {"title": ""}
+    },
+}
+
+SDXL_LOADER_TEMPLATE = {
+    "name": "SDXL",
+    "node_mapping": {
+        "ckpt_name": {
+            "match_strategy": "unique_class",
+            "class_type": "CheckpointLoaderSimple",
+            "widget": "ckpt_name",
+        },
+    },
+    "synonyms": {}
+}
+
+
+def test_sdxl_loader_resolves_ckpt_name(node_matcher):
+    """SDXL with only CheckpointLoaderSimple should resolve ckpt_name."""
+    result = node_matcher.match_nodes(SDXL_LOADER_WORKFLOW, SDXL_LOADER_TEMPLATE)
+    assert result["ckpt_name"] is not None
+    assert result["ckpt_name"].node_id == "413"
+    assert result["ckpt_name"].current_value == "againmixsdxl_v10.safetensors"
+
+
+# === Flux: UNETLoader + CheckpointLoaderSimple both present (CheckpointLoaderSimple is unused) ===
+
+FLUX_MIXED_WORKFLOW = {
+    "12": {
+        "class_type": "UNETLoader",
+        "inputs": {"unet_name": "flux_dev.safetensors", "weight_dtype": "default"},
+        "_meta": {"title": ""}
+    },
+    "13": {
+        "class_type": "CLIPLoader",
+        "inputs": {"clip_name": "t5xxl_fp8.safetensors", "type": "flux", "device": "default"},
+        "_meta": {"title": ""}
+    },
+    "10": {
+        "class_type": "VAELoader",
+        "inputs": {"vae_name": "flux_ae.safetensors"},
+        "_meta": {"title": ""}
+    },
+    # Unused CheckpointLoaderSimple (no downstream connections)
+    "30": {
+        "class_type": "CheckpointLoaderSimple",
+        "inputs": {"ckpt_name": "unused_checkpoint.safetensors"},
+        "_meta": {"title": ""}
+    },
+}
+
+
+def test_flux_ignores_unused_checkpoint_loader(node_matcher):
+    """Flux template declares only the 3-component loaders. The unused
+    CheckpointLoaderSimple node should not affect matching of the
+    actually-used loaders."""
+    flux_template = {
+        "name": "Flux",
+        "node_mapping": {
+            "unet_name": {
+                "match_strategy": "unique_class",
+                "class_type": "UNETLoader",
+                "widget": "unet_name",
+            },
+            "clip_name": {
+                "match_strategy": "unique_class",
+                "class_type": "CLIPLoader",
+                "widget": "clip_name",
+            },
+            "vae_name": {
+                "match_strategy": "unique_class",
+                "class_type": "VAELoader",
+                "widget": "vae_name",
+            },
+        },
+        "synonyms": {}
+    }
+    result = node_matcher.match_nodes(FLUX_MIXED_WORKFLOW, flux_template)
+    assert result["unet_name"].current_value == "flux_dev.safetensors"
+    assert result["clip_name"].current_value == "t5xxl_fp8.safetensors"
+    assert result["vae_name"].current_value == "flux_ae.safetensors"
+
+
+def test_flux_ckpt_resolves_when_ckpt_template(node_matcher):
+    """If a Flux variant user template targets ckpt_name, it should match
+    the (unused) CheckpointLoaderSimple node without breaking."""
+    result = node_matcher.match_nodes(FLUX_MIXED_WORKFLOW, SDXL_LOADER_TEMPLATE)
+    assert result["ckpt_name"] is not None
+    assert result["ckpt_name"].current_value == "unused_checkpoint.safetensors"
