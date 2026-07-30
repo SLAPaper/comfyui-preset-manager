@@ -41,6 +41,22 @@ node_mapping:
     class_type: "KSampler"
     widget: "cfg"
 
+  # 模型加载器 —— UNETLoader / CLIPLoader / VAELoader（Anima 模型分体）
+  unet_name:
+    match_strategy: "unique_class"
+    class_type: "UNETLoader"
+    widget: "unet_name"
+
+  clip_name:
+    match_strategy: "unique_class"
+    class_type: "CLIPLoader"
+    widget: "clip_name"
+
+  vae_name:
+    match_strategy: "unique_class"
+    class_type: "VAELoader"
+    widget: "vae_name"
+
   # 输出尺寸 —— EmptyLatentImage
   width:
     match_strategy: "unique_class"

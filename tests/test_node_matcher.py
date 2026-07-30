@@ -836,3 +836,228 @@ def test_input_slot_multi_hop_respects_depth_limit(node_matcher):
     }
     result = node_matcher.match_nodes(deep_workflow, template)
     assert result["prompt"] is None
+
+
+# === Tests for loader fields (input_slot reused over model/clip/vae chains) ===
+
+# Mimics qwen_image_edit_2511: KSampler <- CFGNorm <- ModelSamplingAuraFlow <- LoraLoaderModelOnly <- UNETLoader
+QWEN_2511_LOADER_WORKFLOW = {
+    "12": {
+        "class_type": "UNETLoader",
+        "inputs": {"unet_name": "qwen_image_edit_fp8.safetensors", "weight_dtype": "default"},
+        "_meta": {"title": ""}
+    },
+    "13": {
+        "class_type": "CLIPLoader",
+        "inputs": {"clip_name": "qwen_2.5_vl_7b.safetensors", "type": "qwen_image", "device": "default"},
+        "_meta": {"title": ""}
+    },
+    "14": {
+        "class_type": "VAELoader",
+        "inputs": {"vae_name": "qwen_image_vae.safetensors"},
+        "_meta": {"title": ""}
+    },
+    "15": {
+        "class_type": "LoraLoaderModelOnly",
+        "inputs": {"model": ["12", 0], "strength_model": 1.0},
+        "_meta": {"title": ""}
+    },
+    "16": {
+        "class_type": "ModelSamplingAuraFlow",
+        "inputs": {"model": ["15", 0]},
+        "_meta": {"title": ""}
+    },
+    "17": {
+        "class_type": "CFGNorm",
+        "inputs": {"model": ["16", 0]},
+        "_meta": {"title": ""}
+    },
+    "18": {
+        "class_type": "CLIPTextEncode",
+        "inputs": {"text": "a cat", "clip": ["13", 0]},
+        "_meta": {"title": ""}
+    },
+    "19": {
+        "class_type": "VAEEncode",
+        "inputs": {"pixels": [], "vae": ["14", 0]},
+        "_meta": {"title": ""}
+    },
+    "3": {
+        "class_type": "KSampler",
+        "inputs": {
+            "model": ["17", 0],
+            "positive": ["18", 0],
+            "negative": ["18", 0],
+            "latent_image": ["19", 0],
+        },
+        "_meta": {"title": {"title": ""}}
+    },
+}
+
+
+def test_loader_unet_name_follows_model_chain(node_matcher):
+    """Tracing KSampler.model backwards through CFGNorm/ModelSampling/LoraLoader should land on UNETLoader."""
+    template = {
+        "name": "Test Loader",
+        "node_mapping": {
+            "unet_name": {
+                "match_strategy": "input_slot",
+                "class_type": "KSampler",
+                "input_name": "model",
+                "widget": "unet_name",
+            },
+        },
+        "synonyms": {}
+    }
+    result = node_matcher.match_nodes(QWEN_2511_LOADER_WORKFLOW, template)
+    assert result["unet_name"] is not None
+    assert result["unet_name"].node_id == "12"
+    assert result["unet_name"].current_value == "qwen_image_edit_fp8.safetensors"
+
+
+def test_loader_clip_name_follows_clip_chain(node_matcher):
+    """Tracing KSampler.positive.clip backwards should land on CLIPLoader."""
+    template = {
+        "name": "Test Loader",
+        "node_mapping": {
+            "clip_name": {
+                "match_strategy": "input_slot",
+                "class_type": "KSampler",
+                "input_name": "positive",
+                "widget": "clip_name",
+            },
+        },
+        "synonyms": {}
+    }
+    result = node_matcher.match_nodes(QWEN_2511_LOADER_WORKFLOW, template)
+    assert result["clip_name"] is not None
+    assert result["clip_name"].node_id == "13"
+
+
+def test_loader_vae_name_follows_latent_chain(node_matcher):
+    """Tracing KSampler.latent_image.vae should land on VAELoader."""
+    template = {
+        "name": "Test Loader",
+        "node_mapping": {
+            "vae_name": {
+                "match_strategy": "input_slot",
+                "class_type": "KSampler",
+                "input_name": "latent_image",
+                "widget": "vae_name",
+            },
+        },
+        "synonyms": {}
+    }
+    result = node_matcher.match_nodes(QWEN_2511_LOADER_WORKFLOW, template)
+    assert result["vae_name"] is not None
+    assert result["vae_name"].node_id == "14"
+
+
+def test_checkpoint_loader_simple_resolves_ckpt_name(node_matcher):
+    """CheckpointLoaderSimple should resolve ckpt_name via model chain."""
+    workflow = {
+        "1": {
+            "class_type": "CheckpointLoaderSimple",
+            "inputs": {"ckpt_name": "sd_xl_base_1.0.safetensors"},
+            "_meta": {"title": ""}
+        },
+        "3": {
+            "class_type": "KSampler",
+            "inputs": {
+                "model": ["1", 0],
+                "positive": [],
+                "negative": [],
+                "latent_image": [],
+            },
+            "_meta": {"title": ""}
+        },
+    }
+    template = {
+        "name": "Test SDXL",
+        "node_mapping": {
+            "ckpt_name": {
+                "match_strategy": "input_slot",
+                "class_type": "KSampler",
+                "input_name": "model",
+                "widget": "ckpt_name",
+            },
+        },
+        "synonyms": {}
+    }
+    result = node_matcher.match_nodes(workflow, template)
+    assert result["ckpt_name"] is not None
+    assert result["ckpt_name"].node_id == "1"
+    assert result["ckpt_name"].current_value == "sd_xl_base_1.0.safetensors"
+
+
+# === Tests for loader fields via unique_class (UNETLoader / CLIPLoader / VAELoader) ===
+
+ANIMA_LOADER_TEMPLATE = {
+    "name": "Anima loaders",
+    "node_mapping": {
+        "unet_name": {
+            "match_strategy": "unique_class",
+            "class_type": "UNETLoader",
+            "widget": "unet_name",
+        },
+        "clip_name": {
+            "match_strategy": "unique_class",
+            "class_type": "CLIPLoader",
+            "widget": "clip_name",
+        },
+        "vae_name": {
+            "match_strategy": "unique_class",
+            "class_type": "VAELoader",
+            "widget": "vae_name",
+        },
+    },
+    "synonyms": {}
+}
+
+
+def test_anima_loaders_match_independently(node_matcher):
+    """Each loader field should resolve to its own loader node."""
+    workflow = {
+        "1": {
+            "class_type": "UNETLoader",
+            "inputs": {"unet_name": "samANIMA.safetensors", "weight_dtype": "default"},
+            "_meta": {"title": ""}
+        },
+        "2": {
+            "class_type": "CLIPLoader",
+            "inputs": {"clip_name": "qwen_3_06b_base.safetensors", "type": "stable_diffusion", "device": "default"},
+            "_meta": {"title": ""}
+        },
+        "8": {
+            "class_type": "VAELoader",
+            "inputs": {"vae_name": "qwen_image_vae.safetensors"},
+            "_meta": {"title": ""}
+        },
+    }
+    result = node_matcher.match_nodes(workflow, ANIMA_LOADER_TEMPLATE)
+    assert result["unet_name"].node_id == "1"
+    assert result["unet_name"].current_value == "samANIMA.safetensors"
+    assert result["clip_name"].node_id == "2"
+    assert result["clip_name"].current_value == "qwen_3_06b_base.safetensors"
+    assert result["vae_name"].node_id == "8"
+    assert result["vae_name"].current_value == "qwen_image_vae.safetensors"
+
+
+def test_loaders_fail_when_duplicates(node_matcher):
+    """unique_class must reject two UNETLoader nodes — loaders should be unique per template."""
+    workflow = {
+        "1": {
+            "class_type": "UNETLoader",
+            "inputs": {"unet_name": "primary.safetensors", "weight_dtype": "default"},
+            "_meta": {"title": ""}
+        },
+        "2": {
+            "class_type": "UNETLoader",
+            "inputs": {"unet_name": "backup.safetensors", "weight_dtype": "default"},
+            "_meta": {"title": ""}
+        },
+    }
+    result = node_matcher.match_nodes(workflow, ANIMA_LOADER_TEMPLATE)
+    assert result["unet_name"] is None
+    assert result["clip_name"] is None
+    assert result["vae_name"] is None

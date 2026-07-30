@@ -349,6 +349,35 @@ class TestQwenImageEditTemplate:
         assert params["scheduler"] == "simple"
         assert params["width"] == 1328
         assert params["height"] == 1328
+        assert "qwen_image_edit" in params["unet_name"]
+        assert "qwen_2.5_vl_7b" in params["clip_name"]
+        assert "qwen_image_vae" in params["vae_name"]
+
+    def test_anima_template_has_loaders(self, api_base):
+        """Anima template should declare unet_name/clip_name/vae_name fields."""
+        resp = httpx.get(f"{api_base}/preset-manager/template/anima-txt2img", timeout=10)
+        assert resp.status_code == 200
+
+        data = resp.json()
+        mapping = data["node_mapping"]
+        for name, class_type, widget in [
+            ("unet_name", "UNETLoader", "unet_name"),
+            ("clip_name", "CLIPLoader", "clip_name"),
+            ("vae_name", "VAELoader", "vae_name"),
+        ]:
+            assert mapping[name]["match_strategy"] == "unique_class"
+            assert mapping[name]["class_type"] == class_type
+            assert mapping[name]["widget"] == widget
+
+    def test_anima_default_preset_has_loaders(self, api_base):
+        """Anima default preset should carry loader filenames."""
+        resp = httpx.get(f"{api_base}/preset-manager/preset/anima-txt2img/_default", timeout=10)
+        assert resp.status_code == 200
+
+        params = resp.json()["params"]
+        assert params["unet_name"].endswith(".safetensors")
+        assert params["clip_name"].endswith(".safetensors")
+        assert params["vae_name"].endswith(".safetensors")
 
 
 @pytest.mark.e2e

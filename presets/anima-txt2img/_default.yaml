@@ -19,3 +19,8 @@ params:
   cfg: 5
   sampler: "euler_ancestral"
   scheduler: "bong_tangent"
+
+  # 模型加载器
+  unet_name: "anima\\samANIMA_turboV10.safetensors"
+  clip_name: "qwen_3_06b_base.safetensors"
+  vae_name: "Image\\qwen_image_vae.safetensors"
