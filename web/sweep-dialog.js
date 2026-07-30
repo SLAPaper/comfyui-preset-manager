@@ -50,7 +50,6 @@ export class SweepDialog {
         this.templateSelect = $el("select.comfy-select", {
             onchange: () => this.onTemplateChange()
         });
-        this.basePresetSelect = $el("select.comfy-select");
         this.sweepSelect = $el("select.comfy-select", {
             onchange: () => this.onSweepSelect()
         });
@@ -88,11 +87,6 @@ export class SweepDialog {
                 $el("div.sweep-section", [
                     $el("label", { textContent: "名称" }),
                     this.nameInput
-                ]),
-
-                $el("div.sweep-section", [
-                    $el("label", { textContent: "基础预设（每次迭代先应用）" }),
-                    this.basePresetSelect
                 ]),
 
                 $el("div.sweep-section", [
@@ -212,6 +206,23 @@ export class SweepDialog {
                 flex: 2;
             }
 
+            .sweep-axis-presets {
+                display: flex;
+                flex: 2;
+                flex-wrap: wrap;
+                gap: 4px 12px;
+                align-items: center;
+            }
+
+            .sweep-axis-preset {
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                color: #cdd6f4;
+                font-size: 13px;
+                cursor: pointer;
+            }
+
             .sweep-summary {
                 color: #a6adc8;
                 font-size: 13px;
@@ -281,14 +292,6 @@ export class SweepDialog {
         this.presets = presets;
         this.sweeps = sweeps;
 
-        this.basePresetSelect.innerHTML = "";
-        this.basePresetSelect.appendChild($el("option", { value: "", textContent: "（不使用）" }));
-        for (const preset of presets) {
-            this.basePresetSelect.appendChild(
-                $el("option", { value: preset.id, textContent: preset.name })
-            );
-        }
-
         this.sweepSelect.innerHTML = "";
         this.sweepSelect.appendChild($el("option", { value: "", textContent: "（新建）" }));
         for (const sweep of sweeps) {
@@ -322,7 +325,6 @@ export class SweepDialog {
         const sweep = await getSweepDetail(this.templateId, sweepId);
         this.currentSweepId = sweepId;
         this.nameInput.value = sweep.name || sweepId;
-        this.basePresetSelect.value = sweep.base_preset || "";
         this.axes = (sweep.axes || []).map(a => ({ ...a }));
         this.renderAxes();
     }
@@ -364,17 +366,38 @@ export class SweepDialog {
                     }));
                 }
                 controls.push(select);
-            }
-
-            controls.push($el("input", {
-                type: "text",
-                placeholder: axis.type === "preset" ? "预设 ID，逗号分隔" : "值，逗号分隔",
-                value: formatValues(axis.values),
-                oninput: (e) => {
-                    axis.values = parseValues(e.target.value);
-                    this.updateSummary();
+                controls.push($el("input", {
+                    type: "text",
+                    placeholder: "值，逗号分隔",
+                    value: formatValues(axis.values),
+                    oninput: (e) => {
+                        axis.values = parseValues(e.target.value);
+                        this.updateSummary();
+                    }
+                }));
+            } else {
+                const checkboxRow = $el("div.sweep-axis-presets");
+                for (const preset of this.presets) {
+                    const cb = $el("input", {
+                        type: "checkbox",
+                        value: preset.id,
+                        checked: axis.values.includes(preset.id),
+                        onchange: (e) => {
+                            if (e.target.checked) {
+                                axis.values.push(preset.id);
+                            } else {
+                                axis.values = axis.values.filter(v => v !== preset.id);
+                            }
+                            this.updateSummary();
+                        }
+                    });
+                    checkboxRow.appendChild($el("label.sweep-axis-preset", [
+                        cb,
+                        $el("span", { textContent: preset.name })
+                    ]));
                 }
-            }));
+                controls.push(checkboxRow);
+            }
 
             controls.push($el("button.comfy-btn.small", {
                 textContent: "↑",
@@ -409,10 +432,7 @@ export class SweepDialog {
     }
 
     collectSweep() {
-        const sweep = { name: this.nameInput.value.trim(), axes: this.axes };
-        const base = this.basePresetSelect.value;
-        if (base) sweep.base_preset = base;
-        return sweep;
+        return { name: this.nameInput.value.trim(), axes: this.axes };
     }
 
     async onSave() {

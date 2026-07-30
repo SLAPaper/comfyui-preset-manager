@@ -104,25 +104,8 @@ def test_expand_outer_param_overridden_by_inner_preset(sweep_manager):
     assert combos[0]["params"] == {"cfg": 7}
 
 
-def test_expand_applies_base_preset_first(sweep_manager):
-    """base_preset should be applied before all axes."""
-    presets = {
-        "_default": {"params": {"cfg": 5, "steps": 20, "sampler": "euler"}},
-    }
-    sweep = {
-        "base_preset": "_default",
-        "axes": [
-            {"type": "param", "param": "cfg", "values": [1, 2]},
-        ]
-    }
-    combos = sweep_manager.expand(sweep, presets=presets)
-
-    assert combos[0]["params"] == {"cfg": 1, "steps": 20, "sampler": "euler"}
-    assert combos[1]["params"] == {"cfg": 2, "steps": 20, "sampler": "euler"}
-
-
-def test_expand_without_base_preset(sweep_manager):
-    """base_preset is optional."""
+def test_expand_starts_with_empty_params(sweep_manager):
+    """Without base_preset, every combination carries only the axes' contributions."""
     sweep = {"axes": [{"type": "param", "param": "cfg", "values": [1]}]}
     combos = sweep_manager.expand(sweep, presets={})
 

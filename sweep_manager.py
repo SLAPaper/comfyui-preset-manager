@@ -41,7 +41,7 @@ def expand(sweep: dict, presets: dict) -> list[dict]:
     Expand a sweep into its list of combinations.
 
     Args:
-        sweep: Sweep config with optional base_preset and an axes list
+        sweep: Sweep config with an axes list
         presets: {preset_id: {params: {...}}} used to resolve preset axes
 
     Returns:
@@ -54,17 +54,9 @@ def expand(sweep: dict, presets: dict) -> list[dict]:
     if not axes:
         return []
 
-    base = {}
-    base_preset_id = sweep.get("base_preset")
-    if base_preset_id:
-        base_preset = presets.get(base_preset_id)
-        if base_preset is None:
-            raise KeyError(f"预设不存在: {base_preset_id}")
-        base = dict(base_preset.get("params", {}))
-
     combos = []
     for values in itertools.product(*(axis["values"] for axis in axes)):
-        params = dict(base)
+        params = {}
         for axis, value in zip(axes, values):
             params.update(_axis_params(axis, value, presets))
         label = ", ".join(_axis_label(axis, value) for axis, value in zip(axes, values))

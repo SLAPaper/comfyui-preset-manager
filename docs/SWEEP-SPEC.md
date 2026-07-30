@@ -12,7 +12,6 @@
 ```yaml
 name: "CFG × Sampler 扫描"
 description: "底模评测用"
-base_preset: _default        # 可选，每次迭代先应用这个预设打底
 axes:
   - type: param
     param: cfg
@@ -27,13 +26,15 @@ axes:
 - 数值与枚举不区分类型，由 YAML 标量天然承载。枚举合法性在运行前对照
   `widget.options.values` 校验。
 - `axes` 数组顺序即循环顺序，`axes[0]` 为最外层。不设独立的 order 字段。
+- 初始状态由用户保证——sweep 不支持 base_preset。如果要锁死非扫描维度的
+  参数，把它们放进一个预设轴里。
 
 ## 覆盖规则
 
 按 axes 顺序依次应用，后应用者覆盖先应用者，即**内层覆盖外层**。
 preset 轴与 param 轴遵循同一规则，无特殊情况。
 
-应用顺序：`base_preset` → `axes[0]` → `axes[1]` → ... → `axes[n]`
+应用顺序：`axes[0]` → `axes[1]` → ... → `axes[n]`
 
 ## 职责划分
 
