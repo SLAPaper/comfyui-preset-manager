@@ -1108,8 +1108,8 @@ FLUX_MIXED_WORKFLOW = {
         "_meta": {"title": ""}
     },
     "13": {
-        "class_type": "CLIPLoader",
-        "inputs": {"clip_name": "t5xxl_fp8.safetensors", "type": "flux", "device": "default"},
+        "class_type": "DualCLIPLoader",
+        "inputs": {"clip_name1": "t5xxl_fp8.safetensors", "clip_name2": "clip_l.safetensors", "type": "flux", "device": "default"},
         "_meta": {"title": ""}
     },
     "10": {
@@ -1140,8 +1140,8 @@ def test_flux_ignores_unused_checkpoint_loader(node_matcher):
             },
             "clip_name": {
                 "match_strategy": "unique_class",
-                "class_type": "CLIPLoader",
-                "widget": "clip_name",
+                "class_type": "DualCLIPLoader",
+                "widget": "clip_name1",
             },
             "vae_name": {
                 "match_strategy": "unique_class",
@@ -1163,3 +1163,37 @@ def test_flux_ckpt_resolves_when_ckpt_template(node_matcher):
     result = node_matcher.match_nodes(FLUX_MIXED_WORKFLOW, SDXL_LOADER_TEMPLATE)
     assert result["ckpt_name"] is not None
     assert result["ckpt_name"].current_value == "unused_checkpoint.safetensors"
+
+
+def test_flux_template_matches_all_four_loaders(node_matcher):
+    """Flux template declares unet/clip/vae/ckpt. Even when ckpt node is
+    present alongside UNETLoader, every field should still resolve
+    independently — class_type isolation prevents cross-field interference."""
+    flux_template_all_four = {
+        "name": "Flux all 4",
+        "node_mapping": {
+            "unet_name": {"match_strategy": "unique_class", "class_type": "UNETLoader", "widget": "unet_name"},
+            "clip_name": {"match_strategy": "unique_class", "class_type": "DualCLIPLoader", "widget": "clip_name1"},
+            "vae_name":  {"match_strategy": "unique_class", "class_type": "VAELoader", "widget": "vae_name"},
+            "ckpt_name": {"match_strategy": "unique_class", "class_type": "CheckpointLoaderSimple", "widget": "ckpt_name"},
+        },
+        "synonyms": {}
+    }
+    result = node_matcher.match_nodes(FLUX_MIXED_WORKFLOW, flux_template_all_four)
+    assert result["unet_name"].current_value == "flux_dev.safetensors"
+    assert result["clip_name"].current_value == "t5xxl_fp8.safetensors"
+    assert result["vae_name"].current_value == "flux_ae.safetensors"
+    assert result["ckpt_name"].current_value == "unused_checkpoint.safetensors"
+
+
+def test_flux_template_dual_clip_uses_clip_name1_widget(node_matcher):
+    """DualCLIPLoader has clip_name1 and clip_name2 — template must point
+    at clip_name1 to read the first CLIP file."""
+    result = node_matcher.match_nodes(FLUX_MIXED_WORKFLOW, {
+        "name": "Flux",
+        "node_mapping": {
+            "clip_name": {"match_strategy": "unique_class", "class_type": "DualCLIPLoader", "widget": "clip_name1"},
+        },
+        "synonyms": {}
+    })
+    assert result["clip_name"].current_value == "t5xxl_fp8.safetensors"

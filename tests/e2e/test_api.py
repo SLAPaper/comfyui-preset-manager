@@ -380,15 +380,17 @@ class TestQwenImageEditTemplate:
         assert params["vae_name"].endswith(".safetensors")
 
     def test_flux_template_has_loaders(self, api_base):
-        """Flux template should declare unet_name/clip_name/vae_name (no ckpt_name)."""
+        """Flux template should declare unet/clip/vae/ckpt — workflow may
+        have an unused CheckpointLoaderSimple but the field is still useful
+        when it is connected (some Flux variants use the unified loader)."""
         resp = httpx.get(f"{api_base}/preset-manager/template/flux-txt2img", timeout=10)
         assert resp.status_code == 200
         mapping = resp.json()["node_mapping"]
         assert mapping["unet_name"]["class_type"] == "UNETLoader"
-        assert mapping["clip_name"]["class_type"] == "CLIPLoader"
+        assert mapping["clip_name"]["class_type"] == "DualCLIPLoader"
+        assert mapping["clip_name"]["widget"] == "clip_name1"
         assert mapping["vae_name"]["class_type"] == "VAELoader"
-        # Workflows may have an unused CheckpointLoaderSimple — template shouldn't claim it
-        assert "ckpt_name" not in mapping
+        assert mapping["ckpt_name"]["class_type"] == "CheckpointLoaderSimple"
 
     def test_sdxl_template_has_ckpt(self, api_base):
         """SDXL template should declare ckpt_name (CheckpointLoaderSimple)."""

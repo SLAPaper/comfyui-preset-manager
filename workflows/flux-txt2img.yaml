@@ -63,9 +63,8 @@ node_mapping:
     target_input: "height"
     widget: "value"
 
-  # 模型加载器 —— Flux 用 UNETLoader + CLIPLoader + VAELoader
-  # 注：workflow 中可能有未连接的 CheckpointLoaderSimple（备用），unique_class 会被
-  # 其它 loader 干扰，因此 ckpt_name 不在此声明
+  # 模型加载器 —— Flux 用 UNETLoader + DualCLIPLoader + VAELoader
+  # 也支持 CheckpointLoaderSimple（如果 workflow 同时有，会作为可选备份）
   unet_name:
     match_strategy: "unique_class"
     class_type: "UNETLoader"
@@ -73,10 +72,15 @@ node_mapping:
 
   clip_name:
     match_strategy: "unique_class"
-    class_type: "CLIPLoader"
-    widget: "clip_name"
+    class_type: "DualCLIPLoader"
+    widget: "clip_name1"
 
   vae_name:
     match_strategy: "unique_class"
     class_type: "VAELoader"
     widget: "vae_name"
+
+  ckpt_name:
+    match_strategy: "unique_class"
+    class_type: "CheckpointLoaderSimple"
+    widget: "ckpt_name"
