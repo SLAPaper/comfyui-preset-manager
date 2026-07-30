@@ -1197,3 +1197,137 @@ def test_flux_template_dual_clip_uses_clip_name1_widget(node_matcher):
         "synonyms": {}
     })
     assert result["clip_name"].current_value == "t5xxl_fp8.safetensors"
+
+
+# === Tests for multi-loader coverage: every variant loader type declared as its own field ===
+
+# Real-world Qwen 2511-like workflow: all known UNET/CLIP/VAE/CKPT variants coexist.
+# Only one of each concept is "active" (connected); others are optional backups.
+MULTI_LOADER_WORKFLOW = {
+    # Active UNET
+    "10": {"class_type": "UNETLoader",
+           "inputs": {"unet_name": "qwen_image_fp8.safetensors", "weight_dtype": "default"},
+           "_meta": {"title": ""}},
+    # Backup GGUF UNET
+    "11": {"class_type": "UnetLoaderGGUF",
+           "inputs": {"unet_name": "qwen_image_Q6_K.gguf"},
+           "_meta": {"title": ""}},
+    # Backup Nunchaku UNET (different widget name!)
+    "12": {"class_type": "NunchakuQwenImageDiTLoader",
+           "inputs": {"model_name": "nunchaku_qwen_int4.safetensors", "cpu_offload": "auto", "num_blocks_on_gpu": 30, "use_pin_memory": False},
+           "_meta": {"title": ""}},
+    # Active CLIP
+    "20": {"class_type": "CLIPLoader",
+           "inputs": {"clip_name": "qwen_2.5_vl_7b_fp8.safetensors", "type": "qwen_image", "device": "default"},
+           "_meta": {"title": ""}},
+    # Backup DualCLIP
+    "21": {"class_type": "DualCLIPLoader",
+           "inputs": {"clip_name1": "t5xxl.safetensors", "clip_name2": "clip_l.safetensors", "type": "flux", "device": "default"},
+           "_meta": {"title": ""}},
+    # Active VAE
+    "30": {"class_type": "VAELoader",
+           "inputs": {"vae_name": "qwen_image_vae.safetensors"},
+           "_meta": {"title": ""}},
+    # Backup CheckpointLoaderSimple
+    "40": {"class_type": "CheckpointLoaderSimple",
+           "inputs": {"ckpt_name": "backup.safetensors"},
+           "_meta": {"title": ""}},
+    # Backup GGUF checkpoint
+    "41": {"class_type": "CheckpointLoaderGGUF",
+           "inputs": {"ckpt_name": "backup.gguf"},
+           "_meta": {"title": ""}},
+    "3": {"class_type": "KSampler",
+         "inputs": {"model": ["10", 0], "positive": ["50", 0], "negative": ["51", 0], "latent_image": ["52", 0]},
+         "_meta": {"title": ""}},
+    "50": {"class_type": "CLIPTextEncode",
+           "inputs": {"text": "a cat", "clip": ["20", 0]},
+           "_meta": {"title": ""}},
+    "51": {"class_type": "CLIPTextEncode",
+           "inputs": {"text": "bad", "clip": ["20", 0]},
+           "_meta": {"title": ""}},
+    "52": {"class_type": "EmptySD3LatentImage",
+           "inputs": {"width": 1024, "height": 1024, "batch_size": 1},
+           "_meta": {"title": ""}},
+}
+
+
+def test_multi_loader_full_coverage_resolves_each_active_field(node_matcher):
+    """Each loader variant should resolve to its own field independently."""
+    template = {
+        "name": "All loaders",
+        "node_mapping": {
+            "unet_name":              {"match_strategy": "unique_class", "class_type": "UNETLoader",                   "widget": "unet_name"},
+            "gguf_unet_name":         {"match_strategy": "unique_class", "class_type": "UnetLoaderGGUF",               "widget": "unet_name"},
+            "nunchaku_model_name":    {"match_strategy": "unique_class", "class_type": "NunchakuQwenImageDiTLoader",   "widget": "model_name"},
+            "clip_name":              {"match_strategy": "unique_class", "class_type": "CLIPLoader",                   "widget": "clip_name"},
+            "dual_clip_name1":        {"match_strategy": "unique_class", "class_type": "DualCLIPLoader",               "widget": "clip_name1"},
+            "vae_name":               {"match_strategy": "unique_class", "class_type": "VAELoader",                    "widget": "vae_name"},
+            "ckpt_name":              {"match_strategy": "unique_class", "class_type": "CheckpointLoaderSimple",       "widget": "ckpt_name"},
+            "gguf_ckpt_name":         {"match_strategy": "unique_class", "class_type": "CheckpointLoaderGGUF",          "widget": "ckpt_name"},
+        },
+        "synonyms": {}
+    }
+    result = node_matcher.match_nodes(MULTI_LOADER_WORKFLOW, template)
+    assert result["unet_name"].current_value == "qwen_image_fp8.safetensors"
+    assert result["gguf_unet_name"].current_value == "qwen_image_Q6_K.gguf"
+    assert result["nunchaku_model_name"].current_value == "nunchaku_qwen_int4.safetensors"
+    assert result["clip_name"].current_value == "qwen_2.5_vl_7b_fp8.safetensors"
+    assert result["dual_clip_name1"].current_value == "t5xxl.safetensors"
+    assert result["vae_name"].current_value == "qwen_image_vae.safetensors"
+    assert result["ckpt_name"].current_value == "backup.safetensors"
+    assert result["gguf_ckpt_name"].current_value == "backup.gguf"
+
+
+def test_multi_loader_none_when_loader_missing(node_matcher):
+    """Removing the active UNETLoader should make unet_name None while
+    the others stay resolved."""
+    workflow = {k: v for k, v in MULTI_LOADER_WORKFLOW.items() if k != "10"}
+    template = {
+        "name": "All loaders",
+        "node_mapping": {
+            "unet_name":              {"match_strategy": "unique_class", "class_type": "UNETLoader",                   "widget": "unet_name"},
+            "gguf_unet_name":         {"match_strategy": "unique_class", "class_type": "UnetLoaderGGUF",               "widget": "unet_name"},
+            "nunchaku_model_name":    {"match_strategy": "unique_class", "class_type": "NunchakuQwenImageDiTLoader",   "widget": "model_name"},
+            "clip_name":              {"match_strategy": "unique_class", "class_type": "CLIPLoader",                   "widget": "clip_name"},
+            "vae_name":               {"match_strategy": "unique_class", "class_type": "VAELoader",                    "widget": "vae_name"},
+        },
+        "synonyms": {}
+    }
+    result = node_matcher.match_nodes(workflow, template)
+    assert result["unet_name"] is None
+    # Others still resolve
+    assert result["gguf_unet_name"].current_value == "qwen_image_Q6_K.gguf"
+    assert result["clip_name"].current_value == "qwen_2.5_vl_7b_fp8.safetensors"
+
+
+def test_apply_preset_multi_loader(node_matcher):
+    """apply_preset should write all loader fields simultaneously."""
+    template = {
+        "name": "All loaders",
+        "node_mapping": {
+            "unet_name":              {"match_strategy": "unique_class", "class_type": "UNETLoader",                   "widget": "unet_name"},
+            "gguf_unet_name":         {"match_strategy": "unique_class", "class_type": "UnetLoaderGGUF",               "widget": "unet_name"},
+            "nunchaku_model_name":    {"match_strategy": "unique_class", "class_type": "NunchakuQwenImageDiTLoader",   "widget": "model_name"},
+            "clip_name":              {"match_strategy": "unique_class", "class_type": "CLIPLoader",                   "widget": "clip_name"},
+            "dual_clip_name1":        {"match_strategy": "unique_class", "class_type": "DualCLIPLoader",               "widget": "clip_name1"},
+            "vae_name":               {"match_strategy": "unique_class", "class_type": "VAELoader",                    "widget": "vae_name"},
+            "ckpt_name":              {"match_strategy": "unique_class", "class_type": "CheckpointLoaderSimple",       "widget": "ckpt_name"},
+        },
+        "synonyms": {}
+    }
+    result = node_matcher.apply_preset(MULTI_LOADER_WORKFLOW, template, {
+        "unet_name": "new_unet.safetensors",
+        "gguf_unet_name": "new_unet.gguf",
+        "nunchaku_model_name": "new_nunchaku.safetensors",
+        "clip_name": "new_clip.safetensors",
+        "dual_clip_name1": "new_t5xxl.safetensors",
+        "vae_name": "new_vae.safetensors",
+        "ckpt_name": "new_ckpt.safetensors",
+    })
+    assert result["10"]["inputs"]["unet_name"] == "new_unet.safetensors"
+    assert result["11"]["inputs"]["unet_name"] == "new_unet.gguf"
+    assert result["12"]["inputs"]["model_name"] == "new_nunchaku.safetensors"
+    assert result["20"]["inputs"]["clip_name"] == "new_clip.safetensors"
+    assert result["21"]["inputs"]["clip_name1"] == "new_t5xxl.safetensors"
+    assert result["30"]["inputs"]["vae_name"] == "new_vae.safetensors"
+    assert result["40"]["inputs"]["ckpt_name"] == "new_ckpt.safetensors"

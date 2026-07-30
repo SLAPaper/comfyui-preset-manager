@@ -18,6 +18,6 @@ params:
 
   # 模型加载器
   unet_name: "FLUX\\artsyVibe_v2FP8.safetensors"
-  clip_name: "t5xxl\\t5xxl_fp16.safetensors"
+  dual_clip_name1: "t5xxl\\t5xxl_fp16.safetensors"
   vae_name: "Flux\\flux_ae.safetensors"
   ckpt_name: "z_flux\\JjdoeFlux_v10.safetensors"

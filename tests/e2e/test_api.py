@@ -380,36 +380,59 @@ class TestQwenImageEditTemplate:
         assert params["vae_name"].endswith(".safetensors")
 
     def test_flux_template_has_loaders(self, api_base):
-        """Flux template should declare unet/clip/vae/ckpt — workflow may
-        have an unused CheckpointLoaderSimple but the field is still useful
-        when it is connected (some Flux variants use the unified loader)."""
+        """Flux template should declare all loader variants."""
         resp = httpx.get(f"{api_base}/preset-manager/template/flux-txt2img", timeout=10)
         assert resp.status_code == 200
         mapping = resp.json()["node_mapping"]
         assert mapping["unet_name"]["class_type"] == "UNETLoader"
-        assert mapping["clip_name"]["class_type"] == "DualCLIPLoader"
-        assert mapping["clip_name"]["widget"] == "clip_name1"
+        assert mapping["dual_clip_name1"]["class_type"] == "DualCLIPLoader"
+        assert mapping["dual_clip_name1"]["widget"] == "clip_name1"
         assert mapping["vae_name"]["class_type"] == "VAELoader"
         assert mapping["ckpt_name"]["class_type"] == "CheckpointLoaderSimple"
 
+    @pytest.mark.parametrize("template_id", [
+        "anima-txt2img",
+        "qwen-image-edit",
+        "qwen-image-txt2img",
+        "flux-txt2img",
+        "sdxl-txt2img",
+    ])
+    def test_all_templates_declare_full_loader_set(self, api_base, template_id):
+        """Every template should declare the full loader variant set:
+        UNETLoader + GGUF variants + Nunchaku, CLIPLoader + DualCLIPLoader,
+        VAELoader, CheckpointLoaderSimple + GGUF/NF4 variants."""
+        resp = httpx.get(f"{api_base}/preset-manager/template/{template_id}", timeout=10)
+        assert resp.status_code == 200
+        mapping = resp.json()["node_mapping"]
+
+        required_fields = {
+            "unet_name":              ("UNETLoader",                "unet_name"),
+            "gguf_unet_name":         ("UnetLoaderGGUF",            "unet_name"),
+            "gguf_unet_advanced_name":("UnetLoaderGGUFAdvanced",    "unet_name"),
+            "nf4_unet_name":          ("UNETLoaderNF4",             "unet_name"),
+            "nunchaku_model_name":    ("NunchakuQwenImageDiTLoader","model_name"),
+            "clip_name":              ("CLIPLoader",                "clip_name"),
+            "dual_clip_name1":        ("DualCLIPLoader",            "clip_name1"),
+            "vae_name":               ("VAELoader",                 "vae_name"),
+            "ckpt_name":              ("CheckpointLoaderSimple",    "ckpt_name"),
+            "gguf_ckpt_name":         ("CheckpointLoaderGGUF",      "ckpt_name"),
+            "nf4_ckpt_name":          ("CheckpointLoaderNF4",       "ckpt_name"),
+        }
+        for field, (class_type, widget) in required_fields.items():
+            assert field in mapping, f"{template_id} missing {field}"
+            assert mapping[field]["class_type"] == class_type
+            assert mapping[field]["widget"] == widget
+
     def test_sdxl_template_has_ckpt(self, api_base):
-        """SDXL template should declare ckpt_name (CheckpointLoaderSimple)."""
+        """SDXL template should declare ckpt_name (CheckpointLoaderSimple) and
+        the full loader variant set (ckpt_name is the primary loader for SDXL)."""
         resp = httpx.get(f"{api_base}/preset-manager/template/sdxl-txt2img", timeout=10)
         assert resp.status_code == 200
         mapping = resp.json()["node_mapping"]
         assert mapping["ckpt_name"]["match_strategy"] == "unique_class"
         assert mapping["ckpt_name"]["class_type"] == "CheckpointLoaderSimple"
-        assert "unet_name" not in mapping
-        assert "clip_name" not in mapping
 
-    def test_qwen_image_txt2img_template_has_loaders(self, api_base):
-        """Qwen Image text-to-image template should declare unet/clip/vae loaders."""
-        resp = httpx.get(f"{api_base}/preset-manager/template/qwen-image-txt2img", timeout=10)
-        assert resp.status_code == 200
-        mapping = resp.json()["node_mapping"]
-        assert mapping["unet_name"]["class_type"] == "UNETLoader"
-        assert mapping["clip_name"]["class_type"] == "CLIPLoader"
-        assert mapping["vae_name"]["class_type"] == "VAELoader"
+    
 
 
 @pytest.mark.e2e

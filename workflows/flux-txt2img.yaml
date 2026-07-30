@@ -63,24 +63,54 @@ node_mapping:
     target_input: "height"
     widget: "value"
 
-  # 模型加载器 —— Flux 用 UNETLoader + DualCLIPLoader + VAELoader
-  # 也支持 CheckpointLoaderSimple（如果 workflow 同时有，会作为可选备份）
+  # 模型加载器 —— 每种 loader 类独立字段，覆盖 UNETLoader 标准 + GGUF/Nunchaku 变体
   unet_name:
     match_strategy: "unique_class"
     class_type: "UNETLoader"
     widget: "unet_name"
+  gguf_unet_name:
+    match_strategy: "unique_class"
+    class_type: "UnetLoaderGGUF"
+    widget: "unet_name"
+  gguf_unet_advanced_name:
+    match_strategy: "unique_class"
+    class_type: "UnetLoaderGGUFAdvanced"
+    widget: "unet_name"
+  nf4_unet_name:
+    match_strategy: "unique_class"
+    class_type: "UNETLoaderNF4"
+    widget: "unet_name"
+  nunchaku_model_name:
+    match_strategy: "unique_class"
+    class_type: "NunchakuQwenImageDiTLoader"
+    widget: "model_name"
 
+  # CLIP —— 单 CLIP / 双 CLIP
   clip_name:
+    match_strategy: "unique_class"
+    class_type: "CLIPLoader"
+    widget: "clip_name"
+  dual_clip_name1:
     match_strategy: "unique_class"
     class_type: "DualCLIPLoader"
     widget: "clip_name1"
 
+  # VAE
   vae_name:
     match_strategy: "unique_class"
     class_type: "VAELoader"
     widget: "vae_name"
 
+  # Checkpoint —— 标准 / GGUF / NF4 量化
   ckpt_name:
     match_strategy: "unique_class"
     class_type: "CheckpointLoaderSimple"
+    widget: "ckpt_name"
+  gguf_ckpt_name:
+    match_strategy: "unique_class"
+    class_type: "CheckpointLoaderGGUF"
+    widget: "ckpt_name"
+  nf4_ckpt_name:
+    match_strategy: "unique_class"
+    class_type: "CheckpointLoaderNF4"
     widget: "ckpt_name"
