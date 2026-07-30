@@ -255,17 +255,10 @@ export class SweepDialog {
         this.progress.classList.remove("error");
         this.nameInput.value = "";
 
-        if (templateId) {
-            this.templateId = templateId;
-            this.templateSelect.value = templateId;
-            this.templateSelect.disabled = true;
-        } else {
-            this.templateId = null;
-            this.templateSelect.disabled = false;
-        }
+        this.templateSelect.disabled = !!templateId;
+        this.templateId = templateId;
         this.element.style.display = "flex";
 
-        // Always populate the template selector so users can switch templates.
         const workflows = await getWorkflows();
         this.templateSelect.innerHTML = "";
         for (const w of workflows) {
@@ -276,10 +269,15 @@ export class SweepDialog {
             }));
         }
 
-        if (this.templateId) {
-            await this.loadTemplateData();
-            this.renderAxes();
+        // If no template was pre-selected (e.g. workflow not mapped yet), fall
+        // back to the first template so the dialog is immediately usable.
+        if (!this.templateId && workflows.length > 0) {
+            this.templateId = workflows[0].id;
+            this.templateSelect.value = this.templateId;
         }
+
+        await this.loadTemplateData();
+        this.renderAxes();
     }
 
     async loadTemplateData() {

@@ -173,6 +173,30 @@ class TestPresetWorkflow:
         assert await dialog.is_visible()
 
     @pytest.mark.asyncio
+    async def test_sweep_dialog_usable_without_pre_selected_template(self, page):
+        """When no template is pre-selected, the dialog should auto-pick one so
+        the user can interact immediately (regression: previously addAxis threw
+        because loadTemplateData was skipped when templateId was null)."""
+        await page.wait_for_timeout(3000)
+        await page.locator("button", has_text="Sweeps").first.click()
+
+        dialog = page.locator(".comfy-sweep-dialog")
+        await dialog.wait_for(state="visible", timeout=5000)
+
+        # Wait for the template list to fill (no template pre-selected)
+        template_options = dialog.locator("select.comfy-select").first.locator("option")
+        await template_options.first.wait_for(state="attached", timeout=5000)
+
+        # The auto-pick must trigger loadTemplateData — sweepSelect gets a placeholder
+        sweep_options = dialog.locator("select.comfy-select").nth(1).locator("option")
+        await sweep_options.first.wait_for(state="attached", timeout=5000)
+
+        # Now + 参数轴 should work (previously threw because template was null)
+        await dialog.locator("button", has_text="+ 参数轴").click()
+        await page.locator(".sweep-axis input").first.wait_for(state="visible", timeout=2000)
+        assert await dialog.locator(".sweep-axis").count() == 1
+
+    @pytest.mark.asyncio
     async def test_sweep_dialog_adds_axis_and_shows_total(self, page):
         """Adding a param axis with two values should report 2 runs in the summary."""
         await page.wait_for_timeout(3000)
