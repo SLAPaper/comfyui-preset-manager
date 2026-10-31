@@ -28,6 +28,19 @@ except ImportError:
 
 PLUGIN_DIR = Path(__file__).parent
 
+
+def _is_safe_id(value) -> bool:
+    """IDs are used as file and folder names; reject values that can escape them."""
+    return (
+        isinstance(value, str)
+        and value not in ("", ".", "..")
+        and "/" not in value
+        and "\\" not in value
+        and ":" not in value
+        and "\x00" not in value
+    )
+
+
 # ComfyUI node registration (empty - this plugin provides API only)
 NODE_CLASS_MAPPINGS = {}
 NODE_DISPLAY_NAME_MAPPINGS = {}
@@ -55,6 +68,8 @@ def _register_routes():
     async def get_presets_list(request):
         """Get all presets for a template."""
         template_id = request.match_info["template_id"]
+        if not _is_safe_id(template_id):
+            return web.json_response({"error": "Invalid template id"}, status=400)
         print(f"[PresetManager] API: 获取预设列表 ({template_id})")
         presets = load_presets(template_id)
         result = [
@@ -67,6 +82,8 @@ def _register_routes():
     async def get_template_detail(request):
         """Get a workflow template with full node_mapping."""
         template_id = request.match_info["template_id"]
+        if not _is_safe_id(template_id):
+            return web.json_response({"error": "Invalid template id"}, status=400)
         print(f"[PresetManager] API: 获取模板详情 ({template_id})")
         template = get_template(template_id)
         if template is None:
@@ -78,6 +95,8 @@ def _register_routes():
         """Get a single preset detail."""
         template_id = request.match_info["template_id"]
         preset_id = request.match_info["preset_id"]
+        if not _is_safe_id(template_id) or not _is_safe_id(preset_id):
+            return web.json_response({"error": "Invalid id"}, status=400)
         print(f"[PresetManager] API: 获取预设详情 ({template_id}/{preset_id})")
         preset = get_preset(template_id, preset_id)
         if preset is None:
@@ -92,8 +111,8 @@ def _register_routes():
             template_id = data.get("workflow_template")
             preset_id = data.get("id")
             print(f"[PresetManager] API: 保存预设 ({template_id}/{preset_id})")
-            if not template_id or not preset_id:
-                return web.json_response({"error": "Missing workflow_template or id"}, status=400)
+            if not _is_safe_id(template_id) or not _is_safe_id(preset_id):
+                return web.json_response({"error": "Invalid workflow_template or id"}, status=400)
 
             success = save_preset(template_id, preset_id, data)
             if success:
@@ -109,6 +128,8 @@ def _register_routes():
         """Delete a preset."""
         template_id = request.match_info["template_id"]
         preset_id = request.match_info["preset_id"]
+        if not _is_safe_id(template_id) or not _is_safe_id(preset_id):
+            return web.json_response({"error": "Invalid id"}, status=400)
         print(f"[PresetManager] API: 删除预设 ({template_id}/{preset_id})")
         success = delete_preset(template_id, preset_id)
         if success:
@@ -125,8 +146,8 @@ def _register_routes():
             preset_id = data.get("preset")
             print(f"[PresetManager] API: 应用预设 ({template_id}/{preset_id})")
 
-            if not template_id or not preset_id:
-                return web.json_response({"error": "Missing workflow or preset"}, status=400)
+            if not _is_safe_id(template_id) or not _is_safe_id(preset_id):
+                return web.json_response({"error": "Invalid workflow or preset"}, status=400)
 
             template = get_template(template_id)
             if template is None:
@@ -154,6 +175,8 @@ def _register_routes():
     async def get_sweeps(request):
         """Get sweep list for a template."""
         template_id = request.match_info["template_id"]
+        if not _is_safe_id(template_id):
+            return web.json_response({"error": "Invalid template id"}, status=400)
         print(f"[PresetManager] API: 获取扫描配置列表 ({template_id})")
         return web.json_response(load_sweeps(template_id))
 
@@ -162,6 +185,8 @@ def _register_routes():
         """Get a single sweep config."""
         template_id = request.match_info["template_id"]
         sweep_id = request.match_info["sweep_id"]
+        if not _is_safe_id(template_id) or not _is_safe_id(sweep_id):
+            return web.json_response({"error": "Invalid id"}, status=400)
         print(f"[PresetManager] API: 获取扫描配置详情 ({template_id}/{sweep_id})")
         sweep = get_sweep(template_id, sweep_id)
         if sweep is None:
@@ -177,8 +202,8 @@ def _register_routes():
             sweep_id = data.get("id")
             print(f"[PresetManager] API: 保存扫描配置 ({template_id}/{sweep_id})")
 
-            if not template_id or not sweep_id:
-                return web.json_response({"error": "Missing workflow_template or id"}, status=400)
+            if not _is_safe_id(template_id) or not _is_safe_id(sweep_id):
+                return web.json_response({"error": "Invalid workflow_template or id"}, status=400)
 
             save_sweep(template_id, sweep_id, data)
             return web.json_response({"status": "ok"})
@@ -191,6 +216,8 @@ def _register_routes():
         """Delete a sweep config."""
         template_id = request.match_info["template_id"]
         sweep_id = request.match_info["sweep_id"]
+        if not _is_safe_id(template_id) or not _is_safe_id(sweep_id):
+            return web.json_response({"error": "Invalid id"}, status=400)
         print(f"[PresetManager] API: 删除扫描配置 ({template_id}/{sweep_id})")
         if delete_sweep(template_id, sweep_id):
             return web.json_response({"status": "ok"})
@@ -205,8 +232,8 @@ def _register_routes():
             sweep = data.get("sweep")
             print(f"[PresetManager] API: 展开扫描配置 ({template_id})")
 
-            if not template_id or sweep is None:
-                return web.json_response({"error": "Missing workflow_template or sweep"}, status=400)
+            if not _is_safe_id(template_id) or sweep is None:
+                return web.json_response({"error": "Invalid workflow_template or sweep"}, status=400)
 
             presets = {p["id"]: get_preset(template_id, p["id"]) for p in load_presets(template_id)}
             combos = expand(sweep, presets)
