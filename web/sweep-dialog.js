@@ -314,7 +314,6 @@ export class SweepDialog {
         if (!sweepId) {
             this.currentSweepId = null;
             this.nameInput.value = "";
-            this.basePresetSelect.value = "";
             this.axes = [];
             this.renderAxes();
             return;
@@ -440,7 +439,10 @@ export class SweepDialog {
             return;
         }
 
-        const sweepId = this.currentSweepId || name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+        const sweepId = this.currentSweepId || name
+            .toLowerCase()
+            .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-")
+            .replace(/^-+|-+$/g, "") || `sweep-${Date.now().toString(36)}`;
         await saveSweep({
             workflow_template: this.templateId,
             id: sweepId,
@@ -486,6 +488,16 @@ export class SweepDialog {
         return snapshot;
     }
 
+    /**
+     * Put widget values back and repaint the canvas.
+     */
+    restoreWidgets(snapshot) {
+        for (const { widget, value } of snapshot) {
+            widget.value = value;
+        }
+        app.graph.setDirtyCanvas(true, true);
+    }
+
     async onRun() {
         if (this.running) {
             this.cancelRequested = true;
@@ -508,17 +520,22 @@ export class SweepDialog {
             return;
         }
 
-        // Validate against the graph before queueing anything
+        // Validate against the graph before queueing anything. Snapshot first so
+        // the probe never leaves the graph modified.
+        const snapshot = this.snapshotWidgets(Object.keys(combos[0].params));
         const probe = applyParamsToGraph(app.graph, this.template, combos[0].params);
         if (probe.failed.length > 0) {
+            this.restoreWidgets(snapshot);
             this.progress.classList.add("error");
             this.progress.textContent = `参数无法匹配到节点: ${probe.failed.join(", ")}`;
             return;
         }
 
-        if (!confirm(`将向队列提交 ${combos.length} 次运行，确定继续？`)) return;
+        if (!confirm(`将向队列提交 ${combos.length} 次运行，确定继续？`)) {
+            this.restoreWidgets(snapshot);
+            return;
+        }
 
-        const snapshot = this.snapshotWidgets(Object.keys(combos[0].params));
         this.running = true;
         this.cancelRequested = false;
         this.runButton.textContent = "取消";
@@ -538,10 +555,7 @@ export class SweepDialog {
             this.progress.classList.add("error");
             this.progress.textContent = `运行失败: ${error.message}`;
         } finally {
-            for (const { widget, value } of snapshot) {
-                widget.value = value;
-            }
-            app.graph.setDirtyCanvas(true, true);
+            this.restoreWidgets(snapshot);
             this.running = false;
             this.cancelRequested = false;
             this.runButton.textContent = "运行";
