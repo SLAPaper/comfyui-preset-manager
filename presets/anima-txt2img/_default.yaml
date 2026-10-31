@@ -1,5 +1,4 @@
 # Anima 默认采样配置
-# 提供开箱即用的 Anima 文生图参数默认值
 
 name: "默认配置"
 description: "Anima 默认采样配置"

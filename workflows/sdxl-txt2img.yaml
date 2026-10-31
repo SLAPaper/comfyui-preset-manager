@@ -6,9 +6,7 @@ description: "SDXL 基础文生图 workflow"
 version: "1.0"
 
 # 节点映射：定义每个参数如何在 workflow JSON 中定位
-# match_strategy:
-#   - "title_keyword": 通过节点标题关键词匹配（用于区分同类型的多个节点）
-#   - "unique_class": 通过 class_type 唯一匹配（适用于场景中只有一个该类型节点）
+# match_strategy 取值见 README 的“匹配策略”一节
 node_mapping:
   # 正向提示词 —— 通过标题关键词 "positive"/"正向" 定位 CLIPTextEncode 节点
   positive_prompt:

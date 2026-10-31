@@ -1,26 +1,32 @@
-# ComfyUI Preset Manager - Tests
+# 测试
 
-## Running Tests
+## 运行单元测试
 
-Tests must be run with the conftest.py file as the config to mock ComfyUI dependencies:
+在插件根目录执行：
 
 ```bash
-# From plugin root directory
-python -m pytest tests/ -v -c tests/conftest.py
-
-# Or with explicit path
-python -m pytest tests/ -v --conftest=tests/conftest.py
+python -m pytest tests -v --ignore=tests/e2e
 ```
 
-## Why `-c tests/conftest.py`?
+E2E 测试见 [../docs/TESTING.md](../docs/TESTING.md)。
 
-The plugin's `__init__.py` imports ComfyUI dependencies (aiohttp, server, folder_paths) that are only available at runtime inside ComfyUI. The `tests/conftest.py` file mocks these dependencies before pytest tries to collect tests.
+## 依赖 mock 的原因
 
-Without the `-c` flag, pytest will try to import `__init__.py` and fail with `ImportError: attempted relative import with no known parent package`.
+插件依赖 ComfyUI 运行时模块：`aiohttp`、`server`、`folder_paths`。单元测试在 ComfyUI 外运行，需要先 mock 这些模块。
 
-## Test Structure
+`conftest.py` 位于插件根目录，pytest 启动时会自动加载，并写入上述 mock。`tests/conftest.py` 提供 fixture，并用 `_import_module_from_file()` 按文件路径导入被测模块，避开 `__init__.py` 的路由注册。
 
-- `conftest.py` - Shared fixtures and ComfyUI dependency mocks
-- `test_workflow_parser.py` - Tests for template discovery and parsing
-- `test_node_matcher.py` - Tests for node matching algorithms
-- `test_preset_manager.py` - Tests for preset CRUD operations
+## 目录结构
+
+| 文件 | 内容 |
+|---|---|
+| `../conftest.py` | mock ComfyUI 运行时模块 |
+| `conftest.py` | fixture 和被测模块导入 |
+| `test_imports.py` | 模块导入 |
+| `test_workflow_parser.py` | 模板加载 |
+| `test_node_matcher.py` | 节点匹配和参数注入 |
+| `test_preset_manager.py` | 预设增删改查 |
+| `test_sweep_manager.py` | 扫描组合展开和增删改查 |
+| `test_mapping_manager.py` | 映射读写 |
+| `test_api_template.py` | 模板数据 |
+| `e2e/` | 启动真实 ComfyUI 的 API 和界面测试 |

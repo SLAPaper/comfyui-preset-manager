@@ -1,5 +1,4 @@
 # Flux 默认采样配置
-# Provides default values for Flux text-to-image generation
 
 name: "默认配置"
 description: "Flux 默认采样配置"

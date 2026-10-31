@@ -1,7 +1,7 @@
 """
 Node matching algorithm for ComfyUI Preset Manager.
 
-Matches workflow nodes to template parameters using class_type and title keyword strategies.
+Matches workflow nodes to template parameters using the match strategies declared in the template.
 """
 
 import copy
@@ -178,7 +178,7 @@ def _match_input_slot(workflow: dict, param_def: dict, synonyms: dict) -> MatchR
 def _follow_to_widget(workflow: dict, node_id: str, widget_name: str, max_depth: int) -> MatchResult | None:
     """
     Follow connection chain from node_id to find a node that has widget_name.
-    Recursively follows conditioning-type inputs when intermediate nodes lack the widget.
+    Recursively follows upstream inputs when intermediate nodes lack the widget.
     """
     if max_depth <= 0:
         return None

@@ -1,7 +1,7 @@
 /**
  * API wrapper for ComfyUI Preset Manager.
  * 
- * Wraps backend API calls for workflows, presets, and mappings.
+ * Wraps backend API calls for workflows, presets, sweeps, and mappings.
  */
 
 import { api } from "../../scripts/api.js";

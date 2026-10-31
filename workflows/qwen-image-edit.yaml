@@ -1,6 +1,7 @@
 # Qwen Image Edit Workflow Template
-# Supports both TextEncodeQwenImageEdit and TextEncodeQwenImageEditPlus
-# Uses VAEEncode (not EmptyLatentImage), so width/height are not extractable
+# Prompt nodes are located through the KSampler inputs.
+# Width and height follow the latent_image input; image-to-image workflows
+# that encode an input image have no width/height widget to write.
 # Reference image (LoadImage) is not managed by presets
 
 name: "Qwen Image Edit"
@@ -42,7 +43,7 @@ node_mapping:
     class_type: "KSampler"
     widget: "cfg"
 
-  # 输出尺寸 —— 通过 KSampler 的 latent_image 输入追踪到 EmptySD3LatentImage
+  # 输出尺寸 —— 通过 KSampler 的 latent_image 输入追溯到 latent 节点
   width:
     match_strategy: "input_slot"
     class_type: "KSampler"

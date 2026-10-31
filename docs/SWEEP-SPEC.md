@@ -1,17 +1,15 @@
-# 参数扫描 Spec
+# 参数扫描说明
 
 ## 目标
 
-在保存的预设之上，沿一个或多个参数轴做笛卡尔积组合，逐个应用到当前 graph 并入队执行，
-用于底模评测等需要控制变量的场景。
+在保存的预设之上，沿一个或多个参数轴做笛卡尔积组合。插件逐组写入当前 graph，并提交到队列，用于底模评测等需要控制变量的场景。
 
 ## 数据格式
 
-存储路径：`sweeps/<template_id>/<sweep_id>.yaml`，仅 user 层（无 bundled 覆盖）。
+存储路径：`user/preset-manager/sweeps/{template_id}/{sweep_id}.yaml`。扫描配置只存用户目录。
 
 ```yaml
 name: "CFG × Sampler 扫描"
-description: "底模评测用"
 axes:
   - type: param
     param: cfg
@@ -23,58 +21,61 @@ axes:
     values: [euler, dpmpp_2m]
 ```
 
-- 数值与枚举不区分类型，由 YAML 标量天然承载。枚举合法性在运行前对照
-  `widget.options.values` 校验。
-- `axes` 数组顺序即循环顺序，`axes[0]` 为最外层。不设独立的 order 字段。
-- 初始状态由用户保证——sweep 不支持 base_preset。如果要锁死非扫描维度的
-  参数，把它们放进一个预设轴里。
+接口保存时会同时写入 `workflow_template` 和 `id`。读取时以存储路径为准，不依赖这两个字段。
 
-## 覆盖规则
+- `axes` 的顺序即循环顺序，`axes[0]` 为最外层。
+- 后应用的轴覆盖先应用的轴。预设轴和参数轴使用同一规则。
+- 扫描不支持基础预设。需要固定非扫描参数时，把参数放进预设轴。
 
-按 axes 顺序依次应用，后应用者覆盖先应用者，即**内层覆盖外层**。
-preset 轴与 param 轴遵循同一规则，无特殊情况。
+## 执行流程
 
-应用顺序：`axes[0]` → `axes[1]` → ... → `axes[n]`
+1. 后端展开 `axes`，得到组合列表。预设轴在后端展开为完整参数。
+2. 前端保存当前 widget 快照，再用第一个组合试算。
+3. 试算失败时，前端恢复快照并停止。
+4. 用户确认提交次数后，前端逐组应用参数，调用 `app.queuePrompt(0, 1)` 提交。
+5. 运行结束后，前端恢复快照。
+
+试算只检查参数能否匹配节点和 widget。插件不检查枚举值是否在 `widget.options.values` 内。
+
+说明：取消只停止后续提交。已进入队列的任务继续执行。
 
 ## 职责划分
 
-### 后端 `sweep_manager.py`
+### 后端
 
-- 扫描配置 CRUD
-- `expand(sweep)` → 完全解析的组合列表，preset 轴在后端展开为 params：
+`workflow_parser.py` 提供模板，`preset_manager.py` 提供预设，`sweep_manager.py` 负责扫描配置的增删改查和组合展开。展开结果是扁平列表，每条包含 `params` 和 `label`。
 
 ```python
 [{"params": {...}, "label": "cfg=3, preset=anime"}, ...]
 ```
 
-后端负责全部组合逻辑，使其可被单元测试覆盖。前端只消费扁平结果。
+组合逻辑放在后端，便于单元测试覆盖。
 
 ### 前端
 
-- `preset-api.js` 抽出 `applyParamsToGraph(graph, template, params)`
-  → `{successCount, totalCount, failed}`，由 `onApply()` 与扫描共用
-- `sweep-dialog.js`：轴的增删、拖动排序、逗号列表输入、总数确认
-- 执行循环：逐组合 apply + `await app.queuePrompt(0, 1)`，结束后恢复原始 widget 值
-- 前置校验：用第一个组合试算，`failed` 非空则中止并报告，不入队
+`preset-api.js` 提供 `applyParamsToGraph()`，返回成功数、总数和失败参数列表。预设应用和扫描共用这个函数。
+
+`sweep-dialog.js` 负责轴的增删和排序、逗号列表输入、总数显示、执行循环和快照恢复。
 
 ## 设计决策
 
 | 决策 | 理由 |
 |---|---|
-| 不处理种子固定 | 控制种子的方式很多（自定义节点、SeedEverywhere 等），插件覆盖无法保证完全，做了反而制造"已保证"的错觉。由用户在 workflow 中自行保证。 |
-| 独立对话框而非标签页 | 项目已有 `PresetEditorDialog` 先例，沿用零学习成本、零回归风险。模板选择通过传参共享。 |
-| `sweep_manager.py` 独立于 `preset_manager.py` | 两者约 70% 逻辑相似，但预设有 bundled/user 双层覆盖、schema 与校验均不同。泛化需改动已测试代码，收益不抵风险。 |
-| 组合展开放后端 | 项目无 JS 测试框架。展开顺序与覆盖规则是最易出 bug 处，放后端才能被 pytest 覆盖。 |
-| 复用 ComfyUI 原生队列 | 进度、中断、预览全部继承，且不绑定输出节点。 |
-| 只支持逗号列表输入 | 范围语法需配套预览功能，抬高使用门槛。 |
-| 不做参数信息叠加到图片 | 生态已有 KJNodes AddLabel 等节点，用户在 workflow 中自行处理更灵活。 |
+| 不处理种子 | 固定种子的方式较多，插件无法保证一致，交给 workflow 处理 |
+| 独立对话框 | 沿用预设对话框的交互方式，减少新交互 |
+| 扫描配置独立于预设 | 两者的存储层级和字段不同，合并会改动已测试代码 |
+| 后端展开组合 | 项目没有前端测试框架，展开顺序和覆盖规则放在后端才能被测试 |
+| 复用 ComfyUI 队列 | 进度、中断和预览由 ComfyUI 提供，插件不绑定输出节点 |
+| 只支持逗号列表 | 范围语法需要配套预览，暂不支持 |
+| 不做图片叠加 | KJNodes AddLabel 等节点已能处理，用户在 workflow 内自行配置 |
 
 ## 待定
 
-- 入队确认框是否提示 `control_after_generate != fixed`（仅提示，不修改）
-- 公共 CSS 抽取推迟到扫描功能跑通之后
+- 入队前是否提示 `control_after_generate != fixed`。只提示，不修改。
+- 抽取三个对话框的公共 CSS。
 
 ## 测试
 
-- `test_sweep_manager.py`：展开顺序、覆盖规则、preset 解析、CRUD
-- E2E：扫描配置 CRUD 路由
+- `tests/test_sweep_manager.py` 覆盖展开顺序、覆盖规则、预设轴解析和增删改查。
+- `tests/e2e/test_api.py` 覆盖扫描配置接口和组合展开。
+- `tests/e2e/test_preset_workflow.py` 覆盖扫描对话框的交互。
