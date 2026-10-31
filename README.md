@@ -25,7 +25,7 @@ ComfyUI 的配置预设与参数扫描插件，用于底模评测。
 3. 选择模板和预设。
 4. 点击 “Apply Preset”。
 
-应用后，插件记录当前 workflow 名称与模板的映射。下次打开对话框时，插件自动选择该模板。
+应用后，插件把模板 ID 写入当前 workflow 的 `extra.preset_template`。保存 workflow 后，下次打开对话框时会自动选择该模板。
 
 ### 新建和编辑预设
 
@@ -76,7 +76,6 @@ ComfyUI 的配置预设与参数扫描插件，用于底模评测。
 | 模板 | `workflows/` | `user/preset-manager/workflows/` |
 | 预设 | `presets/{template_id}/` | `user/preset-manager/presets/{template_id}/` |
 | 扫描配置 | 无 | `user/preset-manager/sweeps/{template_id}/` |
-| workflow 映射 | 无 | `user/preset-manager/mapping.yaml` |
 
 用户目录的同名文件覆盖内置文件。删除预设时，插件只删除用户目录里的文件。
 
@@ -90,16 +89,13 @@ ComfyUI 的配置预设与参数扫描插件，用于底模评测。
 | GET | `/preset-manager/preset/{template_id}/{preset_id}` | 获取预设详情 |
 | POST | `/preset-manager/preset` | 保存预设 |
 | DELETE | `/preset-manager/preset/{template_id}/{preset_id}` | 删除预设 |
-| POST | `/preset-manager/apply` | 把预设写入 API 格式的 workflow |
 | GET | `/preset-manager/sweeps/{template_id}` | 获取扫描配置列表 |
 | GET | `/preset-manager/sweep/{template_id}/{sweep_id}` | 获取扫描配置详情 |
 | POST | `/preset-manager/sweep` | 保存扫描配置 |
 | DELETE | `/preset-manager/sweep/{template_id}/{sweep_id}` | 删除扫描配置 |
 | POST | `/preset-manager/sweep/expand` | 展开扫描组合 |
-| GET | `/preset-manager/mapping` | 获取 workflow 映射 |
-| POST | `/preset-manager/mapping` | 保存 workflow 映射 |
 
-路径参数只能用文件名，不能包含路径分隔符。`/apply` 接受 API 格式的 workflow，前端不使用这个接口。
+路径参数只能用文件名，不能包含路径分隔符。
 
 ## 开发
 
@@ -107,6 +103,7 @@ ComfyUI 的配置预设与参数扫描插件，用于底模评测。
 
 ```bash
 python -m pytest tests -v --ignore=tests/e2e
+node --test tests/js
 ```
 
 E2E 测试见 [docs/TESTING.md](docs/TESTING.md)。设计说明见 [docs/DESIGN.md](docs/DESIGN.md)，扫描格式见 [docs/SWEEP-SPEC.md](docs/SWEEP-SPEC.md)。

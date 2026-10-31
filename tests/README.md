@@ -6,6 +6,7 @@
 
 ```bash
 python -m pytest tests -v --ignore=tests/e2e
+node --test tests/js
 ```
 
 E2E 测试见 [../docs/TESTING.md](../docs/TESTING.md)。
@@ -23,10 +24,10 @@ E2E 测试见 [../docs/TESTING.md](../docs/TESTING.md)。
 | `../conftest.py` | mock ComfyUI 运行时模块 |
 | `conftest.py` | fixture 和被测模块导入 |
 | `test_imports.py` | 模块导入 |
+| `test_storage.py` | 存储接口和 ID 校验 |
 | `test_workflow_parser.py` | 模板加载 |
-| `test_node_matcher.py` | 节点匹配和参数注入 |
 | `test_preset_manager.py` | 预设增删改查 |
 | `test_sweep_manager.py` | 扫描组合展开和增删改查 |
-| `test_mapping_manager.py` | 映射读写 |
 | `test_api_template.py` | 模板数据 |
+| `js/` | 前端 matcher 和 sweep-runner 单元测试 |
 | `e2e/` | 启动真实 ComfyUI 的 API 和界面测试 |

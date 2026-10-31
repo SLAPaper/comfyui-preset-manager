@@ -82,7 +82,13 @@ def test_user_templates_override_bundled(workflow_parser, temp_dir):
     custom_template = {
         "name": "Custom SDXL",
         "description": "User customized template",
-        "node_mapping": {}
+        "node_mapping": {
+            "steps": {
+                "match_strategy": "unique_class",
+                "class_type": "KSampler",
+                "widget": "steps",
+            }
+        },
     }
     
     with open(user_workflows_dir / "sdxl-txt2img.yaml", "w") as f:

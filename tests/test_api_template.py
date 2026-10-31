@@ -4,6 +4,7 @@ Tests for GET /preset-manager/template/{template_id} API endpoint.
 
 import pytest
 import sys
+import tempfile
 import types
 import importlib.util
 from pathlib import Path
@@ -22,8 +23,9 @@ server.PromptServer.instance = types.ModuleType("server.PromptServer.instance")
 server.PromptServer.instance.routes = types.ModuleType("server.PromptServer.instance.routes")
 sys.modules["server"] = server
 
+TEST_USER_DIR = tempfile.mkdtemp(prefix="preset-manager-test-")
 folder_paths = types.ModuleType("folder_paths")
-folder_paths.get_user_directory = lambda: "/tmp/test_user"
+folder_paths.get_user_directory = lambda: TEST_USER_DIR
 sys.modules["folder_paths"] = folder_paths
 
 
@@ -37,6 +39,8 @@ def _import_module(name, file_path):
 
 @pytest.fixture
 def workflow_parser():
+    if "storage" not in sys.modules:
+        _import_module("storage", PLUGIN_DIR / "storage.py")
     return _import_module("workflow_parser", PLUGIN_DIR / "workflow_parser.py")
 
 

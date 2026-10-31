@@ -7,6 +7,8 @@ pip install pytest pytest-asyncio httpx playwright
 python -m playwright install chromium
 ```
 
+前端测试需要 Node.js 18 或更高版本。
+
 ## 单元测试
 
 ```bash
@@ -16,12 +18,22 @@ python -m pytest tests -v --ignore=tests/e2e
 | 文件 | 覆盖范围 |
 |---|---|
 | `test_imports.py` | 模块导入 |
-| `test_workflow_parser.py` | 模板发现和解析 |
-| `test_node_matcher.py` | 4 种匹配策略、参数注入 |
+| `test_storage.py` | ID 校验、原子读写、目录扫描 |
+| `test_workflow_parser.py` | 模板发现、解析和校验 |
 | `test_preset_manager.py` | 预设增删改查、内置与用户目录覆盖 |
 | `test_sweep_manager.py` | 组合展开、覆盖规则、扫描配置增删改查 |
-| `test_mapping_manager.py` | 映射读写 |
 | `test_api_template.py` | 模板数据结构和序列化 |
+
+## 前端单元测试
+
+```bash
+node --test tests/js
+```
+
+| 文件 | 覆盖范围 |
+|---|---|
+| `tests/js/matcher.test.mjs` | 4 种匹配策略、同义词、检查、应用和读取 |
+| `tests/js/sweep-runner.test.mjs` | 执行顺序、取消和中途失败 |
 
 ## E2E 测试
 

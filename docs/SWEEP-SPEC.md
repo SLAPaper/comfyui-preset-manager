@@ -30,12 +30,13 @@ axes:
 ## 执行流程
 
 1. 后端展开 `axes`，得到组合列表。预设轴在后端展开为完整参数。
-2. 前端保存当前 widget 快照，再用第一个组合试算。
-3. 试算失败时，前端恢复快照并停止。
-4. 用户确认提交次数后，前端逐组应用参数，调用 `app.queuePrompt(0, 1)` 提交。
-5. 运行结束后，前端恢复快照。
+2. 前端用 `checkParams()` 检查第一个组合，不修改 graph。
+3. 检查失败时停止。
+4. 用户确认提交次数后，前端保存快照。快照覆盖所有组合用到的参数。
+5. `sweep-runner.js` 逐组检查、应用参数，调用 `app.queuePrompt(0, 1)` 提交。
+6. 运行结束后，前端恢复快照。
 
-试算只检查参数能否匹配节点和 widget。插件不检查枚举值是否在 `widget.options.values` 内。
+检查只确认参数能否匹配节点和 widget。插件不检查枚举值是否在 `widget.options.values` 内。
 
 说明：取消只停止后续提交。已进入队列的任务继续执行。
 
@@ -53,9 +54,11 @@ axes:
 
 ### 前端
 
-`preset-api.js` 提供 `applyParamsToGraph()`，返回成功数、总数和失败参数列表。预设应用和扫描共用这个函数。
+`matcher.js` 提供 `resolveParams()`、`checkParams()` 和 `applyParams()`。预设应用和扫描共用这些函数。
 
-`sweep-dialog.js` 负责轴的增删和排序、逗号列表输入、总数显示、执行循环和快照恢复。
+`sweep-runner.js` 负责执行顺序和中途取消，依赖通过参数注入，不依赖 DOM。
+
+`sweep-dialog.js` 负责轴的增删和排序、逗号列表输入、总数显示、快照恢复和进度显示。
 
 ## 设计决策
 
@@ -77,5 +80,6 @@ axes:
 ## 测试
 
 - `tests/test_sweep_manager.py` 覆盖展开顺序、覆盖规则、预设轴解析和增删改查。
+- `tests/js/sweep-runner.test.mjs` 覆盖执行顺序、取消和中途失败。
 - `tests/e2e/test_api.py` 覆盖扫描配置接口和组合展开。
 - `tests/e2e/test_preset_workflow.py` 覆盖扫描对话框的交互。

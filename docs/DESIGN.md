@@ -8,20 +8,24 @@
 
 | 层 | 文件 | 职责 |
 |---|---|---|
-| 前端 | `web/*.js` | 对话框、节点匹配、参数应用、扫描循环 |
-| 后端 | `__init__.py` | 注册 API 路由 |
-| 后端 | `workflow_parser.py` | 加载模板 |
+| 前端 | `web/preset-manager.js` | 注册扩展，添加入口按钮 |
+| 前端 | `web/client.js` | HTTP 请求 |
+| 前端 | `web/matcher.js` | 节点匹配、参数读取、检查、应用 |
+| 前端 | `web/sweep-runner.js` | 扫描执行顺序和取消 |
+| 前端 | `web/*-dialog.js` | 对话框和表单 |
+| 后端 | `__init__.py` | 注册 HTTP 路由 |
+| 后端 | `storage.py` | 安全 ID、原子写、用户目录、YAML 扫描 |
+| 后端 | `workflow_parser.py` | 加载和校验模板 |
 | 后端 | `preset_manager.py` | 预设增删改查 |
 | 后端 | `sweep_manager.py` | 扫描配置增删改查、组合展开 |
-| 后端 | `mapping_manager.py` | workflow 名称与模板的映射 |
 | 存储 | `workflows/`、`presets/` | 内置模板和预设 |
-| 存储 | `user/preset-manager/` | 用户模板、预设、扫描配置、映射 |
+| 存储 | `user/preset-manager/` | 用户模板、预设、扫描配置 |
 
-数据流分两条。界面上，前端读取模板后直接匹配 `app.graph`，不经过后端。脚本调用时，后端用 API 格式的 workflow 做匹配。`POST /preset-manager/apply` 只服务后一条路径。
+数据和执行只在前端。后端只提供存储和组合展开，不匹配节点，也不接收 workflow。
 
 ## 节点匹配
 
-模板的 `node_mapping` 为每个参数声明匹配策略。
+匹配逻辑只有一份，位于 `web/matcher.js`。模板的 `node_mapping` 为每个参数声明匹配策略。
 
 | 策略 | 定位方式 | 限制 |
 |---|---|---|
@@ -30,9 +34,18 @@
 | `output_connection` | 从目标节点的指定输入回溯源节点；输入未连接时改用目标节点自身 | 目标节点必须唯一 |
 | `input_slot` | 从枢纽节点的命名输入回溯源节点，可沿连接递归 5 层 | 枢纽节点必须唯一，输入必须已连接 |
 
-`synonyms` 把派生节点类型映射到标准类型。例如 `KSamplerAdvanced` 映射为 `KSampler`。
+`synonyms` 在比较前映射节点类型。例如 `KSamplerAdvanced` 按 `KSampler` 处理。
 
-前端和后端各有一份匹配逻辑。两份逻辑的行为需要同时修改，否则界面与 API 的结果会不同。
+匹配模块对外提供 4 个函数：
+
+```text
+resolveParams(graph, template) -> {param: {nodeId, widgetName, value, widget} | null}
+readParams(graph, template)     -> [{name, nodeType, nodeId, value}]
+checkParams(graph, template, params) -> failed[]
+applyParams(graph, template, params) -> {applied, failed}
+```
+
+预览、读取当前参数、扫描快照和参数注入都调用 `resolveParams`，调用方不需要知道策略分支。`checkParams` 不修改 graph，扫描试算和逐组校验都调用这个函数。
 
 ## 预设
 
@@ -40,44 +53,61 @@
 
 存储分两层。内置预设位于 `presets/{template_id}/`，用户预设位于 `user/preset-manager/presets/{template_id}/`。同名文件以用户目录为准。预设 ID 取自文件名，保存时写入用户目录。
 
-新建预设时，前端从当前 graph 读取模板声明的参数值。编辑预设时，前端重新读取当前 graph。当前 graph 匹配不到的已存参数不会出现在编辑器中，保存后会被删除。
+新建预设时，前端用 `readParams()` 读取当前 graph 的参数值。编辑预设时，前端重新读取当前 graph。当前 graph 匹配不到的已存参数不会出现在编辑器中，保存后会被删除。
 
 删除接口只删除用户目录的文件。内置预设无法通过接口删除。
 
 ## 扫描
 
-扫描配置由一个或多个轴组成。参数轴直接给参数取值，预设轴展开为一个预设的全部参数。后端用笛卡尔积展开组合，`axes[0]` 为最外层。后应用的轴覆盖先应用的轴。
+扫描配置由 1 个或多个轴组成。参数轴直接给参数取值，预设轴展开为一个预设的全部参数。后端用笛卡尔积展开组合，`axes[0]` 为最外层。后应用的轴覆盖先应用的轴。
 
 前端执行流程：
 
-1. 用第一个组合试算，检查参数能否匹配节点和 widget。
+1. 用 `checkParams()` 检查第一个组合能否匹配节点和 widget。
 2. 用户确认提交次数。
-3. 逐组应用参数，调用 `app.queuePrompt(0, 1)` 提交。
-4. 恢复扫描前的 widget 值。
+3. 保存快照。快照覆盖所有组合用到的参数。
+4. `sweep-runner.js` 逐组检查、应用、提交队列。
+5. 运行结束后恢复快照。
 
-试算前先保存 widget 快照。试算失败或用户取消时，插件立即恢复快照。运行结束后再恢复一次。
+`runSweep()` 接收检查、应用、提交、进度和取消回调，不依赖 DOM。取消只停止后续提交，已进入队列的任务继续执行。
 
-取消只停止后续提交。已进入队列的任务继续执行。扫描不校验枚举值是否在 widget 的可选项内。
+扫描不校验枚举值是否在 widget 的可选项内。
 
-## 映射
+## 模板关联
 
-映射文件记录 workflow 名称与模板 ID 的对应关系。用户点击 “Apply Preset” 时，前端保存当前 workflow 名称和模板 ID。下次打开预设对话框时，前端按映射自动选择模板。
+用户点击 “Apply Preset” 后，前端把模板 ID 写入 `app.graph.extra.preset_template`。这个字段随 workflow 保存。下次打开预设对话框或扫描对话框时，前端读取该字段，自动选择模板。
+
+关联不再使用独立映射文件，也不依赖 workflow 名称。
 
 ## 存储与安全
 
-路径参数只允许文件名，不能包含 `/`、`\`、`:`、空值、`.` 或 `..`。API 在拼接路径前检查这些值。
+`storage.py` 统一处理存储：
+
+- `is_safe_id()` 和 `require_safe_id()`：ID 不能包含 `/`、`\`、`:`、空值、`.` 或 `..`。
+- `save_yaml()`：先写临时文件，再用 `os.replace()` 替换目标文件。
+- `scan_yaml()`：按文件名读取目录下的 YAML。
+- `user_dir()`：返回 `user/preset-manager/` 下的目录。
+
+业务模块在拼接路径前调用 `require_safe_id()`。路由用 `_match_ids()` 和 `_body_ids()` 检查入参，非法 ID 返回 400。
+
+## 测试面
+
+- `tests/js/matcher.test.mjs` 覆盖 4 种策略、同义词、检查、应用和读取。
+- `tests/js/sweep-runner.test.mjs` 覆盖执行顺序、取消和中途失败。
+- `tests/test_storage.py` 覆盖 ID 校验和原子读写。
+- `tests/test_preset_manager.py`、`tests/test_sweep_manager.py` 覆盖存储行为。
+- `tests/e2e/` 覆盖 HTTP 接口和界面流程。
 
 ## 已知限制
 
 - 含多个 KSampler 的 workflow 无法用 `unique_class` 或 `input_slot` 匹配采样参数。
-- 前端和后端各有一份匹配逻辑。
 - 编辑预设会丢失当前 graph 匹配不到的已存参数。
 - 预设没有删除按钮。
-- 后端 `apply_preset` 每次调用会重写 `debug_apply.log`。
 - 扫描不校验枚举值。
+- 脚本无法通过 HTTP 应用预设。应用只在前端完成。
 
 ## 后续方向
 
 - 支持按标题或序号选择多个同类型节点。
 - 增加预设删除入口，并在编辑时保留未匹配参数。
-- 合并前后端的匹配逻辑，或为两份逻辑补同一组测试。
+- 用 `graphToPrompt()` 预构造 prompt，避免扫描期间修改 graph。

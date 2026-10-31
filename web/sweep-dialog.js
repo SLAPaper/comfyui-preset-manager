@@ -10,9 +10,10 @@ import { app } from "../../scripts/app.js";
 import { $el } from "../../scripts/ui.js";
 import {
     getSweeps, getSweepDetail, saveSweep, deleteSweep, expandSweep,
-    getPresets, getTemplateDetail, applyParamsToGraph, findNodeByTemplate,
-    getWorkflows
-} from "./preset-api.js";
+    getPresets, getTemplateDetail, getWorkflows
+} from "./client.js";
+import { applyParams, checkParams, resolveParams } from "./matcher.js";
+import { runSweep } from "./sweep-runner.js";
 
 /**
  * Parse a comma-separated value list, keeping numbers as numbers.
@@ -269,13 +270,15 @@ export class SweepDialog {
             }));
         }
 
-        // If no template was pre-selected (e.g. workflow not mapped yet), fall
-        // back to the first template so the dialog is immediately usable.
-        if (!this.templateId && workflows.length > 0) {
-            this.templateId = workflows[0].id;
-            this.templateSelect.value = this.templateId;
+        // Fall back to the first template when none is stored or the stored
+        // template no longer exists, so the dialog stays usable.
+        if (!workflows.some(w => w.id === this.templateId)) {
+            this.templateId = workflows[0]?.id ?? null;
+            this.templateSelect.disabled = !this.templateId;
+            if (this.templateId) this.templateSelect.value = this.templateId;
         }
 
+        if (!this.templateId) return;
         await this.loadTemplateData();
         this.renderAxes();
     }
@@ -476,14 +479,11 @@ export class SweepDialog {
      * Snapshot the widgets a set of params resolves to, so they can be restored.
      */
     snapshotWidgets(paramNames) {
+        const resolved = resolveParams(app.graph, this.template);
         const snapshot = [];
         for (const name of paramNames) {
-            const paramDef = this.template.node_mapping[name];
-            if (!paramDef) continue;
-            const result = findNodeByTemplate(app.graph, paramDef, this.template.synonyms || {});
-            if (!result) continue;
-            const widget = result.node.widgets?.find(w => w.name === result.widgetName);
-            if (widget) snapshot.push({ widget, value: widget.value });
+            const match = resolved[name];
+            if (match) snapshot.push({ widget: match.widget, value: match.value });
         }
         return snapshot;
     }
@@ -520,37 +520,36 @@ export class SweepDialog {
             return;
         }
 
-        // Validate against the graph before queueing anything. Snapshot first so
-        // the probe never leaves the graph modified.
-        const snapshot = this.snapshotWidgets(Object.keys(combos[0].params));
-        const probe = applyParamsToGraph(app.graph, this.template, combos[0].params);
-        if (probe.failed.length > 0) {
-            this.restoreWidgets(snapshot);
+        // Validate against the graph before queueing anything.
+        const failed = checkParams(app.graph, this.template, combos[0].params);
+        if (failed.length > 0) {
             this.progress.classList.add("error");
-            this.progress.textContent = `参数无法匹配到节点: ${probe.failed.join(", ")}`;
+            this.progress.textContent = `参数无法匹配到节点: ${failed.join(", ")}`;
             return;
         }
 
-        if (!confirm(`将向队列提交 ${combos.length} 次运行，确定继续？`)) {
-            this.restoreWidgets(snapshot);
-            return;
-        }
+        if (!confirm(`将向队列提交 ${combos.length} 次运行，确定继续？`)) return;
 
+        const snapshot = this.snapshotWidgets(new Set(combos.flatMap(combo => Object.keys(combo.params))));
         this.running = true;
         this.cancelRequested = false;
         this.runButton.textContent = "取消";
         this.progress.classList.remove("error");
 
         try {
-            for (const [index, combo] of combos.entries()) {
-                if (this.cancelRequested) break;
-                applyParamsToGraph(app.graph, this.template, combo.params);
-                await app.queuePrompt(0, 1);
-                this.progress.textContent = `${index + 1}/${combos.length} — ${combo.label}`;
-            }
-            this.progress.textContent = this.cancelRequested
-                ? `已取消（${this.progress.textContent}）`
-                : `完成，已提交 ${combos.length} 次运行`;
+            const result = await runSweep({
+                combos,
+                check: (params) => checkParams(app.graph, this.template, params),
+                apply: (params) => applyParams(app.graph, this.template, params),
+                queue: () => app.queuePrompt(0, 1),
+                isCancelled: () => this.cancelRequested,
+                onProgress: (submitted, combo) => {
+                    this.progress.textContent = `${submitted}/${combos.length} — ${combo.label}`;
+                },
+            });
+            this.progress.textContent = result.cancelled
+                ? `已取消（${result.submitted}/${combos.length}）`
+                : `完成，已提交 ${result.submitted} 次运行`;
         } catch (error) {
             this.progress.classList.add("error");
             this.progress.textContent = `运行失败: ${error.message}`;

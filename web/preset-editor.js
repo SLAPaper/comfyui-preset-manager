@@ -8,8 +8,7 @@
  * - Code editing mode for advanced users
  */
 
-import { app } from "../../scripts/app.js";
-import { getWorkflows, savePreset, getPresetDetail } from "./preset-api.js";
+import { savePreset } from "./client.js";
 
 // Use new API to avoid deprecation warnings
 const { $el, ComfyDialog } = window.comfyAPI.ui;

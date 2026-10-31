@@ -128,15 +128,16 @@ class TestPresetWorkflow:
 
     @pytest.mark.asyncio
     async def test_apply_params_writes_values_into_graph(self, page):
-        """applyParamsToGraph should write values onto the matched widgets."""
+        """applyParams should write values onto the matched widgets."""
         await page.wait_for_timeout(3000)
 
         result = await page.evaluate("""async () => {
-            const api = await import('/extensions/comfyui-preset-manager/preset-api.js');
+            const client = await import('/extensions/comfyui-preset-manager/client.js');
+            const matcher = await import('/extensions/comfyui-preset-manager/matcher.js');
             const { app } = await import('/scripts/app.js');
 
-            const template = await api.getTemplateDetail('sdxl-txt2img');
-            const outcome = api.applyParamsToGraph(app.graph, template, {
+            const template = await client.getTemplateDetail('sdxl-txt2img');
+            const outcome = matcher.applyParams(app.graph, template, {
                 steps: 33,
                 cfg: 6.5,
             });
@@ -150,7 +151,7 @@ class TestPresetWorkflow:
         }""")
 
         assert result["outcome"]["failed"] == []
-        assert result["outcome"]["successCount"] == 2
+        assert result["outcome"]["applied"] == 2
         assert result["steps"] == 33
         assert result["cfg"] == 6.5
 
@@ -226,19 +227,19 @@ class TestPresetWorkflow:
         await page.wait_for_timeout(3000)
 
         result = await page.evaluate("""async () => {
-            const api = await import('/extensions/comfyui-preset-manager/preset-api.js');
+            const client = await import('/extensions/comfyui-preset-manager/client.js');
+            const matcher = await import('/extensions/comfyui-preset-manager/matcher.js');
             const { app } = await import('/scripts/app.js');
 
-            const template = await api.getTemplateDetail('sdxl-txt2img');
-            return api.applyParamsToGraph(app.graph, template, {
+            const template = await client.getTemplateDetail('sdxl-txt2img');
+            return matcher.applyParams(app.graph, template, {
                 steps: 12,
                 no_such_param: 1,
             });
         }""")
 
         assert result["failed"] == ["no_such_param"]
-        assert result["successCount"] == 1
-        assert result["totalCount"] == 2
+        assert result["applied"] == 1
 
     @pytest.mark.asyncio
     async def test_editor_width_consistent_between_modes(self, page):

@@ -1,102 +1,56 @@
 """
-Preset CRUD operations for ComfyUI Preset Manager.
+Preset CRUD for ComfyUI Preset Manager.
 
-Loads presets from bundled and user directories, storing user presets as YAML files.
-Bundled presets serve as defaults; user presets override when sharing the same id.
+Bundled presets live in presets/{template_id}/. User presets live in
+user/preset-manager/presets/{template_id}/ and override bundled presets by ID.
 """
 
-import os
-import yaml
 from pathlib import Path
 
+try:
+    from .storage import load_yaml, require_safe_id, save_yaml, scan_yaml, user_dir
+except ImportError:
+    from storage import load_yaml, require_safe_id, save_yaml, scan_yaml, user_dir
+
 PLUGIN_DIR = Path(__file__).parent
-PRESETS_DIR = PLUGIN_DIR / "presets"  # Bundled presets
+PRESETS_DIR = PLUGIN_DIR / "presets"
 
 
 def get_user_presets_dir() -> Path:
-    """
-    Get user presets directory: {ComfyUI_base}/user/preset-manager/presets/
-    Creates directory if it doesn't exist.
-    """
-    import folder_paths
-    user_dir = Path(folder_paths.get_user_directory())
-    presets_dir = user_dir / "preset-manager" / "presets"
-    presets_dir.mkdir(parents=True, exist_ok=True)
-    return presets_dir
-
-
-def _load_yaml_file(filepath: Path) -> dict | None:
-    """Load a single YAML file and return its contents, or None on error."""
-    try:
-        with open(filepath, "r", encoding="utf-8") as f:
-            data = yaml.safe_load(f)
-        if isinstance(data, dict):
-            return data
-        print(f"[PresetManager] Warning: {filepath} did not contain a valid dict")
-        return None
-    except Exception as e:
-        print(f"[PresetManager] Error loading {filepath}: {e}")
-        return None
+    return user_dir("presets")
 
 
 def _scan_preset_dir(directory: Path, template_id: str) -> dict[str, dict]:
-    """
-    Scan a preset directory for a given template_id.
-    Returns a dict mapping preset_id -> preset_data (with id injected).
-    """
-    result = {}
-    template_dir = directory / template_id
-    if not template_dir.is_dir():
-        return result
-    for f in template_dir.iterdir():
-        if f.suffix in (".yaml", ".yml") and f.is_file():
-            preset_id = f.stem
-            data = _load_yaml_file(f)
-            if data is not None:
-                data["id"] = preset_id
-                result[preset_id] = data
-    return result
+    presets = scan_yaml(directory / template_id)
+    for preset_id, data in presets.items():
+        data["id"] = preset_id
+    return presets
 
 
 def load_presets(template_id: str) -> list[dict]:
-    """
-    Load all presets for a given template.
-    Sources:
-    1. Bundled presets/{template_id}/ directory
-    2. User presets/{template_id}/ directory
-
-    Returns: list of preset dicts with keys: id, name, description, workflow_template, params
-    - id = filename without .yaml extension
-    - Merges both sources, user presets override bundled if same id
-    """
-    # Bundled presets first
+    """Load bundled presets, then let user presets override them by ID."""
+    require_safe_id(template_id)
     presets = _scan_preset_dir(PRESETS_DIR, template_id)
-
-    # User presets override bundled
-    user_dir = get_user_presets_dir()
-    user_presets = _scan_preset_dir(user_dir, template_id)
-    presets.update(user_presets)
-
+    presets.update(_scan_preset_dir(get_user_presets_dir(), template_id))
     return list(presets.values())
 
 
-def get_preset(template_id: str, preset_id: str) -> dict | None:
-    """Load a single preset. Returns None if not found."""
-    # Check user directory first (higher priority)
-    user_dir = get_user_presets_dir()
+def _preset_file(directory: Path, template_id: str, preset_id: str) -> Path | None:
     for ext in (".yaml", ".yml"):
-        user_file = user_dir / template_id / f"{preset_id}{ext}"
-        if user_file.is_file():
-            data = _load_yaml_file(user_file)
-            if data is not None:
-                data["id"] = preset_id
-                return data
+        filepath = directory / template_id / f"{preset_id}{ext}"
+        if filepath.is_file():
+            return filepath
+    return None
 
-    # Fall back to bundled
-    for ext in (".yaml", ".yml"):
-        bundled_file = PRESETS_DIR / template_id / f"{preset_id}{ext}"
-        if bundled_file.is_file():
-            data = _load_yaml_file(bundled_file)
+
+def get_preset(template_id: str, preset_id: str) -> dict | None:
+    """Load a single preset. User files take priority over bundled files."""
+    require_safe_id(template_id, preset_id)
+
+    for directory in (get_user_presets_dir(), PRESETS_DIR):
+        filepath = _preset_file(directory, template_id, preset_id)
+        if filepath is not None:
+            data = load_yaml(filepath)
             if data is not None:
                 data["id"] = preset_id
                 return data
@@ -105,44 +59,32 @@ def get_preset(template_id: str, preset_id: str) -> dict | None:
 
 
 def save_preset(template_id: str, preset_id: str, preset_data: dict) -> bool:
-    """
-    Save a preset to user directory.
-    preset_data must have: name, description, workflow_template, params
-    Returns True on success.
-    """
-    user_dir = get_user_presets_dir()
-    template_dir = user_dir / template_id
-    template_dir.mkdir(parents=True, exist_ok=True)
+    """Save a preset to the user directory. The ID comes from the filename."""
+    require_safe_id(template_id, preset_id)
 
-    filepath = template_dir / f"{preset_id}.yaml"
-
-    # Remove the injected 'id' key if present — it's derived from filename
+    filepath = get_user_presets_dir() / template_id / f"{preset_id}.yaml"
     save_data = {k: v for k, v in preset_data.items() if k != "id"}
 
-    try:
-        with open(filepath, "w", encoding="utf-8") as f:
-            yaml.dump(save_data, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+    if save_yaml(filepath, save_data):
         print(f"[PresetManager] Saved preset: {template_id}/{preset_id}")
         return True
-    except Exception as e:
-        print(f"[PresetManager] Error saving preset {template_id}/{preset_id}: {e}")
-        return False
+    return False
 
 
 def delete_preset(template_id: str, preset_id: str) -> bool:
-    """Delete a preset from user directory. Returns True if deleted, False if not found."""
-    user_dir = get_user_presets_dir()
+    """Delete a preset from the user directory. Bundled presets cannot be deleted."""
+    require_safe_id(template_id, preset_id)
 
-    for ext in (".yaml", ".yml"):
-        filepath = user_dir / template_id / f"{preset_id}{ext}"
-        if filepath.is_file():
-            try:
-                filepath.unlink()
-                print(f"[PresetManager] Deleted preset: {template_id}/{preset_id}")
-                return True
-            except Exception as e:
-                print(f"[PresetManager] Error deleting preset {template_id}/{preset_id}: {e}")
-                return False
+    filepath = _preset_file(get_user_presets_dir(), template_id, preset_id)
+    if filepath is None:
+        print(f"[PresetManager] Preset not found for deletion: {template_id}/{preset_id}")
+        return False
 
-    print(f"[PresetManager] Preset not found for deletion: {template_id}/{preset_id}")
-    return False
+    try:
+        filepath.unlink()
+    except OSError as e:
+        print(f"[PresetManager] Error deleting preset {template_id}/{preset_id}: {e}")
+        return False
+
+    print(f"[PresetManager] Deleted preset: {template_id}/{preset_id}")
+    return True

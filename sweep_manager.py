@@ -11,14 +11,14 @@ Sweeps live only in the user directory; there are no bundled sweeps.
 import itertools
 from pathlib import Path
 
-import yaml
-import folder_paths
+try:
+    from .storage import load_yaml, require_safe_id, save_yaml, scan_yaml, user_dir
+except ImportError:
+    from storage import load_yaml, require_safe_id, save_yaml, scan_yaml, user_dir
 
 
 def get_user_sweeps_dir() -> Path:
-    """User sweeps directory: <user>/preset-manager/sweeps/"""
-    user_dir = Path(folder_paths.get_user_directory())
-    return user_dir / "preset-manager" / "sweeps"
+    return user_dir("sweeps")
 
 
 def _axis_params(axis: dict, value, presets: dict) -> dict:
@@ -67,45 +67,38 @@ def expand(sweep: dict, presets: dict) -> list[dict]:
 
 def load_sweeps(template_id: str) -> list[dict]:
     """List sweeps for a template as {id, name, description} summaries."""
-    directory = get_user_sweeps_dir() / template_id
-    if not directory.is_dir():
-        return []
-
-    sweeps = []
-    for filepath in sorted(directory.glob("*.yaml")):
-        data = yaml.safe_load(filepath.read_text(encoding="utf-8"))
-        if not isinstance(data, dict):
-            continue
-        sweeps.append({
-            "id": filepath.stem,
-            "name": data.get("name", filepath.stem),
+    require_safe_id(template_id)
+    sweeps = scan_yaml(get_user_sweeps_dir() / template_id)
+    return [
+        {
+            "id": sweep_id,
+            "name": data.get("name", sweep_id),
             "description": data.get("description", ""),
-        })
-    return sweeps
+        }
+        for sweep_id, data in sweeps.items()
+    ]
+
+
+def _sweep_file(template_id: str, sweep_id: str) -> Path:
+    return get_user_sweeps_dir() / template_id / f"{sweep_id}.yaml"
 
 
 def get_sweep(template_id: str, sweep_id: str) -> dict | None:
     """Load a full sweep config, or None if it does not exist."""
-    filepath = get_user_sweeps_dir() / template_id / f"{sweep_id}.yaml"
-    if not filepath.is_file():
-        return None
-    return yaml.safe_load(filepath.read_text(encoding="utf-8"))
+    require_safe_id(template_id, sweep_id)
+    return load_yaml(_sweep_file(template_id, sweep_id))
 
 
-def save_sweep(template_id: str, sweep_id: str, data: dict) -> None:
+def save_sweep(template_id: str, sweep_id: str, data: dict) -> bool:
     """Write a sweep config, overwriting any existing one."""
-    directory = get_user_sweeps_dir() / template_id
-    directory.mkdir(parents=True, exist_ok=True)
-    filepath = directory / f"{sweep_id}.yaml"
-    filepath.write_text(
-        yaml.dump(data, allow_unicode=True, sort_keys=False),
-        encoding="utf-8",
-    )
+    require_safe_id(template_id, sweep_id)
+    return save_yaml(_sweep_file(template_id, sweep_id), data)
 
 
 def delete_sweep(template_id: str, sweep_id: str) -> bool:
     """Delete a sweep config. Returns False if it did not exist."""
-    filepath = get_user_sweeps_dir() / template_id / f"{sweep_id}.yaml"
+    require_safe_id(template_id, sweep_id)
+    filepath = _sweep_file(template_id, sweep_id)
     if not filepath.is_file():
         return False
     filepath.unlink()

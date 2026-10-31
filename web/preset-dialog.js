@@ -9,7 +9,8 @@
  */
 
 import { app } from "../../scripts/app.js";
-import { getWorkflows, getPresets, getPresetDetail, getMapping, saveMapping, getCurrentWorkflowParams, getTemplateDetail, findNodeByTemplate, applyParamsToGraph } from "./preset-api.js";
+import { getWorkflows, getPresets, getPresetDetail, getTemplateDetail } from "./client.js";
+import { readParams, resolveParams, applyParams } from "./matcher.js";
 import { PresetEditorDialog } from "./preset-editor.js";
 
 // Use new API to avoid deprecation warnings
@@ -23,7 +24,6 @@ export class PresetDialog extends ComfyDialog {
         this.selectedTemplate = null;
         this.selectedPreset = null;
         this.presetDetail = null;
-        this.mapping = {};
         this.currentTemplate = null;
         
         // Initialize editor dialog
@@ -326,15 +326,9 @@ export class PresetDialog extends ComfyDialog {
     
     async loadData() {
         try {
-            // Load templates and mapping in parallel
-            const [templates, mapping] = await Promise.all([
-                getWorkflows(),
-                getMapping()
-            ]);
-            
+            const templates = await getWorkflows();
             this.workflowTemplates = templates;
-            this.mapping = mapping;
-            
+
             // Populate template selector
             this.templateSelect.innerHTML = "";
             for (const template of templates) {
@@ -355,12 +349,8 @@ export class PresetDialog extends ComfyDialog {
     }
     
     async autoDetectTemplate() {
-        // Get current workflow name from app
-        const workflowName = this.getCurrentWorkflowName();
-        
-        if (workflowName && this.mapping[workflowName]) {
-            const templateId = this.mapping[workflowName];
-            // Find and select the template
+        const templateId = app.graph?.extra?.preset_template;
+        if (templateId) {
             const option = this.templateSelect.querySelector(`option[value="${templateId}"]`);
             if (option) {
                 this.templateSelect.value = templateId;
@@ -368,28 +358,11 @@ export class PresetDialog extends ComfyDialog {
                 return;
             }
         }
-        
-        // If no auto-detection, select first template
+
         if (this.workflowTemplates.length > 0) {
             this.templateSelect.value = this.workflowTemplates[0].id;
             await this.onTemplateChange();
         }
-    }
-    
-    getCurrentWorkflowName() {
-        // Try to get workflow name from graph metadata
-        const graph = app.graph;
-        if (graph && graph.extra && graph.extra.name) {
-            return graph.extra.name;
-        }
-        
-        // Try to get from document title
-        const title = document.title;
-        if (title && title !== "ComfyUI") {
-            return title.replace(" - ComfyUI", "").trim();
-        }
-        
-        return null;
     }
     
     async onTemplateChange() {
@@ -449,13 +422,15 @@ export class PresetDialog extends ComfyDialog {
             return;
         }
         
-        // Get current workflow parameters using template
-        const params = await getCurrentWorkflowParams(this.selectedTemplate);
+        if (!this.currentTemplate) {
+            this.currentTemplate = await getTemplateDetail(this.selectedTemplate);
+        }
+        const params = readParams(app.graph, this.currentTemplate);
         if (params.length === 0) {
             alert("当前 workflow 没有可保存的参数");
             return;
         }
-        
+
         this.editor.showForCreate(this.selectedTemplate, params);
     }
     
@@ -465,7 +440,10 @@ export class PresetDialog extends ComfyDialog {
     async onEditPreset(preset) {
         try {
             const presetData = await getPresetDetail(this.selectedTemplate, preset.id);
-            const params = await getCurrentWorkflowParams(this.selectedTemplate);
+            if (!this.currentTemplate) {
+                this.currentTemplate = await getTemplateDetail(this.selectedTemplate);
+            }
+            const params = readParams(app.graph, this.currentTemplate);
             this.editor.showForEdit(this.selectedTemplate, preset.id, presetData, params);
         } catch (error) {
             console.error("[PresetManager] Error loading preset for edit:", error);
@@ -502,19 +480,16 @@ export class PresetDialog extends ComfyDialog {
         const params = this.presetDetail.params || {};
         this.presetPreview.innerHTML = "";
         
-        const graph = app.graph;
-        const template = this.currentTemplate;
-        const synonyms = template?.synonyms || {};
-        
+        const resolved = this.currentTemplate ? resolveParams(app.graph, this.currentTemplate) : {};
+
         for (const [key, value] of Object.entries(params)) {
-            const paramDef = template?.node_mapping?.[key];
-            const matchResult = paramDef ? findNodeByTemplate(graph, paramDef, synonyms) : null;
-            
+            const matchResult = resolved[key];
+
             let status, statusClass, nodeIdText;
             if (matchResult) {
                 status = "✅";
                 statusClass = "match-success";
-                nodeIdText = `#${matchResult.node.id}`;
+                nodeIdText = `#${matchResult.nodeId}`;
             } else {
                 status = "❌";
                 statusClass = "match-fail";
@@ -550,18 +525,14 @@ export class PresetDialog extends ComfyDialog {
             if (!this.currentTemplate) {
                 this.currentTemplate = await getTemplateDetail(this.selectedTemplate);
             }
-            const { successCount, totalCount } = applyParamsToGraph(
-                app.graph, this.currentTemplate, params
-            );
-            console.log(`[PresetManager] Applied ${successCount}/${totalCount} parameters`);
-            
-            // Save mapping for future auto-detection
-            const workflowName = this.getCurrentWorkflowName();
-            if (workflowName) {
-                await saveMapping(workflowName, this.selectedTemplate);
+            const { failed } = applyParams(app.graph, this.currentTemplate, params);
+            if (failed.length > 0) {
+                console.warn(`[PresetManager] Unmatched parameters: ${failed.join(", ")}`);
             }
-            
-            // Close dialog
+
+            app.graph.extra = app.graph.extra || {};
+            app.graph.extra.preset_template = this.selectedTemplate;
+
             this.close();
             
         } catch (error) {

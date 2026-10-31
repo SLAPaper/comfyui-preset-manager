@@ -1,34 +1,19 @@
 """
-Pytest configuration for ComfyUI Preset Manager tests.
-
-Provides fixtures that import the actual modules.
+Smoke tests for module imports.
 """
 
-import pytest
-import sys
-from pathlib import Path
 
-# Add plugin directory to path so we can import modules
-PLUGIN_DIR = Path(__file__).parent.parent
-sys.path.insert(0, str(PLUGIN_DIR))
+def test_storage_imports(storage):
+    assert storage.is_safe_id("sdxl-txt2img")
 
 
-@pytest.fixture
-def workflow_parser():
-    """Import and return the workflow_parser module."""
-    import workflow_parser
-    return workflow_parser
+def test_workflow_parser_imports(workflow_parser):
+    assert callable(workflow_parser.load_templates)
 
 
-@pytest.fixture
-def node_matcher():
-    """Import and return the node_matcher module."""
-    import node_matcher
-    return node_matcher
+def test_preset_manager_imports(preset_manager):
+    assert callable(preset_manager.load_presets)
 
 
-@pytest.fixture
-def preset_manager():
-    """Import and return the preset_manager module."""
-    import preset_manager
-    return preset_manager
+def test_sweep_manager_imports(sweep_manager):
+    assert callable(sweep_manager.expand)
