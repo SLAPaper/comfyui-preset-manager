@@ -1,0 +1,97 @@
+{
+  "template": "anima-txt2img",
+  "nodes": [
+    {
+      "id": 1,
+      "type": "UNETLoader",
+      "widgets": {
+        "unet_name": "anima.safetensors",
+        "weight_dtype": "default"
+      }
+    },
+    {
+      "id": 2,
+      "type": "CLIPLoader",
+      "widgets": {
+        "clip_name": "qwen_3_06b_base.safetensors",
+        "type": "stable_diffusion",
+        "device": "default"
+      }
+    },
+    {
+      "id": 8,
+      "type": "VAELoader",
+      "widgets": {
+        "vae_name": "qwen_image_vae.safetensors"
+      }
+    },
+    {
+      "id": 3,
+      "type": "CLIPTextEncode",
+      "widgets": {
+        "text": "masterpiece, best quality"
+      }
+    },
+    {
+      "id": 4,
+      "type": "CLIPTextEncode",
+      "widgets": {
+        "text": "low quality, worst quality"
+      }
+    },
+    {
+      "id": 17,
+      "type": "KSampler",
+      "widgets": {
+        "seed": 42,
+        "steps": 35,
+        "cfg": 5.0,
+        "sampler_name": "euler_ancestral",
+        "scheduler": "bong_tangent",
+        "denoise": 1.0
+      },
+      "inputs": {
+        "model": 10,
+        "positive": 1,
+        "negative": 2,
+        "latent_image": 3
+      }
+    },
+    {
+      "id": 6,
+      "type": "EmptyLatentImage",
+      "widgets": {
+        "width": 1024,
+        "height": 1024,
+        "batch_size": 1
+      }
+    }
+  ],
+  "links": {
+    "10": { "origin_id": 1, "origin_slot": 0 },
+    "1": { "origin_id": 3, "origin_slot": 0 },
+    "2": { "origin_id": 4, "origin_slot": 0 },
+    "3": { "origin_id": 6, "origin_slot": 0 }
+  },
+  "expected": {
+    "positive_prompt": { "nodeId": "3", "widgetName": "text", "value": "masterpiece, best quality" },
+    "negative_prompt": { "nodeId": "4", "widgetName": "text", "value": "low quality, worst quality" },
+    "sampler": { "nodeId": "17", "widgetName": "sampler_name", "value": "euler_ancestral" },
+    "scheduler": { "nodeId": "17", "widgetName": "scheduler", "value": "bong_tangent" },
+    "steps": { "nodeId": "17", "widgetName": "steps", "value": 35 },
+    "cfg": { "nodeId": "17", "widgetName": "cfg", "value": 5.0 },
+    "unet_name": { "nodeId": "1", "widgetName": "unet_name", "value": "anima.safetensors" },
+    "gguf_unet_name": null,
+    "gguf_unet_advanced_name": null,
+    "nf4_unet_name": null,
+    "nunchaku_model_name": null,
+    "clip_name": { "nodeId": "2", "widgetName": "clip_name", "value": "qwen_3_06b_base.safetensors" },
+    "dual_clip_name1": null,
+    "vae_name": { "nodeId": "8", "widgetName": "vae_name", "value": "qwen_image_vae.safetensors" },
+    "ckpt_name": null,
+    "gguf_ckpt_name": null,
+    "nf4_ckpt_name": null,
+    "width": { "nodeId": "6", "widgetName": "width", "value": 1024 },
+    "height": { "nodeId": "6", "widgetName": "height", "value": 1024 }
+  }
+}

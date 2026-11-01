@@ -229,6 +229,38 @@ def test_load_presets_marks_user_source(preset_manager, temp_dir):
         preset_manager.get_user_presets_dir = original_func
 
 
+BUNDLED_TEMPLATES = [
+    "anima-txt2img",
+    "qwen-image-edit",
+    "qwen-image-txt2img",
+    "flux-txt2img",
+    "sdxl-txt2img",
+]
+
+LOADER_PARAMS = {
+    "unet_name",
+    "gguf_unet_name",
+    "gguf_unet_advanced_name",
+    "nf4_unet_name",
+    "nunchaku_model_name",
+    "clip_name",
+    "dual_clip_name1",
+    "vae_name",
+    "ckpt_name",
+    "gguf_ckpt_name",
+    "nf4_ckpt_name",
+}
+
+
+@pytest.mark.parametrize("template_id", BUNDLED_TEMPLATES)
+def test_bundled_default_preset_is_portable(preset_manager, template_id):
+    """Bundled defaults carry sampling values, not machine-specific model files."""
+    preset = preset_manager.get_preset(template_id, "_default")
+    assert preset is not None
+    assert preset["workflow_template"] == template_id
+    assert set(preset["params"]).isdisjoint(LOADER_PARAMS)
+
+
 def test_delete_preset_logs_deletion(preset_manager, temp_dir, capsys):
     """delete_preset() should log deletion."""
     original_func = preset_manager.get_user_presets_dir

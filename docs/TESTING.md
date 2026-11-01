@@ -23,6 +23,7 @@ python -m pytest tests -v --ignore=tests/e2e
 | `test_preset_manager.py` | 预设增删改查、内置与用户目录覆盖 |
 | `test_sweep_manager.py` | 组合展开、覆盖规则、扫描配置增删改查 |
 | `test_api_template.py` | 模板数据结构和序列化 |
+| `test_templates_snapshot.py` | 模板快照与图 fixture 覆盖 |
 
 ## 前端单元测试
 
@@ -32,8 +33,10 @@ node --test tests/js
 
 | 文件 | 覆盖范围 |
 |---|---|
-| `tests/js/matcher.test.mjs` | 4 种匹配策略、同义词、检查、应用和读取 |
+| `tests/js/matcher.test.mjs` | 4 种匹配策略、同义词、检查、应用、快照和读取 |
+| `tests/js/templates.test.mjs` | 快照模板与真实结构图的匹配结果 |
 | `tests/js/sweep-runner.test.mjs` | 执行顺序、取消和中途失败 |
+| `tests/js/sweep-values.test.mjs` | 轴值解析、格式化和总数计算 |
 
 ## E2E 测试
 

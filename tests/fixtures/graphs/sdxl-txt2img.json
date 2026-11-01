@@ -1,0 +1,82 @@
+{
+  "template": "sdxl-txt2img",
+  "nodes": [
+    {
+      "id": 413,
+      "type": "CheckpointLoaderSimple",
+      "widgets": {
+        "ckpt_name": "sdxl-base.safetensors"
+      }
+    },
+    {
+      "id": 6,
+      "type": "CLIPTextEncode",
+      "title": "CLIPTextEncode (positive)",
+      "widgets": {
+        "text": "masterpiece, best quality"
+      }
+    },
+    {
+      "id": 7,
+      "type": "CLIPTextEncode",
+      "title": "CLIPTextEncode (negative)",
+      "widgets": {
+        "text": "worst quality, blurry"
+      }
+    },
+    {
+      "id": 5,
+      "type": "EmptyLatentImage",
+      "widgets": {
+        "width": 1280,
+        "height": 768,
+        "batch_size": 1
+      }
+    },
+    {
+      "id": 395,
+      "type": "KSampler",
+      "widgets": {
+        "seed": 42,
+        "steps": 20,
+        "cfg": 5.0,
+        "sampler_name": "euler_ancestral",
+        "scheduler": "sgm_uniform",
+        "denoise": 1.0
+      },
+      "inputs": {
+        "model": 1,
+        "positive": 2,
+        "negative": 3,
+        "latent_image": 4
+      }
+    }
+  ],
+  "links": {
+    "1": { "origin_id": 413, "origin_slot": 0 },
+    "2": { "origin_id": 6, "origin_slot": 0 },
+    "3": { "origin_id": 7, "origin_slot": 0 },
+    "4": { "origin_id": 5, "origin_slot": 0 }
+  },
+  "expected": {
+    "positive_prompt": { "nodeId": "6", "widgetName": "text", "value": "masterpiece, best quality" },
+    "negative_prompt": { "nodeId": "7", "widgetName": "text", "value": "worst quality, blurry" },
+    "sampler": { "nodeId": "395", "widgetName": "sampler_name", "value": "euler_ancestral" },
+    "scheduler": { "nodeId": "395", "widgetName": "scheduler", "value": "sgm_uniform" },
+    "steps": { "nodeId": "395", "widgetName": "steps", "value": 20 },
+    "cfg": { "nodeId": "395", "widgetName": "cfg", "value": 5.0 },
+    "width": { "nodeId": "5", "widgetName": "width", "value": 1280 },
+    "height": { "nodeId": "5", "widgetName": "height", "value": 768 },
+    "unet_name": null,
+    "gguf_unet_name": null,
+    "gguf_unet_advanced_name": null,
+    "nf4_unet_name": null,
+    "nunchaku_model_name": null,
+    "clip_name": null,
+    "dual_clip_name1": null,
+    "vae_name": null,
+    "ckpt_name": { "nodeId": "413", "widgetName": "ckpt_name", "value": "sdxl-base.safetensors" },
+    "gguf_ckpt_name": null,
+    "nf4_ckpt_name": null
+  }
+}

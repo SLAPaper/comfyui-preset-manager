@@ -1,5 +1,7 @@
 name: "Default"
 description: "Qwen Image Edit 默认参数"
+workflow_template: "qwen-image-edit"
+
 params:
   steps: 20
   cfg: 2.5
@@ -7,6 +9,3 @@ params:
   scheduler: "simple"
   width: 1328
   height: 1328
-  unet_name: "QwenImage\\qwen_image_edit_fp8_e4m3fn.safetensors"
-  clip_name: "Qwen25VL\\qwen_2.5_vl_7b_fp8_scaled.safetensors"
-  vae_name: "Image\\qwen_image_vae.safetensors"

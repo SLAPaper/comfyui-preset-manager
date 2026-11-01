@@ -32,9 +32,9 @@ axes:
 1. 后端展开 `axes`，得到组合列表。预设轴在后端展开为完整参数。
 2. 前端用 `checkParams()` 检查第一个组合，不修改 graph。
 3. 检查失败时停止。
-4. 用户确认提交次数后，前端保存快照。快照覆盖所有组合用到的参数。
+4. 用户确认提交次数后，前端用 `captureParams()` 保存快照。快照覆盖所有组合用到的参数。
 5. `sweep-runner.js` 逐组检查、应用参数，调用 `app.queuePrompt(0, 1)` 提交。
-6. 运行结束后，前端恢复快照。
+6. 运行结束后，前端用 `restoreParams()` 写回快照。
 
 检查只确认参数能否匹配节点和 widget。插件不检查枚举值是否在 `widget.options.values` 内。
 
@@ -54,11 +54,11 @@ axes:
 
 ### 前端
 
-`matcher.js` 提供 `resolveParams()`、`checkParams()` 和 `applyParams()`。预设应用和扫描共用这些函数。
+`matcher.js` 提供 `resolveParams()`、`checkParams()`、`applyParams()`、`captureParams()` 和 `restoreParams()`。预设应用和扫描共用这些函数。
 
 `sweep-runner.js` 负责执行顺序和中途取消，依赖通过参数注入，不依赖 DOM。
 
-`sweep-axes.js` 负责轴的增删、排序、逗号列表输入和总数显示。
+`sweep-axes.js` 负责轴的增删、排序和 DOM 渲染。`sweep-values.js` 负责解析逗号列表、格式化轴值和计算运行总数，不依赖 DOM。
 
 `sweep-dialog.js` 负责配置管理和快照恢复。
 

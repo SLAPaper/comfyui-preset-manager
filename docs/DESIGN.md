@@ -13,6 +13,7 @@
 | 前端 | `web/matcher.js` | 节点匹配、参数读取、检查、应用 |
 | 前端 | `web/sweep-runner.js` | 扫描执行顺序和取消 |
 | 前端 | `web/sweep-axes.js` | 扫描轴编辑和总数显示 |
+| 前端 | `web/sweep-values.js` | 轴值解析、格式化和总数计算 |
 | 前端 | `web/styles.js` | 对话框共享样式 |
 | 前端 | `web/*-dialog.js` | 对话框和表单 |
 | 后端 | `__init__.py` | 注册 HTTP 路由 |
@@ -38,22 +39,26 @@
 
 `synonyms` 在比较前映射节点类型。例如 `KSamplerAdvanced` 按 `KSampler` 处理。
 
-匹配模块对外提供 4 个函数：
+匹配模块对外提供 6 个函数：
 
 ```text
 resolveParams(graph, template) -> {param: {nodeId, widgetName, value, widget} | null}
 readParams(graph, template)     -> [{name, nodeType, nodeId, value}]
 checkParams(graph, template, params) -> failed[]
 applyParams(graph, template, params) -> {applied, failed}
+captureParams(graph, template, names) -> [{name, widget, value}]
+restoreParams(graph, snapshot)  -> void
 ```
 
-预览、读取当前参数、扫描快照和参数注入都调用 `resolveParams`，调用方不需要知道策略分支。`checkParams` 不修改 graph，扫描试算和逐组校验都调用这个函数。
+预览、读取当前参数和参数注入调用 `resolveParams`，调用方不需要知道策略分支。扫描前用 `captureParams` 保存指定参数，结束后用 `restoreParams` 写回。`checkParams` 不修改 graph，扫描试算和逐组校验都调用这个函数。
 
 ## 预设
 
 预设由元数据和 `params` 组成。参数名必须与模板的 `node_mapping` 一致。
 
 存储分两层。内置预设位于 `presets/{template_id}/`，用户预设位于 `user/preset-manager/presets/{template_id}/`。同名文件以用户目录为准。预设 ID 取自文件名，保存时写入用户目录。
+
+内置预设只写提示词、尺寸和采样参数，不写模型文件名。模型由当前 workflow 决定，换机器后内置预设仍可直接使用。
 
 新建预设时，前端用 `readParams()` 读取当前 graph 的参数值。编辑预设时，前端重新读取当前 graph。当前 graph 匹配不到的已存参数不会出现在编辑器中，保存后会被删除。
 
@@ -94,9 +99,12 @@ applyParams(graph, template, params) -> {applied, failed}
 
 ## 测试面
 
-- `tests/js/matcher.test.mjs` 覆盖 4 种策略、同义词、检查、应用和读取。
+- `tests/js/matcher.test.mjs` 覆盖 4 种策略、同义词、检查、应用、快照和读取。
+- `tests/js/templates.test.mjs` 用快照模板和真实结构图验证每个参数的匹配结果。
 - `tests/js/sweep-runner.test.mjs` 覆盖执行顺序、取消和中途失败。
+- `tests/js/sweep-values.test.mjs` 覆盖轴值解析和总数计算。
 - `tests/test_storage.py` 覆盖 ID 校验和原子读写。
+- `tests/test_templates_snapshot.py` 保证模板快照与 `workflows/` 一致。
 - `tests/test_preset_manager.py`、`tests/test_sweep_manager.py` 覆盖存储行为。
 - `tests/e2e/` 覆盖 HTTP 接口和界面流程。
 

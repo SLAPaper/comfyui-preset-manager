@@ -2,7 +2,8 @@
  * Shared styles for the Preset Manager dialogs.
  *
  * ComfyUI already defines some of these classes, but the plugin's rules are
- * darker and must be injected before the dialogs render.
+ * darker. Every rule is scoped to `.preset-manager-dialog` so the plugin does
+ * not restyle other ComfyUI dialogs that use the same class names.
  */
 
 let injected = false;
@@ -13,7 +14,7 @@ export function injectStyles() {
     const style = document.createElement("style");
     style.id = "preset-manager-shared-styles";
     style.textContent = `
-        .comfy-modal-header {
+        .preset-manager-dialog .comfy-modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -22,13 +23,13 @@ export function injectStyles() {
             padding-bottom: 10px;
         }
 
-        .comfy-modal-header h2 {
+        .preset-manager-dialog .comfy-modal-header h2 {
             margin: 0;
             color: #cdd6f4;
             font-size: 18px;
         }
 
-        .comfy-btn {
+        .preset-manager-dialog .comfy-btn {
             padding: 8px 16px;
             background: #45475a;
             border: none;
@@ -38,39 +39,39 @@ export function injectStyles() {
             font-size: 14px;
         }
 
-        .comfy-btn:hover {
+        .preset-manager-dialog .comfy-btn:hover {
             background: #585b70;
         }
 
-        .comfy-btn.primary {
+        .preset-manager-dialog .comfy-btn.primary {
             background: #89b4fa;
             color: #1e1e2e;
         }
 
-        .comfy-btn.primary:hover {
+        .preset-manager-dialog .comfy-btn.primary:hover {
             background: #74c7ec;
         }
 
-        .comfy-btn.danger {
+        .preset-manager-dialog .comfy-btn.danger {
             background: #f38ba8;
             color: #1e1e2e;
         }
 
-        .comfy-btn.danger:hover {
+        .preset-manager-dialog .comfy-btn.danger:hover {
             background: #eba0ac;
         }
 
-        .comfy-btn.small {
+        .preset-manager-dialog .comfy-btn.small {
             padding: 4px 10px;
             font-size: 12px;
         }
 
-        .comfy-btn:disabled {
+        .preset-manager-dialog .comfy-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
 
-        .comfy-select {
+        .preset-manager-dialog .comfy-select {
             flex: 1;
             padding: 8px;
             background: #313244;
@@ -80,7 +81,7 @@ export function injectStyles() {
             font-size: 14px;
         }
 
-        .comfy-input {
+        .preset-manager-dialog .comfy-input {
             width: 100%;
             padding: 8px;
             background: #313244;
@@ -92,7 +93,7 @@ export function injectStyles() {
             box-sizing: border-box;
         }
 
-        .comfy-textarea {
+        .preset-manager-dialog .comfy-textarea {
             width: 100%;
             padding: 8px;
             background: #313244;

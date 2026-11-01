@@ -12,7 +12,7 @@ import {
     getSweeps, getSweepDetail, saveSweep, deleteSweep, expandSweep,
     getPresets, getTemplateDetail, getWorkflows
 } from "./client.js";
-import { applyParams, checkParams, resolveParams } from "./matcher.js";
+import { applyParams, captureParams, checkParams, restoreParams } from "./matcher.js";
 import { SweepAxes } from "./sweep-axes.js";
 import { runSweep } from "./sweep-runner.js";
 import { injectStyles } from "./styles.js";
@@ -48,7 +48,7 @@ export class SweepDialog {
             onclick: () => this.onRun()
         });
 
-        this.element = $el("div.comfy-modal.comfy-sweep-dialog", {
+        this.element = $el("div.comfy-modal.comfy-sweep-dialog.preset-manager-dialog", {
             style: { display: "none" }
         }, [
             $el("div.comfy-modal-content", [
@@ -387,29 +387,6 @@ export class SweepDialog {
         }
     }
 
-    /**
-     * Snapshot the widgets a set of params resolves to, so they can be restored.
-     */
-    snapshotWidgets(paramNames) {
-        const resolved = resolveParams(app.graph, this.template);
-        const snapshot = [];
-        for (const name of paramNames) {
-            const match = resolved[name];
-            if (match) snapshot.push({ widget: match.widget, value: match.value });
-        }
-        return snapshot;
-    }
-
-    /**
-     * Put widget values back and repaint the canvas.
-     */
-    restoreWidgets(snapshot) {
-        for (const { widget, value } of snapshot) {
-            widget.value = value;
-        }
-        app.graph.setDirtyCanvas(true, true);
-    }
-
     async onRun() {
         if (this.running) {
             this.cancelRequested = true;
@@ -442,7 +419,11 @@ export class SweepDialog {
 
         if (!confirm(`将向队列提交 ${combos.length} 次运行，确定继续？`)) return;
 
-        const snapshot = this.snapshotWidgets(new Set(combos.flatMap(combo => Object.keys(combo.params))));
+        const snapshot = captureParams(
+            app.graph,
+            this.template,
+            new Set(combos.flatMap(combo => Object.keys(combo.params)))
+        );
         this.running = true;
         this.cancelRequested = false;
         this.runButton.textContent = "取消";
@@ -466,7 +447,7 @@ export class SweepDialog {
             this.progress.classList.add("error");
             this.progress.textContent = `运行失败: ${error.message}`;
         } finally {
-            this.restoreWidgets(snapshot);
+            restoreParams(app.graph, snapshot);
             this.running = false;
             this.cancelRequested = false;
             this.runButton.textContent = "运行";

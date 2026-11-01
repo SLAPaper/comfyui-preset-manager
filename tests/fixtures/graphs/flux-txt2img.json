@@ -1,0 +1,123 @@
+{
+  "template": "flux-txt2img",
+  "nodes": [
+    {
+      "id": 12,
+      "type": "UNETLoader",
+      "widgets": {
+        "unet_name": "flux1-dev.safetensors",
+        "weight_dtype": "default"
+      }
+    },
+    {
+      "id": 11,
+      "type": "DualCLIPLoader",
+      "widgets": {
+        "clip_name1": "t5xxl_fp16.safetensors",
+        "clip_name2": "clip_l.safetensors",
+        "type": "flux",
+        "device": "default"
+      }
+    },
+    {
+      "id": 10,
+      "type": "VAELoader",
+      "widgets": {
+        "vae_name": "ae.safetensors"
+      }
+    },
+    {
+      "id": 6,
+      "type": "CLIPTextEncode",
+      "title": "CLIP Text Encode (Positive Prompt)",
+      "widgets": {
+        "text": "a futuristic soldier"
+      }
+    },
+    {
+      "id": 17,
+      "type": "BasicScheduler",
+      "widgets": {
+        "scheduler": "simple",
+        "steps": 20,
+        "denoise": 1.0
+      }
+    },
+    {
+      "id": 16,
+      "type": "KSamplerSelect",
+      "widgets": {
+        "sampler_name": "euler"
+      }
+    },
+    {
+      "id": 45,
+      "type": "FluxGuidance",
+      "widgets": {
+        "guidance": 3.5
+      }
+    },
+    {
+      "id": 25,
+      "type": "RandomNoise",
+      "widgets": {
+        "noise_seed": 907105043668787
+      }
+    },
+    {
+      "id": 46,
+      "type": "ModelSamplingFlux",
+      "widgets": {
+        "max_shift": 1.15,
+        "base_shift": 0.5,
+        "width": 1024,
+        "height": 1024
+      },
+      "inputs": {
+        "width": 11,
+        "height": 12
+      }
+    },
+    {
+      "id": 27,
+      "type": "PrimitiveInt",
+      "widgets": {
+        "value": 768
+      }
+    },
+    {
+      "id": 28,
+      "type": "PrimitiveInt",
+      "widgets": {
+        "value": 1280
+      }
+    }
+  ],
+  "links": {
+    "11": { "origin_id": 27, "origin_slot": 0 },
+    "12": { "origin_id": 28, "origin_slot": 0 }
+  },
+  "expected": {
+    "positive_prompt": { "nodeId": "6", "widgetName": "text", "value": "a futuristic soldier" },
+    "negative_prompt": null,
+    "steps": { "nodeId": "17", "widgetName": "steps", "value": 20 },
+    "sampler": { "nodeId": "16", "widgetName": "sampler_name", "value": "euler" },
+    "cfg": { "nodeId": "45", "widgetName": "guidance", "value": 3.5 },
+    "scheduler": { "nodeId": "17", "widgetName": "scheduler", "value": "simple" },
+    "seed": { "nodeId": "25", "widgetName": "noise_seed", "value": 907105043668787 },
+    "denoise": { "nodeId": "17", "widgetName": "denoise", "value": 1.0 },
+    "width": { "nodeId": "27", "widgetName": "value", "value": 768 },
+    "height": { "nodeId": "28", "widgetName": "value", "value": 1280 },
+    "unet_name": { "nodeId": "12", "widgetName": "unet_name", "value": "flux1-dev.safetensors" },
+    "gguf_unet_name": null,
+    "gguf_unet_advanced_name": null,
+    "nf4_unet_name": null,
+    "nunchaku_model_name": null,
+    "clip_name": null,
+    "dual_clip_name1": { "nodeId": "11", "widgetName": "clip_name1", "value": "t5xxl_fp16.safetensors" },
+    "vae_name": { "nodeId": "10", "widgetName": "vae_name", "value": "ae.safetensors" },
+    "ckpt_name": null,
+    "gguf_ckpt_name": null,
+    "nf4_ckpt_name": null
+  }
+}

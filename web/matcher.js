@@ -148,3 +148,29 @@ export function applyParams(graph, template, params) {
     graph.setDirtyCanvas?.(true, true);
     return { applied, failed };
 }
+
+/**
+ * Snapshot the current values of the named parameters so they can be restored.
+ * Parameters that do not match the graph are skipped.
+ */
+export function captureParams(graph, template, names) {
+    const resolved = resolveParams(graph, template);
+    const snapshot = [];
+
+    for (const name of names) {
+        const match = resolved[name];
+        if (match) snapshot.push({ name, widget: match.widget, value: match.value });
+    }
+
+    return snapshot;
+}
+
+/**
+ * Put a snapshot taken by captureParams back onto the graph.
+ */
+export function restoreParams(graph, snapshot) {
+    for (const { widget, value } of snapshot) {
+        widget.value = value;
+    }
+    graph.setDirtyCanvas?.(true, true);
+}

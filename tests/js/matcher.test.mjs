@@ -3,9 +3,11 @@ import assert from "node:assert/strict";
 
 import {
     applyParams,
+    captureParams,
     checkParams,
     readParams,
     resolveParams,
+    restoreParams,
 } from "../../web/matcher.js";
 
 function makeNode(id, type, widgets = {}, inputs = {}, title = "") {
@@ -285,6 +287,24 @@ test("matches loader variants independently", () => {
     assert.equal(resolved.dual_clip_name1.value, "clip1.safetensors");
     assert.equal(resolved.vae_name.value, "vae.safetensors");
     assert.equal(resolved.ckpt_name.value, "model.safetensors");
+});
+
+test("capture and restore round-trip the named params", () => {
+    const graph = makeGraph([makeNode(3, "KSampler", { steps: 20, cfg: 7 })]);
+    const tpl = template({
+        steps: { match_strategy: "unique_class", class_type: "KSampler", widget: "steps" },
+        cfg: { match_strategy: "unique_class", class_type: "KSampler", widget: "cfg" },
+    });
+
+    const snapshot = captureParams(graph, tpl, new Set(["steps", "missing"]));
+    assert.deepEqual(snapshot.map(item => item.name), ["steps"]);
+
+    applyParams(graph, tpl, { steps: 30 });
+    graph.dirty = false;
+    restoreParams(graph, snapshot);
+
+    assert.equal(graph.nodes[0].widgets[0].value, 20);
+    assert.equal(graph.dirty, true);
 });
 
 test("check, apply, and read use the same resolution", () => {

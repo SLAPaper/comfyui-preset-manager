@@ -1,0 +1,574 @@
+{
+  "anima-txt2img": {
+    "description": "Anima 基础文生图 workflow",
+    "name": "Anima Text to Image",
+    "node_mapping": {
+      "cfg": {
+        "class_type": "KSampler",
+        "match_strategy": "unique_class",
+        "widget": "cfg"
+      },
+      "ckpt_name": {
+        "class_type": "CheckpointLoaderSimple",
+        "match_strategy": "unique_class",
+        "widget": "ckpt_name"
+      },
+      "clip_name": {
+        "class_type": "CLIPLoader",
+        "match_strategy": "unique_class",
+        "widget": "clip_name"
+      },
+      "dual_clip_name1": {
+        "class_type": "DualCLIPLoader",
+        "match_strategy": "unique_class",
+        "widget": "clip_name1"
+      },
+      "gguf_ckpt_name": {
+        "class_type": "CheckpointLoaderGGUF",
+        "match_strategy": "unique_class",
+        "widget": "ckpt_name"
+      },
+      "gguf_unet_advanced_name": {
+        "class_type": "UnetLoaderGGUFAdvanced",
+        "match_strategy": "unique_class",
+        "widget": "unet_name"
+      },
+      "gguf_unet_name": {
+        "class_type": "UnetLoaderGGUF",
+        "match_strategy": "unique_class",
+        "widget": "unet_name"
+      },
+      "height": {
+        "class_type": "EmptyLatentImage",
+        "match_strategy": "unique_class",
+        "widget": "height"
+      },
+      "negative_prompt": {
+        "class_type": "KSampler",
+        "input_name": "negative",
+        "match_strategy": "input_slot",
+        "widget": "text"
+      },
+      "nf4_ckpt_name": {
+        "class_type": "CheckpointLoaderNF4",
+        "match_strategy": "unique_class",
+        "widget": "ckpt_name"
+      },
+      "nf4_unet_name": {
+        "class_type": "UNETLoaderNF4",
+        "match_strategy": "unique_class",
+        "widget": "unet_name"
+      },
+      "nunchaku_model_name": {
+        "class_type": "NunchakuQwenImageDiTLoader",
+        "match_strategy": "unique_class",
+        "widget": "model_name"
+      },
+      "positive_prompt": {
+        "class_type": "KSampler",
+        "input_name": "positive",
+        "match_strategy": "input_slot",
+        "widget": "text"
+      },
+      "sampler": {
+        "class_type": "KSampler",
+        "match_strategy": "unique_class",
+        "widget": "sampler_name"
+      },
+      "scheduler": {
+        "class_type": "KSampler",
+        "match_strategy": "unique_class",
+        "widget": "scheduler"
+      },
+      "steps": {
+        "class_type": "KSampler",
+        "match_strategy": "unique_class",
+        "widget": "steps"
+      },
+      "unet_name": {
+        "class_type": "UNETLoader",
+        "match_strategy": "unique_class",
+        "widget": "unet_name"
+      },
+      "vae_name": {
+        "class_type": "VAELoader",
+        "match_strategy": "unique_class",
+        "widget": "vae_name"
+      },
+      "width": {
+        "class_type": "EmptyLatentImage",
+        "match_strategy": "unique_class",
+        "widget": "width"
+      }
+    },
+    "synonyms": {
+      "KSamplerAdvanced": "KSampler",
+      "KSamplerEfficient": "KSampler"
+    },
+    "version": "1.0"
+  },
+  "flux-txt2img": {
+    "description": "Flux 基础文生图 workflow",
+    "name": "Flux Text to Image",
+    "node_mapping": {
+      "cfg": {
+        "class_type": "FluxGuidance",
+        "match_strategy": "unique_class",
+        "widget": "guidance"
+      },
+      "ckpt_name": {
+        "class_type": "CheckpointLoaderSimple",
+        "match_strategy": "unique_class",
+        "widget": "ckpt_name"
+      },
+      "clip_name": {
+        "class_type": "CLIPLoader",
+        "match_strategy": "unique_class",
+        "widget": "clip_name"
+      },
+      "denoise": {
+        "class_type": "BasicScheduler",
+        "match_strategy": "unique_class",
+        "widget": "denoise"
+      },
+      "dual_clip_name1": {
+        "class_type": "DualCLIPLoader",
+        "match_strategy": "unique_class",
+        "widget": "clip_name1"
+      },
+      "gguf_ckpt_name": {
+        "class_type": "CheckpointLoaderGGUF",
+        "match_strategy": "unique_class",
+        "widget": "ckpt_name"
+      },
+      "gguf_unet_advanced_name": {
+        "class_type": "UnetLoaderGGUFAdvanced",
+        "match_strategy": "unique_class",
+        "widget": "unet_name"
+      },
+      "gguf_unet_name": {
+        "class_type": "UnetLoaderGGUF",
+        "match_strategy": "unique_class",
+        "widget": "unet_name"
+      },
+      "height": {
+        "match_strategy": "output_connection",
+        "target_class_type": "ModelSamplingFlux",
+        "target_input": "height",
+        "widget": "value"
+      },
+      "negative_prompt": {
+        "class_type": "CLIPTextEncode",
+        "match_strategy": "title_keyword",
+        "optional": true,
+        "title_keywords": [
+          "negative",
+          "负向"
+        ],
+        "widget": "text"
+      },
+      "nf4_ckpt_name": {
+        "class_type": "CheckpointLoaderNF4",
+        "match_strategy": "unique_class",
+        "widget": "ckpt_name"
+      },
+      "nf4_unet_name": {
+        "class_type": "UNETLoaderNF4",
+        "match_strategy": "unique_class",
+        "widget": "unet_name"
+      },
+      "nunchaku_model_name": {
+        "class_type": "NunchakuQwenImageDiTLoader",
+        "match_strategy": "unique_class",
+        "widget": "model_name"
+      },
+      "positive_prompt": {
+        "class_type": "CLIPTextEncode",
+        "match_strategy": "title_keyword",
+        "title_keywords": [
+          "positive",
+          "正向"
+        ],
+        "widget": "text"
+      },
+      "sampler": {
+        "class_type": "KSamplerSelect",
+        "match_strategy": "unique_class",
+        "widget": "sampler_name"
+      },
+      "scheduler": {
+        "class_type": "BasicScheduler",
+        "match_strategy": "unique_class",
+        "widget": "scheduler"
+      },
+      "seed": {
+        "match_strategy": "output_connection",
+        "target_class_type": "RandomNoise",
+        "target_input": "noise_seed",
+        "widget": "noise_seed"
+      },
+      "steps": {
+        "class_type": "BasicScheduler",
+        "match_strategy": "unique_class",
+        "widget": "steps"
+      },
+      "unet_name": {
+        "class_type": "UNETLoader",
+        "match_strategy": "unique_class",
+        "widget": "unet_name"
+      },
+      "vae_name": {
+        "class_type": "VAELoader",
+        "match_strategy": "unique_class",
+        "widget": "vae_name"
+      },
+      "width": {
+        "match_strategy": "output_connection",
+        "target_class_type": "ModelSamplingFlux",
+        "target_input": "width",
+        "widget": "value"
+      }
+    },
+    "version": "1.0"
+  },
+  "qwen-image-edit": {
+    "description": "Qwen Image Edit 图像编辑 workflow（支持文生图和图生图）",
+    "name": "Qwen Image Edit",
+    "node_mapping": {
+      "cfg": {
+        "class_type": "KSampler",
+        "match_strategy": "unique_class",
+        "widget": "cfg"
+      },
+      "ckpt_name": {
+        "class_type": "CheckpointLoaderSimple",
+        "match_strategy": "unique_class",
+        "widget": "ckpt_name"
+      },
+      "clip_name": {
+        "class_type": "CLIPLoader",
+        "match_strategy": "unique_class",
+        "widget": "clip_name"
+      },
+      "dual_clip_name1": {
+        "class_type": "DualCLIPLoader",
+        "match_strategy": "unique_class",
+        "widget": "clip_name1"
+      },
+      "gguf_ckpt_name": {
+        "class_type": "CheckpointLoaderGGUF",
+        "match_strategy": "unique_class",
+        "widget": "ckpt_name"
+      },
+      "gguf_unet_advanced_name": {
+        "class_type": "UnetLoaderGGUFAdvanced",
+        "match_strategy": "unique_class",
+        "widget": "unet_name"
+      },
+      "gguf_unet_name": {
+        "class_type": "UnetLoaderGGUF",
+        "match_strategy": "unique_class",
+        "widget": "unet_name"
+      },
+      "height": {
+        "class_type": "KSampler",
+        "input_name": "latent_image",
+        "match_strategy": "input_slot",
+        "widget": "height"
+      },
+      "negative_prompt": {
+        "class_type": "KSampler",
+        "input_name": "negative",
+        "match_strategy": "input_slot",
+        "widget": "prompt"
+      },
+      "nf4_ckpt_name": {
+        "class_type": "CheckpointLoaderNF4",
+        "match_strategy": "unique_class",
+        "widget": "ckpt_name"
+      },
+      "nf4_unet_name": {
+        "class_type": "UNETLoaderNF4",
+        "match_strategy": "unique_class",
+        "widget": "unet_name"
+      },
+      "nunchaku_model_name": {
+        "class_type": "NunchakuQwenImageDiTLoader",
+        "match_strategy": "unique_class",
+        "widget": "model_name"
+      },
+      "positive_prompt": {
+        "class_type": "KSampler",
+        "input_name": "positive",
+        "match_strategy": "input_slot",
+        "widget": "prompt"
+      },
+      "sampler": {
+        "class_type": "KSampler",
+        "match_strategy": "unique_class",
+        "widget": "sampler_name"
+      },
+      "scheduler": {
+        "class_type": "KSampler",
+        "match_strategy": "unique_class",
+        "widget": "scheduler"
+      },
+      "steps": {
+        "class_type": "KSampler",
+        "match_strategy": "unique_class",
+        "widget": "steps"
+      },
+      "unet_name": {
+        "class_type": "UNETLoader",
+        "match_strategy": "unique_class",
+        "widget": "unet_name"
+      },
+      "vae_name": {
+        "class_type": "VAELoader",
+        "match_strategy": "unique_class",
+        "widget": "vae_name"
+      },
+      "width": {
+        "class_type": "KSampler",
+        "input_name": "latent_image",
+        "match_strategy": "input_slot",
+        "widget": "width"
+      }
+    },
+    "synonyms": {
+      "KSamplerAdvanced": "KSampler",
+      "KSamplerEfficient": "KSampler"
+    },
+    "version": "1.0"
+  },
+  "qwen-image-txt2img": {
+    "description": "Qwen Image 基础文生图 workflow",
+    "name": "Qwen Image Text to Image",
+    "node_mapping": {
+      "cfg": {
+        "class_type": "KSampler",
+        "match_strategy": "unique_class",
+        "widget": "cfg"
+      },
+      "ckpt_name": {
+        "class_type": "CheckpointLoaderSimple",
+        "match_strategy": "unique_class",
+        "widget": "ckpt_name"
+      },
+      "clip_name": {
+        "class_type": "CLIPLoader",
+        "match_strategy": "unique_class",
+        "widget": "clip_name"
+      },
+      "dual_clip_name1": {
+        "class_type": "DualCLIPLoader",
+        "match_strategy": "unique_class",
+        "widget": "clip_name1"
+      },
+      "gguf_ckpt_name": {
+        "class_type": "CheckpointLoaderGGUF",
+        "match_strategy": "unique_class",
+        "widget": "ckpt_name"
+      },
+      "gguf_unet_advanced_name": {
+        "class_type": "UnetLoaderGGUFAdvanced",
+        "match_strategy": "unique_class",
+        "widget": "unet_name"
+      },
+      "gguf_unet_name": {
+        "class_type": "UnetLoaderGGUF",
+        "match_strategy": "unique_class",
+        "widget": "unet_name"
+      },
+      "height": {
+        "class_type": "EmptySD3LatentImage",
+        "match_strategy": "unique_class",
+        "widget": "height"
+      },
+      "negative_prompt": {
+        "class_type": "CLIPTextEncode",
+        "match_strategy": "title_keyword",
+        "title_keywords": [
+          "negative",
+          "负向",
+          "Negative Prompt"
+        ],
+        "widget": "text"
+      },
+      "nf4_ckpt_name": {
+        "class_type": "CheckpointLoaderNF4",
+        "match_strategy": "unique_class",
+        "widget": "ckpt_name"
+      },
+      "nf4_unet_name": {
+        "class_type": "UNETLoaderNF4",
+        "match_strategy": "unique_class",
+        "widget": "unet_name"
+      },
+      "nunchaku_model_name": {
+        "class_type": "NunchakuQwenImageDiTLoader",
+        "match_strategy": "unique_class",
+        "widget": "model_name"
+      },
+      "positive_prompt": {
+        "class_type": "CLIPTextEncode",
+        "match_strategy": "title_keyword",
+        "title_keywords": [
+          "positive",
+          "正向",
+          "Positive Prompt"
+        ],
+        "widget": "text"
+      },
+      "sampler": {
+        "class_type": "KSampler",
+        "match_strategy": "unique_class",
+        "widget": "sampler_name"
+      },
+      "scheduler": {
+        "class_type": "KSampler",
+        "match_strategy": "unique_class",
+        "widget": "scheduler"
+      },
+      "steps": {
+        "class_type": "KSampler",
+        "match_strategy": "unique_class",
+        "widget": "steps"
+      },
+      "unet_name": {
+        "class_type": "UNETLoader",
+        "match_strategy": "unique_class",
+        "widget": "unet_name"
+      },
+      "vae_name": {
+        "class_type": "VAELoader",
+        "match_strategy": "unique_class",
+        "widget": "vae_name"
+      },
+      "width": {
+        "class_type": "EmptySD3LatentImage",
+        "match_strategy": "unique_class",
+        "widget": "width"
+      }
+    },
+    "synonyms": {
+      "KSamplerAdvanced": "KSampler",
+      "KSamplerEfficient": "KSampler"
+    },
+    "version": "1.0"
+  },
+  "sdxl-txt2img": {
+    "description": "SDXL 基础文生图 workflow",
+    "name": "SDXL Text to Image",
+    "node_mapping": {
+      "cfg": {
+        "class_type": "KSampler",
+        "match_strategy": "unique_class",
+        "widget": "cfg"
+      },
+      "ckpt_name": {
+        "class_type": "CheckpointLoaderSimple",
+        "match_strategy": "unique_class",
+        "widget": "ckpt_name"
+      },
+      "clip_name": {
+        "class_type": "CLIPLoader",
+        "match_strategy": "unique_class",
+        "widget": "clip_name"
+      },
+      "dual_clip_name1": {
+        "class_type": "DualCLIPLoader",
+        "match_strategy": "unique_class",
+        "widget": "clip_name1"
+      },
+      "gguf_ckpt_name": {
+        "class_type": "CheckpointLoaderGGUF",
+        "match_strategy": "unique_class",
+        "widget": "ckpt_name"
+      },
+      "gguf_unet_advanced_name": {
+        "class_type": "UnetLoaderGGUFAdvanced",
+        "match_strategy": "unique_class",
+        "widget": "unet_name"
+      },
+      "gguf_unet_name": {
+        "class_type": "UnetLoaderGGUF",
+        "match_strategy": "unique_class",
+        "widget": "unet_name"
+      },
+      "height": {
+        "class_type": "EmptyLatentImage",
+        "match_strategy": "unique_class",
+        "widget": "height"
+      },
+      "negative_prompt": {
+        "class_type": "CLIPTextEncode",
+        "match_strategy": "title_keyword",
+        "title_keywords": [
+          "negative",
+          "负向"
+        ],
+        "widget": "text"
+      },
+      "nf4_ckpt_name": {
+        "class_type": "CheckpointLoaderNF4",
+        "match_strategy": "unique_class",
+        "widget": "ckpt_name"
+      },
+      "nf4_unet_name": {
+        "class_type": "UNETLoaderNF4",
+        "match_strategy": "unique_class",
+        "widget": "unet_name"
+      },
+      "nunchaku_model_name": {
+        "class_type": "NunchakuQwenImageDiTLoader",
+        "match_strategy": "unique_class",
+        "widget": "model_name"
+      },
+      "positive_prompt": {
+        "class_type": "CLIPTextEncode",
+        "match_strategy": "title_keyword",
+        "title_keywords": [
+          "positive",
+          "正向"
+        ],
+        "widget": "text"
+      },
+      "sampler": {
+        "class_type": "KSampler",
+        "match_strategy": "unique_class",
+        "widget": "sampler_name"
+      },
+      "scheduler": {
+        "class_type": "KSampler",
+        "match_strategy": "unique_class",
+        "widget": "scheduler"
+      },
+      "steps": {
+        "class_type": "KSampler",
+        "match_strategy": "unique_class",
+        "widget": "steps"
+      },
+      "unet_name": {
+        "class_type": "UNETLoader",
+        "match_strategy": "unique_class",
+        "widget": "unet_name"
+      },
+      "vae_name": {
+        "class_type": "VAELoader",
+        "match_strategy": "unique_class",
+        "widget": "vae_name"
+      },
+      "width": {
+        "class_type": "EmptyLatentImage",
+        "match_strategy": "unique_class",
+        "widget": "width"
+      }
+    },
+    "synonyms": {
+      "KSamplerAdvanced": "KSampler",
+      "KSamplerEfficient": "KSampler"
+    },
+    "version": "1.0"
+  }
+}

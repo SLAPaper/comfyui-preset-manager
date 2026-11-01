@@ -6,20 +6,7 @@
  */
 
 import { $el } from "../../scripts/ui.js";
-
-function parseValues(text) {
-    return text.split(",")
-        .map(value => value.trim())
-        .filter(value => value.length > 0)
-        .map(value => {
-            const number = Number(value);
-            return Number.isFinite(number) ? number : value;
-        });
-}
-
-function formatValues(values) {
-    return (values || []).join(", ");
-}
+import { formatValues, parseValues, summarizeAxes } from "./sweep-values.js";
 
 export class SweepAxes {
     constructor(container, summary) {
@@ -151,12 +138,9 @@ export class SweepAxes {
     }
 
     updateSummary() {
-        const counts = this.axes.map(axis => (axis.values || []).length);
-        if (counts.length === 0 || counts.some(count => count === 0)) {
-            this.summary.textContent = "尚未配置轴";
-            return;
-        }
-        const total = counts.reduce((left, right) => left * right, 1);
-        this.summary.textContent = `${counts.join(" × ")} = ${total} 次运行`;
+        const summary = summarizeAxes(this.axes);
+        this.summary.textContent = summary
+            ? `${summary.counts.join(" × ")} = ${summary.total} 次运行`
+            : "尚未配置轴";
     }
 }

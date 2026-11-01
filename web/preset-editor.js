@@ -23,7 +23,7 @@ export class PresetEditorDialog extends ComfyDialog {
         this.parameters = []; // { name, nodeType, nodeId, value, selected }
         this.mode = 'form'; // 'form' or 'code'
         
-        this.element = $el("div.comfy-modal.comfy-preset-editor", { parent: document.body }, [
+        this.element = $el("div.comfy-modal.comfy-preset-editor.preset-manager-dialog", { parent: document.body }, [
             $el("div.comfy-modal-content", [
                 // Header
                 $el("div.comfy-modal-header", [

@@ -1,0 +1,99 @@
+{
+  "template": "qwen-image-txt2img",
+  "nodes": [
+    {
+      "id": 10,
+      "type": "UNETLoader",
+      "widgets": {
+        "unet_name": "qwen_image_fp8_e4m3fn.safetensors",
+        "weight_dtype": "default"
+      }
+    },
+    {
+      "id": 11,
+      "type": "CLIPLoader",
+      "widgets": {
+        "clip_name": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+        "type": "qwen_image",
+        "device": "default"
+      }
+    },
+    {
+      "id": 12,
+      "type": "VAELoader",
+      "widgets": {
+        "vae_name": "qwen_image_vae.safetensors"
+      }
+    },
+    {
+      "id": 6,
+      "type": "CLIPTextEncode",
+      "title": "Positive Prompt",
+      "widgets": {
+        "text": "a photo of a cat"
+      }
+    },
+    {
+      "id": 7,
+      "type": "CLIPTextEncode",
+      "title": "Negative Prompt",
+      "widgets": {
+        "text": "low quality"
+      }
+    },
+    {
+      "id": 3,
+      "type": "KSampler",
+      "widgets": {
+        "seed": 42,
+        "steps": 20,
+        "cfg": 2.5,
+        "sampler_name": "euler",
+        "scheduler": "simple",
+        "denoise": 1.0
+      },
+      "inputs": {
+        "model": 1,
+        "positive": 2,
+        "negative": 3,
+        "latent_image": 4
+      }
+    },
+    {
+      "id": 50,
+      "type": "EmptySD3LatentImage",
+      "widgets": {
+        "width": 1328,
+        "height": 1328,
+        "batch_size": 1
+      }
+    }
+  ],
+  "links": {
+    "1": { "origin_id": 10, "origin_slot": 0 },
+    "2": { "origin_id": 6, "origin_slot": 0 },
+    "3": { "origin_id": 7, "origin_slot": 0 },
+    "4": { "origin_id": 50, "origin_slot": 0 }
+  },
+  "expected": {
+    "positive_prompt": { "nodeId": "6", "widgetName": "text", "value": "a photo of a cat" },
+    "negative_prompt": { "nodeId": "7", "widgetName": "text", "value": "low quality" },
+    "sampler": { "nodeId": "3", "widgetName": "sampler_name", "value": "euler" },
+    "scheduler": { "nodeId": "3", "widgetName": "scheduler", "value": "simple" },
+    "steps": { "nodeId": "3", "widgetName": "steps", "value": 20 },
+    "cfg": { "nodeId": "3", "widgetName": "cfg", "value": 2.5 },
+    "width": { "nodeId": "50", "widgetName": "width", "value": 1328 },
+    "height": { "nodeId": "50", "widgetName": "height", "value": 1328 },
+    "unet_name": { "nodeId": "10", "widgetName": "unet_name", "value": "qwen_image_fp8_e4m3fn.safetensors" },
+    "gguf_unet_name": null,
+    "gguf_unet_advanced_name": null,
+    "nf4_unet_name": null,
+    "nunchaku_model_name": null,
+    "clip_name": { "nodeId": "11", "widgetName": "clip_name", "value": "qwen_2.5_vl_7b_fp8_scaled.safetensors" },
+    "dual_clip_name1": null,
+    "vae_name": { "nodeId": "12", "widgetName": "vae_name", "value": "qwen_image_vae.safetensors" },
+    "ckpt_name": null,
+    "gguf_ckpt_name": null,
+    "nf4_ckpt_name": null
+  }
+}

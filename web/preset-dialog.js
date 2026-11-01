@@ -33,7 +33,7 @@ export class PresetDialog extends ComfyDialog {
             this.onTemplateChange();
         });
         
-        this.element = $el("div.comfy-modal.comfy-preset-manager", { parent: document.body }, [
+        this.element = $el("div.comfy-modal.comfy-preset-manager.preset-manager-dialog", { parent: document.body }, [
             $el("div.comfy-modal-content", [
                 // Header
                 $el("div.comfy-modal-header", [
