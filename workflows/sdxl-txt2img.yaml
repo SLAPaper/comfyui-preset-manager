@@ -3,7 +3,6 @@
 
 name: "SDXL Text to Image"
 description: "SDXL 基础文生图 workflow"
-version: "1.0"
 
 # 节点映射：定义每个参数如何在 workflow JSON 中定位
 # match_strategy 取值见 README 的“匹配策略”一节

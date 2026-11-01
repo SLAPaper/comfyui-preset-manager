@@ -4,7 +4,6 @@
 
 name: "Flux Text to Image"
 description: "Flux 基础文生图 workflow"
-version: "1.0"
 
 node_mapping:
   positive_prompt:
@@ -18,7 +17,6 @@ node_mapping:
     class_type: "CLIPTextEncode"
     title_keywords: ["negative", "负向"]
     widget: "text"
-    optional: true
 
   steps:
     match_strategy: "unique_class"

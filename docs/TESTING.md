@@ -22,7 +22,6 @@ python -m pytest tests -v --ignore=tests/e2e
 | `test_workflow_parser.py` | 模板发现、解析和校验 |
 | `test_preset_manager.py` | 预设增删改查、内置与用户目录覆盖 |
 | `test_sweep_manager.py` | 组合展开、覆盖规则、扫描配置增删改查 |
-| `test_api_template.py` | 模板数据结构和序列化 |
 | `test_templates_snapshot.py` | 模板快照与图 fixture 覆盖 |
 
 ## 前端单元测试

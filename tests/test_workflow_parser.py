@@ -4,9 +4,7 @@ Tests for workflow_parser module.
 Verifies template discovery, loading, and parsing functionality.
 """
 
-import pytest
 import yaml
-from pathlib import Path
 
 
 # === Tests for load_templates() ===
@@ -31,13 +29,6 @@ def test_load_templates_template_has_required_keys(workflow_parser):
     for template_id, template_data in result.items():
         assert "name" in template_data, f"Template {template_id} missing 'name'"
         assert "node_mapping" in template_data, f"Template {template_id} missing 'node_mapping'"
-
-
-def test_load_templates_logs_template_count(workflow_parser, capsys):
-    """load_templates() should log template loading with parameter count."""
-    workflow_parser.load_templates()
-    captured = capsys.readouterr()
-    assert "[PresetManager] 加载模板:" in captured.out
 
 
 # === Tests for get_template() ===

@@ -28,7 +28,6 @@ E2E 测试见 [../docs/TESTING.md](../docs/TESTING.md)。
 | `test_workflow_parser.py` | 模板加载 |
 | `test_preset_manager.py` | 预设增删改查 |
 | `test_sweep_manager.py` | 扫描组合展开和增删改查 |
-| `test_api_template.py` | 模板数据 |
 | `test_templates_snapshot.py` | 模板快照与图 fixture 覆盖 |
 | `fixtures/templates.json` | 内置模板快照，供 JS 测试读取 |
 | `fixtures/graphs/` | 每个模板对应的真实结构图，含预期匹配结果 |

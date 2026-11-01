@@ -105,7 +105,7 @@ def test_expand_outer_param_overridden_by_inner_preset(sweep_manager):
 
 
 def test_expand_starts_with_empty_params(sweep_manager):
-    """Without base_preset, every combination carries only the axes' contributions."""
+    """Every combination carries only the axes' contributions."""
     sweep = {"axes": [{"type": "param", "param": "cfg", "values": [1]}]}
     combos = sweep_manager.expand(sweep, presets={})
 
@@ -198,7 +198,6 @@ def test_get_sweep_returns_full_config(sweep_manager, temp_dir):
     sweep_dir.mkdir(parents=True)
     data = {
         "name": "CFG Scan",
-        "base_preset": "_default",
         "axes": [{"type": "param", "param": "cfg", "values": [1, 2]}],
     }
     (sweep_dir / "cfg-scan.yaml").write_text(yaml.dump(data), encoding="utf-8")
@@ -211,7 +210,6 @@ def test_get_sweep_returns_full_config(sweep_manager, temp_dir):
         sweep_manager.get_user_sweeps_dir = original
 
     assert sweep["name"] == "CFG Scan"
-    assert sweep["base_preset"] == "_default"
     assert len(sweep["axes"]) == 1
 
 

@@ -5,8 +5,9 @@
  * axes through getAxes() and does not touch individual axis widgets.
  */
 
-import { $el } from "../../scripts/ui.js";
 import { formatValues, parseValues, summarizeAxes } from "./sweep-values.js";
+
+const { $el } = window.comfyAPI.ui;
 
 export class SweepAxes {
     constructor(container, summary) {

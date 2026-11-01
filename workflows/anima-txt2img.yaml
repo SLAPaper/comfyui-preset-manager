@@ -4,7 +4,6 @@
 
 name: "Anima Text to Image"
 description: "Anima 基础文生图 workflow"
-version: "1.0"
 
 node_mapping:
   # 提示词 —— 通过 KSampler 的输入连接定位（CLIPTextEncode 无标题）

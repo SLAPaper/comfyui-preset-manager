@@ -104,8 +104,7 @@
     "synonyms": {
       "KSamplerAdvanced": "KSampler",
       "KSamplerEfficient": "KSampler"
-    },
-    "version": "1.0"
+    }
   },
   "flux-txt2img": {
     "description": "Flux 基础文生图 workflow",
@@ -160,7 +159,6 @@
       "negative_prompt": {
         "class_type": "CLIPTextEncode",
         "match_strategy": "title_keyword",
-        "optional": true,
         "title_keywords": [
           "negative",
           "负向"
@@ -228,8 +226,7 @@
         "target_input": "width",
         "widget": "value"
       }
-    },
-    "version": "1.0"
+    }
   },
   "qwen-image-edit": {
     "description": "Qwen Image Edit 图像编辑 workflow（支持文生图和图生图）",
@@ -338,8 +335,7 @@
     "synonyms": {
       "KSamplerAdvanced": "KSampler",
       "KSamplerEfficient": "KSampler"
-    },
-    "version": "1.0"
+    }
   },
   "qwen-image-txt2img": {
     "description": "Qwen Image 基础文生图 workflow",
@@ -454,8 +450,7 @@
     "synonyms": {
       "KSamplerAdvanced": "KSampler",
       "KSamplerEfficient": "KSampler"
-    },
-    "version": "1.0"
+    }
   },
   "sdxl-txt2img": {
     "description": "SDXL 基础文生图 workflow",
@@ -568,7 +563,6 @@
     "synonyms": {
       "KSamplerAdvanced": "KSampler",
       "KSamplerEfficient": "KSampler"
-    },
-    "version": "1.0"
+    }
   }
 }

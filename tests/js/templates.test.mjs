@@ -88,15 +88,3 @@ test("checkParams still reports params the graph cannot match", () => {
         ["no_such_param"]
     );
 });
-
-test("optional parameters may stay unmatched", () => {
-    const template = templates["flux-txt2img"];
-    assert.equal(template.node_mapping.negative_prompt.optional, true);
-
-    const fixture = graphFixtures.find(item => item.template === "flux-txt2img");
-    const graph = makeGraph(fixture);
-    assert.deepEqual(
-        checkParams(graph, template, { steps: 12, scheduler: "simple" }),
-        []
-    );
-});

@@ -6,7 +6,6 @@
 
 name: "Qwen Image Edit"
 description: "Qwen Image Edit 图像编辑 workflow（支持文生图和图生图）"
-version: "1.0"
 
 node_mapping:
   # 提示词 —— 通过 KSampler 的输入连接定位

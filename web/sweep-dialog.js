@@ -7,7 +7,6 @@
  */
 
 import { app } from "../../scripts/app.js";
-import { $el } from "../../scripts/ui.js";
 import {
     getSweeps, getSweepDetail, saveSweep, deleteSweep, expandSweep,
     getPresets, getTemplateDetail, getWorkflows
@@ -16,6 +15,8 @@ import { applyParams, captureParams, checkParams, restoreParams } from "./matche
 import { SweepAxes } from "./sweep-axes.js";
 import { runSweep } from "./sweep-runner.js";
 import { injectStyles } from "./styles.js";
+
+const { $el } = window.comfyAPI.ui;
 
 export class SweepDialog {
     constructor() {

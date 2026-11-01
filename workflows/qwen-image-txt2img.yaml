@@ -3,7 +3,6 @@
 
 name: "Qwen Image Text to Image"
 description: "Qwen Image 基础文生图 workflow"
-version: "1.0"
 
 node_mapping:
   positive_prompt:

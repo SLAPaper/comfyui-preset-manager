@@ -73,10 +73,6 @@ def load_templates() -> dict[str, dict]:
     """Load bundled templates, then let user templates override them by ID."""
     templates = _scan_workflow_dir(WORKFLOWS_DIR)
     templates.update(_scan_workflow_dir(_get_user_workflows_dir()))
-
-    for template_id, data in templates.items():
-        print(f"[PresetManager] 加载模板: {data.get('name', template_id)} ({len(data['node_mapping'])} 个参数定义)")
-
     return templates
 
 
