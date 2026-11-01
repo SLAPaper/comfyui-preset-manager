@@ -20,18 +20,19 @@ def get_user_presets_dir() -> Path:
     return user_dir("presets")
 
 
-def _scan_preset_dir(directory: Path, template_id: str) -> dict[str, dict]:
+def _scan_preset_dir(directory: Path, template_id: str, source: str) -> dict[str, dict]:
     presets = scan_yaml(directory / template_id)
     for preset_id, data in presets.items():
         data["id"] = preset_id
+        data["source"] = source
     return presets
 
 
 def load_presets(template_id: str) -> list[dict]:
     """Load bundled presets, then let user presets override them by ID."""
     require_safe_id(template_id)
-    presets = _scan_preset_dir(PRESETS_DIR, template_id)
-    presets.update(_scan_preset_dir(get_user_presets_dir(), template_id))
+    presets = _scan_preset_dir(PRESETS_DIR, template_id, "bundled")
+    presets.update(_scan_preset_dir(get_user_presets_dir(), template_id, "user"))
     return list(presets.values())
 
 
@@ -63,7 +64,7 @@ def save_preset(template_id: str, preset_id: str, preset_data: dict) -> bool:
     require_safe_id(template_id, preset_id)
 
     filepath = get_user_presets_dir() / template_id / f"{preset_id}.yaml"
-    save_data = {k: v for k, v in preset_data.items() if k != "id"}
+    save_data = {k: v for k, v in preset_data.items() if k not in ("id", "source")}
 
     if save_yaml(filepath, save_data):
         print(f"[PresetManager] Saved preset: {template_id}/{preset_id}")

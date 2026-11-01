@@ -13,24 +13,9 @@ import {
     getPresets, getTemplateDetail, getWorkflows
 } from "./client.js";
 import { applyParams, checkParams, resolveParams } from "./matcher.js";
+import { SweepAxes } from "./sweep-axes.js";
 import { runSweep } from "./sweep-runner.js";
-
-/**
- * Parse a comma-separated value list, keeping numbers as numbers.
- */
-function parseValues(text) {
-    return text.split(",")
-        .map(s => s.trim())
-        .filter(s => s.length > 0)
-        .map(s => {
-            const n = Number(s);
-            return s !== "" && Number.isFinite(n) ? n : s;
-        });
-}
-
-function formatValues(values) {
-    return (values || []).join(", ");
-}
+import { injectStyles } from "./styles.js";
 
 export class SweepDialog {
     constructor() {
@@ -40,7 +25,6 @@ export class SweepDialog {
         this.presets = [];
         this.sweeps = [];
         this.currentSweepId = null;
-        this.axes = [];
         this.running = false;
         this.cancelRequested = false;
         this.createDialog();
@@ -56,6 +40,7 @@ export class SweepDialog {
         });
         this.axisList = $el("div.sweep-axis-list");
         this.summary = $el("div.sweep-summary", { textContent: "尚未配置轴" });
+        this.axesEditor = new SweepAxes(this.axisList, this.summary);
         this.progress = $el("div.sweep-progress");
 
         this.runButton = $el("button.comfy-btn.primary", {
@@ -95,11 +80,11 @@ export class SweepDialog {
                         $el("label", { textContent: "扫描轴（第一条为最外层循环）" }),
                         $el("button.comfy-btn.small", {
                             textContent: "+ 参数轴",
-                            onclick: () => this.addAxis("param")
+                            onclick: () => this.axesEditor.addAxis("param")
                         }),
                         $el("button.comfy-btn.small", {
                             textContent: "+ 预设轴",
-                            onclick: () => this.addAxis("preset")
+                            onclick: () => this.axesEditor.addAxis("preset")
                         })
                     ]),
                     this.axisList
@@ -127,6 +112,7 @@ export class SweepDialog {
     }
 
     addStyles() {
+        injectStyles();
         if (document.getElementById("comfy-sweep-dialog-styles")) return;
 
         const style = document.createElement("style");
@@ -250,7 +236,7 @@ export class SweepDialog {
 
     async show(templateId) {
         this.currentSweepId = null;
-        this.axes = [];
+        this.axesEditor.clear();
         this.cancelRequested = false;
         this.progress.textContent = "";
         this.progress.classList.remove("error");
@@ -260,27 +246,31 @@ export class SweepDialog {
         this.templateId = templateId;
         this.element.style.display = "flex";
 
-        const workflows = await getWorkflows();
-        this.templateSelect.innerHTML = "";
-        for (const w of workflows) {
-            this.templateSelect.appendChild($el("option", {
-                value: w.id,
-                textContent: w.name,
-                selected: w.id === this.templateId
-            }));
-        }
+        try {
+            const workflows = await getWorkflows();
+            this.templateSelect.innerHTML = "";
+            for (const w of workflows) {
+                this.templateSelect.appendChild($el("option", {
+                    value: w.id,
+                    textContent: w.name,
+                    selected: w.id === this.templateId
+                }));
+            }
 
-        // Fall back to the first template when none is stored or the stored
-        // template no longer exists, so the dialog stays usable.
-        if (!workflows.some(w => w.id === this.templateId)) {
-            this.templateId = workflows[0]?.id ?? null;
-            this.templateSelect.disabled = !this.templateId;
-            if (this.templateId) this.templateSelect.value = this.templateId;
-        }
+            // Fall back to the first template when none is stored or the stored
+            // template no longer exists, so the dialog stays usable.
+            if (!workflows.some(w => w.id === this.templateId)) {
+                this.templateId = workflows[0]?.id ?? null;
+                this.templateSelect.disabled = !this.templateId;
+                if (this.templateId) this.templateSelect.value = this.templateId;
+            }
 
-        if (!this.templateId) return;
-        await this.loadTemplateData();
-        this.renderAxes();
+            if (!this.templateId) return;
+            await this.loadTemplateData();
+            this.axesEditor.render();
+        } catch (error) {
+            this.reportError(error, "加载失败");
+        }
     }
 
     async loadTemplateData() {
@@ -292,6 +282,7 @@ export class SweepDialog {
         this.template = template;
         this.presets = presets;
         this.sweeps = sweeps;
+        this.axesEditor.setSources(template, presets);
 
         this.sweepSelect.innerHTML = "";
         this.sweepSelect.appendChild($el("option", { value: "", textContent: "（新建）" }));
@@ -304,12 +295,24 @@ export class SweepDialog {
 
     async onTemplateChange() {
         this.templateId = this.templateSelect.value;
-        await this.loadTemplateData();
-        this.renderAxes();
+        this.currentSweepId = null;
+        this.nameInput.value = "";
+        this.axesEditor.clear();
+        try {
+            await this.loadTemplateData();
+            this.axesEditor.render();
+        } catch (error) {
+            this.reportError(error, "加载失败");
+        }
     }
 
     close() {
         this.element.style.display = "none";
+    }
+
+    reportError(error, prefix) {
+        this.progress.classList.add("error");
+        this.progress.textContent = `${prefix}: ${error.message}`;
     }
 
     async onSweepSelect() {
@@ -317,122 +320,22 @@ export class SweepDialog {
         if (!sweepId) {
             this.currentSweepId = null;
             this.nameInput.value = "";
-            this.axes = [];
-            this.renderAxes();
+            this.axesEditor.clear();
             return;
         }
 
-        const sweep = await getSweepDetail(this.templateId, sweepId);
-        this.currentSweepId = sweepId;
-        this.nameInput.value = sweep.name || sweepId;
-        this.axes = (sweep.axes || []).map(a => ({ ...a }));
-        this.renderAxes();
-    }
-
-    addAxis(type) {
-        const axis = type === "preset"
-            ? { type: "preset", values: [] }
-            : { type: "param", param: Object.keys(this.template.node_mapping)[0] || "", values: [] };
-        this.axes.push(axis);
-        this.renderAxes();
-    }
-
-    moveAxis(index, delta) {
-        const target = index + delta;
-        if (target < 0 || target >= this.axes.length) return;
-        [this.axes[index], this.axes[target]] = [this.axes[target], this.axes[index]];
-        this.renderAxes();
-    }
-
-    renderAxes() {
-        this.axisList.innerHTML = "";
-
-        for (const [index, axis] of this.axes.entries()) {
-            const controls = [
-                $el("span.sweep-axis-kind", {
-                    textContent: axis.type === "preset" ? "预设" : "参数"
-                })
-            ];
-
-            if (axis.type === "param") {
-                const select = $el("select", {
-                    onchange: (e) => { axis.param = e.target.value; }
-                });
-                for (const name of Object.keys(this.template.node_mapping)) {
-                    select.appendChild($el("option", {
-                        value: name,
-                        textContent: name,
-                        selected: name === axis.param
-                    }));
-                }
-                controls.push(select);
-                controls.push($el("input", {
-                    type: "text",
-                    placeholder: "值，逗号分隔",
-                    value: formatValues(axis.values),
-                    oninput: (e) => {
-                        axis.values = parseValues(e.target.value);
-                        this.updateSummary();
-                    }
-                }));
-            } else {
-                const checkboxRow = $el("div.sweep-axis-presets");
-                for (const preset of this.presets) {
-                    const cb = $el("input", {
-                        type: "checkbox",
-                        value: preset.id,
-                        checked: axis.values.includes(preset.id),
-                        onchange: (e) => {
-                            if (e.target.checked) {
-                                axis.values.push(preset.id);
-                            } else {
-                                axis.values = axis.values.filter(v => v !== preset.id);
-                            }
-                            this.updateSummary();
-                        }
-                    });
-                    checkboxRow.appendChild($el("label.sweep-axis-preset", [
-                        cb,
-                        $el("span", { textContent: preset.name })
-                    ]));
-                }
-                controls.push(checkboxRow);
-            }
-
-            controls.push($el("button.comfy-btn.small", {
-                textContent: "↑",
-                onclick: () => this.moveAxis(index, -1)
-            }));
-            controls.push($el("button.comfy-btn.small", {
-                textContent: "↓",
-                onclick: () => this.moveAxis(index, 1)
-            }));
-            controls.push($el("button.comfy-btn.small", {
-                textContent: "✕",
-                onclick: () => {
-                    this.axes.splice(index, 1);
-                    this.renderAxes();
-                }
-            }));
-
-            this.axisList.appendChild($el("div.sweep-axis", controls));
+        try {
+            const sweep = await getSweepDetail(this.templateId, sweepId);
+            this.currentSweepId = sweepId;
+            this.nameInput.value = sweep.name || sweepId;
+            this.axesEditor.setAxes(sweep.axes || []);
+        } catch (error) {
+            this.reportError(error, "加载扫描配置失败");
         }
-
-        this.updateSummary();
-    }
-
-    updateSummary() {
-        const counts = this.axes.map(a => (a.values || []).length);
-        if (counts.length === 0 || counts.some(c => c === 0)) {
-            this.summary.textContent = "尚未配置轴";
-            return;
-        }
-        const total = counts.reduce((a, b) => a * b, 1);
-        this.summary.textContent = `${counts.join(" × ")} = ${total} 次运行`;
     }
 
     collectSweep() {
-        return { name: this.nameInput.value.trim(), axes: this.axes };
+        return { name: this.nameInput.value.trim(), axes: this.axesEditor.getAxes() };
     }
 
     async onSave() {
@@ -446,33 +349,42 @@ export class SweepDialog {
             .toLowerCase()
             .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-")
             .replace(/^-+|-+$/g, "") || `sweep-${Date.now().toString(36)}`;
-        await saveSweep({
-            workflow_template: this.templateId,
-            id: sweepId,
-            ...this.collectSweep()
-        });
 
-        this.currentSweepId = sweepId;
-        this.sweeps = await getSweeps(this.templateId);
-        this.sweepSelect.innerHTML = "";
-        this.sweepSelect.appendChild($el("option", { value: "", textContent: "（新建）" }));
-        for (const sweep of this.sweeps) {
-            this.sweepSelect.appendChild($el("option", {
-                value: sweep.id,
-                textContent: sweep.name,
-                selected: sweep.id === sweepId
-            }));
+        try {
+            await saveSweep({
+                workflow_template: this.templateId,
+                id: sweepId,
+                ...this.collectSweep()
+            });
+
+            this.currentSweepId = sweepId;
+            this.sweeps = await getSweeps(this.templateId);
+            this.sweepSelect.innerHTML = "";
+            this.sweepSelect.appendChild($el("option", { value: "", textContent: "（新建）" }));
+            for (const sweep of this.sweeps) {
+                this.sweepSelect.appendChild($el("option", {
+                    value: sweep.id,
+                    textContent: sweep.name,
+                    selected: sweep.id === sweepId
+                }));
+            }
+            this.progress.classList.remove("error");
+            this.progress.textContent = "已保存";
+        } catch (error) {
+            this.reportError(error, "保存失败");
         }
-        this.progress.classList.remove("error");
-        this.progress.textContent = "已保存";
     }
 
     async onDelete() {
         if (!this.currentSweepId) return;
         if (!confirm(`删除扫描配置「${this.nameInput.value}」？`)) return;
 
-        await deleteSweep(this.templateId, this.currentSweepId);
-        await this.show(this.templateId);
+        try {
+            await deleteSweep(this.templateId, this.currentSweepId);
+            await this.show(this.templateId);
+        } catch (error) {
+            this.reportError(error, "删除失败");
+        }
     }
 
     /**

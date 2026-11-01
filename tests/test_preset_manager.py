@@ -209,6 +209,26 @@ def test_delete_preset_returns_false_for_missing(preset_manager, temp_dir):
         preset_manager.get_user_presets_dir = original_func
 
 
+def test_load_presets_marks_bundled_source(preset_manager):
+    """Bundled presets should report source='bundled'."""
+    presets = preset_manager.load_presets("sdxl-txt2img")
+    default = next(preset for preset in presets if preset["id"] == "_default")
+    assert default["source"] == "bundled"
+
+
+def test_load_presets_marks_user_source(preset_manager, temp_dir):
+    """User presets should report source='user'."""
+    original_func = preset_manager.get_user_presets_dir
+    preset_manager.get_user_presets_dir = lambda: temp_dir
+    try:
+        preset_manager.save_preset("sdxl-txt2img", "mine", {"name": "Mine", "params": {}})
+        presets = preset_manager.load_presets("sdxl-txt2img")
+        saved = next(preset for preset in presets if preset["id"] == "mine")
+        assert saved["source"] == "user"
+    finally:
+        preset_manager.get_user_presets_dir = original_func
+
+
 def test_delete_preset_logs_deletion(preset_manager, temp_dir, capsys):
     """delete_preset() should log deletion."""
     original_func = preset_manager.get_user_presets_dir

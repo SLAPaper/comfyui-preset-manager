@@ -9,9 +9,10 @@
  */
 
 import { app } from "../../scripts/app.js";
-import { getWorkflows, getPresets, getPresetDetail, getTemplateDetail } from "./client.js";
+import { deletePreset, getWorkflows, getPresets, getPresetDetail, getTemplateDetail } from "./client.js";
 import { readParams, resolveParams, applyParams } from "./matcher.js";
 import { PresetEditorDialog } from "./preset-editor.js";
+import { injectStyles } from "./styles.js";
 
 // Use new API to avoid deprecation warnings
 const { $el, ComfyDialog } = window.comfyAPI.ui;
@@ -88,6 +89,7 @@ export class PresetDialog extends ComfyDialog {
     }
     
     addStyles() {
+        injectStyles();
         const style = document.createElement("style");
         style.textContent = `
             .comfy-preset-manager {
@@ -112,21 +114,6 @@ export class PresetDialog extends ComfyDialog {
                 box-sizing: border-box;
             }
             
-            .comfy-modal-header {
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                margin-bottom: 20px;
-                border-bottom: 1px solid #45475a;
-                padding-bottom: 10px;
-            }
-            
-            .comfy-modal-header h2 {
-                margin: 0;
-                color: #cdd6f4;
-                font-size: 18px;
-            }
-            
             .preset-section {
                 margin-bottom: 15px;
             }
@@ -149,25 +136,10 @@ export class PresetDialog extends ComfyDialog {
                 margin-bottom: 0;
             }
             
-            .comfy-btn.small {
-                padding: 4px 10px;
-                font-size: 12px;
-            }
-            
             .template-selector {
                 display: flex;
                 gap: 10px;
                 align-items: center;
-            }
-            
-            .comfy-select {
-                flex: 1;
-                padding: 8px;
-                background: #313244;
-                border: 1px solid #45475a;
-                border-radius: 4px;
-                color: #cdd6f4;
-                font-size: 14px;
             }
             
             .auto-detect-badge {
@@ -216,6 +188,12 @@ export class PresetDialog extends ComfyDialog {
                 flex: 1;
             }
             
+            .preset-item-actions {
+                display: flex;
+                gap: 6px;
+                align-items: center;
+            }
+
             .preset-item:last-child {
                 border-bottom: none;
             }
@@ -282,34 +260,6 @@ export class PresetDialog extends ComfyDialog {
                 margin-top: 20px;
                 padding-top: 10px;
                 border-top: 1px solid #45475a;
-            }
-            
-            .comfy-btn {
-                padding: 8px 16px;
-                background: #45475a;
-                border: none;
-                border-radius: 4px;
-                color: #cdd6f4;
-                cursor: pointer;
-                font-size: 14px;
-            }
-            
-            .comfy-btn:hover {
-                background: #585b70;
-            }
-            
-            .comfy-btn.primary {
-                background: #89b4fa;
-                color: #1e1e2e;
-            }
-            
-            .comfy-btn.primary:hover {
-                background: #74c7ec;
-            }
-            
-            .comfy-btn:disabled {
-                opacity: 0.5;
-                cursor: not-allowed;
             }
         `;
         document.head.appendChild(style);
@@ -396,11 +346,7 @@ export class PresetDialog extends ComfyDialog {
         }
         
         for (const preset of this.presets) {
-            const item = $el("div.preset-item", [
-                $el("span.preset-item-name", {
-                    textContent: `${preset.name} (${preset.id})`,
-                    onclick: (e) => this.onPresetSelect(preset, e)
-                }),
+            const actions = $el("div.preset-item-actions", [
                 $el("button.comfy-btn.small", {
                     textContent: "编辑",
                     onclick: (e) => {
@@ -408,6 +354,23 @@ export class PresetDialog extends ComfyDialog {
                         this.onEditPreset(preset);
                     }
                 })
+            ]);
+            if (preset.source !== "bundled") {
+                actions.appendChild($el("button.comfy-btn.small.danger", {
+                    textContent: "删除",
+                    onclick: (e) => {
+                        e.stopPropagation();
+                        this.onDeletePreset(preset);
+                    }
+                }));
+            }
+
+            const item = $el("div.preset-item", [
+                $el("span.preset-item-name", {
+                    textContent: `${preset.name} (${preset.id})`,
+                    onclick: (e) => this.onPresetSelect(preset, e)
+                }),
+                actions
             ]);
             this.presetList.appendChild(item);
         }
@@ -422,16 +385,20 @@ export class PresetDialog extends ComfyDialog {
             return;
         }
         
-        if (!this.currentTemplate) {
-            this.currentTemplate = await getTemplateDetail(this.selectedTemplate);
-        }
-        const params = readParams(app.graph, this.currentTemplate);
-        if (params.length === 0) {
-            alert("当前 workflow 没有可保存的参数");
-            return;
-        }
+        try {
+            if (!this.currentTemplate) {
+                this.currentTemplate = await getTemplateDetail(this.selectedTemplate);
+            }
+            const params = readParams(app.graph, this.currentTemplate);
+            if (params.length === 0) {
+                alert("当前 workflow 没有可保存的参数");
+                return;
+            }
 
-        this.editor.showForCreate(this.selectedTemplate, params);
+            this.editor.showForCreate(this.selectedTemplate, params);
+        } catch (error) {
+            alert("加载模板失败: " + error.message);
+        }
     }
     
     /**
@@ -451,6 +418,19 @@ export class PresetDialog extends ComfyDialog {
         }
     }
     
+    async onDeletePreset(preset) {
+        if (!confirm(`删除预设「${preset.name}」？`)) return;
+
+        try {
+            await deletePreset(this.selectedTemplate, preset.id);
+            this.selectedPreset = null;
+            this.presetDetail = null;
+            await this.onTemplateChange();
+        } catch (error) {
+            alert("删除预设失败: " + error.message);
+        }
+    }
+
     async onPresetSelect(preset, event) {
         this.selectedPreset = preset;
         

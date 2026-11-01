@@ -73,7 +73,12 @@ def _register_routes():
     async def get_presets_list(request):
         (template_id,) = _match_ids(request, "template_id")
         return web.json_response([
-            {"id": p["id"], "name": p.get("name", p["id"]), "description": p.get("description", "")}
+            {
+                "id": p["id"],
+                "name": p.get("name", p["id"]),
+                "description": p.get("description", ""),
+                "source": p.get("source", "user"),
+            }
             for p in load_presets(template_id)
         ])
 

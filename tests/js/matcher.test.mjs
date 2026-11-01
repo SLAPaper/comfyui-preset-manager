@@ -145,6 +145,148 @@ test("synonyms map derived node types", () => {
     assert.equal(resolveParams(graph, tpl).steps.value, 12);
 });
 
+test("matches the Flux template shape", () => {
+    const graph = makeGraph(
+        [
+            makeNode(27, "PrimitiveInt", { value: 768 }),
+            makeNode(28, "PrimitiveInt", { value: 1280 }),
+            makeNode(25, "ModelSamplingFlux", {}, { width: 11, height: 12 }),
+            makeNode(26, "RandomNoise", { noise_seed: 0 }),
+            makeNode(24, "BasicScheduler", { steps: 20, scheduler: "simple", denoise: 1 }),
+            makeNode(23, "KSamplerSelect", { sampler_name: "euler" }),
+            makeNode(30, "FluxGuidance", { guidance: 3.5 }),
+            makeNode(6, "CLIPTextEncode", { text: "a photo" }, {}, "positive"),
+            makeNode(7, "CLIPTextEncode", { text: "blurry" }, {}, "negative"),
+        ],
+        { 11: { origin_id: 27 }, 12: { origin_id: 28 } }
+    );
+    const tpl = template({
+        positive_prompt: {
+            match_strategy: "title_keyword",
+            class_type: "CLIPTextEncode",
+            title_keywords: ["positive"],
+            widget: "text",
+        },
+        width: {
+            match_strategy: "output_connection",
+            target_class_type: "ModelSamplingFlux",
+            target_input: "width",
+            widget: "value",
+        },
+        height: {
+            match_strategy: "output_connection",
+            target_class_type: "ModelSamplingFlux",
+            target_input: "height",
+            widget: "value",
+        },
+        seed: {
+            match_strategy: "output_connection",
+            target_class_type: "RandomNoise",
+            target_input: "noise_seed",
+            widget: "noise_seed",
+        },
+        steps: { match_strategy: "unique_class", class_type: "BasicScheduler", widget: "steps" },
+        cfg: { match_strategy: "unique_class", class_type: "FluxGuidance", widget: "guidance" },
+    });
+
+    const resolved = resolveParams(graph, tpl);
+    assert.equal(resolved.positive_prompt.nodeId, "6");
+    assert.equal(resolved.width.nodeId, "27");
+    assert.equal(resolved.width.value, 768);
+    assert.equal(resolved.height.nodeId, "28");
+    assert.equal(resolved.height.value, 1280);
+    assert.equal(resolved.seed.nodeId, "26");
+    assert.equal(resolved.steps.value, 20);
+    assert.equal(resolved.cfg.value, 3.5);
+});
+
+test("matches the Qwen Image Edit multi-hop shape", () => {
+    const graph = makeGraph(
+        [
+            makeNode(3, "KSampler", {
+                steps: 20,
+                cfg: 2.5,
+                sampler_name: "euler",
+                scheduler: "simple",
+            }, { positive: 1, negative: 2, latent_image: 3 }),
+            makeNode(40, "ReferenceLatent", {}, { conditioning: 4 }),
+            makeNode(41, "FluxKontextMultiReferenceLatentMethod", {}, { conditioning: 5 }),
+            makeNode(6, "CLIPTextEncode", { prompt: "edit this" }),
+            makeNode(7, "CLIPTextEncode", { prompt: "blurry" }),
+            makeNode(50, "EmptySD3LatentImage", { width: 1328, height: 1328 }),
+        ],
+        {
+            1: { origin_id: 40 },
+            4: { origin_id: 41 },
+            5: { origin_id: 6 },
+            2: { origin_id: 7 },
+            3: { origin_id: 50 },
+        }
+    );
+    const tpl = template({
+        positive_prompt: {
+            match_strategy: "input_slot",
+            class_type: "KSampler",
+            input_name: "positive",
+            widget: "prompt",
+        },
+        negative_prompt: {
+            match_strategy: "input_slot",
+            class_type: "KSampler",
+            input_name: "negative",
+            widget: "prompt",
+        },
+        width: {
+            match_strategy: "input_slot",
+            class_type: "KSampler",
+            input_name: "latent_image",
+            widget: "width",
+        },
+        height: {
+            match_strategy: "input_slot",
+            class_type: "KSampler",
+            input_name: "latent_image",
+            widget: "height",
+        },
+        steps: { match_strategy: "unique_class", class_type: "KSampler", widget: "steps" },
+    });
+
+    const resolved = resolveParams(graph, tpl);
+    assert.equal(resolved.positive_prompt.nodeId, "6");
+    assert.equal(resolved.positive_prompt.value, "edit this");
+    assert.equal(resolved.negative_prompt.nodeId, "7");
+    assert.equal(resolved.width.nodeId, "50");
+    assert.equal(resolved.width.value, 1328);
+    assert.equal(resolved.steps.value, 20);
+});
+
+test("matches loader variants independently", () => {
+    const graph = makeGraph([
+        makeNode(10, "UNETLoader", { unet_name: "base.safetensors" }),
+        makeNode(11, "UnetLoaderGGUF", { unet_name: "base.gguf" }),
+        makeNode(12, "CLIPLoader", { clip_name: "clip.safetensors" }),
+        makeNode(13, "DualCLIPLoader", { clip_name1: "clip1.safetensors", clip_name2: "clip2.safetensors" }),
+        makeNode(14, "VAELoader", { vae_name: "vae.safetensors" }),
+        makeNode(15, "CheckpointLoaderSimple", { ckpt_name: "model.safetensors" }),
+    ]);
+    const tpl = template({
+        unet_name: { match_strategy: "unique_class", class_type: "UNETLoader", widget: "unet_name" },
+        gguf_unet_name: { match_strategy: "unique_class", class_type: "UnetLoaderGGUF", widget: "unet_name" },
+        clip_name: { match_strategy: "unique_class", class_type: "CLIPLoader", widget: "clip_name" },
+        dual_clip_name1: { match_strategy: "unique_class", class_type: "DualCLIPLoader", widget: "clip_name1" },
+        vae_name: { match_strategy: "unique_class", class_type: "VAELoader", widget: "vae_name" },
+        ckpt_name: { match_strategy: "unique_class", class_type: "CheckpointLoaderSimple", widget: "ckpt_name" },
+    });
+
+    const resolved = resolveParams(graph, tpl);
+    assert.equal(resolved.unet_name.value, "base.safetensors");
+    assert.equal(resolved.gguf_unet_name.value, "base.gguf");
+    assert.equal(resolved.clip_name.value, "clip.safetensors");
+    assert.equal(resolved.dual_clip_name1.value, "clip1.safetensors");
+    assert.equal(resolved.vae_name.value, "vae.safetensors");
+    assert.equal(resolved.ckpt_name.value, "model.safetensors");
+});
+
 test("check, apply, and read use the same resolution", () => {
     const graph = makeGraph([makeNode(3, "KSampler", { steps: 20, cfg: 7 })]);
     const tpl = template({

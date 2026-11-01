@@ -45,6 +45,14 @@ export function savePreset(presetData) {
     }, "保存预设失败");
 }
 
+export function deletePreset(templateId, presetId) {
+    return request(
+        `/preset/${encodeURIComponent(templateId)}/${encodeURIComponent(presetId)}`,
+        { method: "DELETE" },
+        "删除预设失败"
+    );
+}
+
 export function getSweeps(templateId) {
     return request(`/sweeps/${encodeURIComponent(templateId)}`, undefined, "加载扫描配置失败");
 }

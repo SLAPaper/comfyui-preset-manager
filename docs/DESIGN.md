@@ -12,6 +12,8 @@
 | 前端 | `web/client.js` | HTTP 请求 |
 | 前端 | `web/matcher.js` | 节点匹配、参数读取、检查、应用 |
 | 前端 | `web/sweep-runner.js` | 扫描执行顺序和取消 |
+| 前端 | `web/sweep-axes.js` | 扫描轴编辑和总数显示 |
+| 前端 | `web/styles.js` | 对话框共享样式 |
 | 前端 | `web/*-dialog.js` | 对话框和表单 |
 | 后端 | `__init__.py` | 注册 HTTP 路由 |
 | 后端 | `storage.py` | 安全 ID、原子写、用户目录、YAML 扫描 |
@@ -55,7 +57,7 @@ applyParams(graph, template, params) -> {applied, failed}
 
 新建预设时，前端用 `readParams()` 读取当前 graph 的参数值。编辑预设时，前端重新读取当前 graph。当前 graph 匹配不到的已存参数不会出现在编辑器中，保存后会被删除。
 
-删除接口只删除用户目录的文件。内置预设无法通过接口删除。
+预设列表返回 `source` 字段，取值为 `bundled` 或 `user`。界面只对用户预设显示删除按钮。删除接口只删除用户目录的文件，内置预设无法删除。
 
 ## 扫描
 
@@ -75,9 +77,9 @@ applyParams(graph, template, params) -> {applied, failed}
 
 ## 模板关联
 
-用户点击 “Apply Preset” 后，前端把模板 ID 写入 `app.graph.extra.preset_template`。这个字段随 workflow 保存。下次打开预设对话框或扫描对话框时，前端读取该字段，自动选择模板。
+用户点击 “Apply Preset” 后，前端把模板 ID 写入 `app.graph.extra.preset_template`。这个字段随 workflow 保存。未保存 workflow 时，关联不会持久化。下次打开预设对话框或扫描对话框时，前端读取该字段，自动选择模板。
 
-关联不再使用独立映射文件，也不依赖 workflow 名称。
+关联不再使用独立映射文件，也不依赖 workflow 名称。旧版本的 `mapping.yaml` 不再读取。
 
 ## 存储与安全
 
@@ -102,12 +104,11 @@ applyParams(graph, template, params) -> {applied, failed}
 
 - 含多个 KSampler 的 workflow 无法用 `unique_class` 或 `input_slot` 匹配采样参数。
 - 编辑预设会丢失当前 graph 匹配不到的已存参数。
-- 预设没有删除按钮。
 - 扫描不校验枚举值。
 - 脚本无法通过 HTTP 应用预设。应用只在前端完成。
 
 ## 后续方向
 
 - 支持按标题或序号选择多个同类型节点。
-- 增加预设删除入口，并在编辑时保留未匹配参数。
+- 编辑预设时保留当前 graph 匹配不到的已存参数。
 - 用 `graphToPrompt()` 预构造 prompt，避免扫描期间修改 graph。

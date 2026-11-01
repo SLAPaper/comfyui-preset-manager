@@ -25,7 +25,7 @@ ComfyUI 的配置预设与参数扫描插件，用于底模评测。
 3. 选择模板和预设。
 4. 点击 “Apply Preset”。
 
-应用后，插件把模板 ID 写入当前 workflow 的 `extra.preset_template`。保存 workflow 后，下次打开对话框时会自动选择该模板。
+应用后，插件把模板 ID 写入当前 workflow 的 `extra.preset_template`。保存 workflow 后，下次打开对话框时会自动选择该模板。旧版本的 `mapping.yaml` 不再读取。
 
 ### 新建和编辑预设
 
@@ -33,6 +33,7 @@ ComfyUI 的配置预设与参数扫描插件，用于底模评测。
 2. 点击 “+ 新建”。
 3. 勾选要保存的参数，填写名称，点击 “保存”。
 4. 编辑已有预设时，点击预设右侧的 “编辑”。
+5. 删除用户预设时，点击预设右侧的 “删除”。内置预设不显示删除按钮。
 
 说明：新建预设时，插件读取当前 workflow 的 widget 值。编辑器提供表单模式和代码模式。
 
@@ -77,7 +78,7 @@ ComfyUI 的配置预设与参数扫描插件，用于底模评测。
 | 预设 | `presets/{template_id}/` | `user/preset-manager/presets/{template_id}/` |
 | 扫描配置 | 无 | `user/preset-manager/sweeps/{template_id}/` |
 
-用户目录的同名文件覆盖内置文件。删除预设时，插件只删除用户目录里的文件。
+用户目录的同名文件覆盖内置文件。删除预设时，插件只删除用户目录里的文件。内置预设不能删除。
 
 ## API
 
@@ -112,4 +113,3 @@ E2E 测试见 [docs/TESTING.md](docs/TESTING.md)。设计说明见 [docs/DESIGN.
 
 - `unique_class` 和 `input_slot` 要求目标节点唯一。hires fix 等含多个 KSampler 的 workflow 会匹配失败。
 - 编辑预设时，当前 workflow 匹配不到的已存参数会被丢弃。
-- 预设没有删除按钮，只能调用删除接口。

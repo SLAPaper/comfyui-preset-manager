@@ -9,6 +9,7 @@
  */
 
 import { savePreset } from "./client.js";
+import { injectStyles } from "./styles.js";
 
 // Use new API to avoid deprecation warnings
 const { $el, ComfyDialog } = window.comfyAPI.ui;
@@ -93,6 +94,7 @@ export class PresetEditorDialog extends ComfyDialog {
     }
     
     addStyles() {
+        injectStyles();
         const style = document.createElement("style");
         style.textContent = `
             .comfy-preset-editor {
@@ -124,31 +126,6 @@ export class PresetEditorDialog extends ComfyDialog {
                 color: #a6adc8;
                 margin-bottom: 5px;
                 font-size: 14px;
-            }
-            
-            .comfy-input {
-                width: 100%;
-                padding: 8px;
-                background: #313244;
-                border: 1px solid #45475a;
-                border-radius: 4px;
-                color: #cdd6f4;
-                font-size: 14px;
-                margin-bottom: 10px;
-                box-sizing: border-box;
-            }
-            
-            .comfy-textarea {
-                width: 100%;
-                padding: 8px;
-                background: #313244;
-                border: 1px solid #45475a;
-                border-radius: 4px;
-                color: #cdd6f4;
-                font-family: monospace;
-                font-size: 13px;
-                resize: vertical;
-                box-sizing: border-box;
             }
             
             .preset-editor-mode {
