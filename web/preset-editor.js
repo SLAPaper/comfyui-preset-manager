@@ -50,16 +50,18 @@ export class PresetEditorDialog extends ComfyDialog {
                 
                 // Mode toggle
                 $el("div.preset-editor-mode", [
-                    $el("button.comfy-btn.mode-btn.active", {
+                    this.formModeBtn = $el("button.comfy-btn.mode-btn.active", {
                         textContent: "表单模式",
-                        onclick: (e) => this.setMode('form', e)
+                        onclick: () => this.setMode('form')
                     }),
-                    $el("button.comfy-btn.mode-btn", {
+                    this.codeModeBtn = $el("button.comfy-btn.mode-btn", {
                         textContent: "代码模式",
-                        onclick: (e) => this.setMode('code', e)
+                        onclick: () => this.setMode('code')
                     })
                 ]),
-                
+
+                this.noteEl = $el("div.preset-editor-note", { style: { display: "none" } }),
+
                 // Form mode: parameter list
                 this.formContainer = $el("div.preset-editor-form", [
                     $el("label", { textContent: "要保存的参数:" }),
@@ -141,6 +143,16 @@ export class PresetEditorDialog extends ComfyDialog {
             .mode-btn.active {
                 background: #89b4fa;
                 color: #1e1e2e;
+            }
+
+            .preset-editor-note {
+                margin-bottom: 15px;
+                padding: 8px 10px;
+                border-radius: 4px;
+                background: #313244;
+                color: #a6adc8;
+                font-size: 12px;
+                line-height: 1.5;
             }
             
             .preset-param-list {
@@ -244,26 +256,38 @@ export class PresetEditorDialog extends ComfyDialog {
         this.nameInput.value = "";
         this.descInput.value = "";
         this.nameInput.disabled = false;
-        
+        this.noteEl.textContent = "";
+        this.noteEl.style.display = "none";
+        this.codeEditor.value = "";
+
+        this.resetMode();
         this.renderParameterList();
         this.element.style.display = "flex";
     }
     
     /**
      * Show the dialog for editing an existing preset.
+     * A bundled preset is edited as a new user copy so the built-in stays intact.
      * @param {string} templateId - The template ID
      * @param {string} presetId - The preset ID
      * @param {Object} presetData - The preset data
      * @param {Array} parameters - Array of { name, nodeType, nodeId, value }
+     * @param {boolean} bundled - Whether the preset comes from the bundled layer
      */
-    showForEdit(templateId, presetId, presetData, parameters) {
+    showForEdit(templateId, presetId, presetData, parameters, bundled = false) {
         this.templateId = templateId;
-        this.presetId = presetId;
-        
-        this.titleEl.textContent = "编辑预设";
-        this.nameInput.value = presetData.name || presetId;
+        this.presetId = bundled ? null : presetId;
+
+        const sourceName = presetData.name || presetId;
+        this.titleEl.textContent = bundled ? "复制内置预设" : "编辑预设";
+        this.nameInput.value = bundled ? `${sourceName} 副本` : sourceName;
         this.descInput.value = presetData.description || "";
-        this.nameInput.disabled = true; // Can't rename existing preset
+        this.nameInput.disabled = !bundled;
+        this.noteEl.textContent = bundled
+            ? "保存后创建用户预设，内置预设保持不变。"
+            : "保存后覆盖当前用户预设。";
+        this.noteEl.style.display = "block";
+        this.codeEditor.value = "";
         
         // Mark parameters that are in the preset as selected
         const presetParams = presetData.params || {};
@@ -273,8 +297,20 @@ export class PresetEditorDialog extends ComfyDialog {
             value: p.name in presetParams ? presetParams[p.name] : p.value
         }));
         
+        this.resetMode();
         this.renderParameterList();
         this.element.style.display = "flex";
+    }
+
+    /**
+     * Always reopen on the form view; neither the mode nor code text carries over.
+     */
+    resetMode() {
+        this.mode = "form";
+        this.formModeBtn.classList.add("active");
+        this.codeModeBtn.classList.remove("active");
+        this.formContainer.style.display = "block";
+        this.codeContainer.style.display = "none";
     }
     
     /**
@@ -359,40 +395,102 @@ export class PresetEditorDialog extends ComfyDialog {
     }
     
     /**
-     * Set the editor mode (form or code).
+     * Set the editor mode and carry the current data across the switch.
      */
-    setMode(mode, evt) {
-        // Sync data to code editor BEFORE switching mode
-        // (getPresetData() reads from form when mode is 'form', from textarea when 'code')
+    setMode(mode) {
+        if (mode === this.mode) return;
+
         if (mode === "code") {
             const data = this.getPresetData();
+            if (!data) return;
             this.codeEditor.value = JSON.stringify(data, null, 2);
+        } else {
+            const data = this.parseCode();
+            if (!data) return;
+            this.applyEditorData(data);
         }
         
         this.mode = mode;
-        
-        // Update button states
-        const buttons = this.element.querySelectorAll(".mode-btn");
-        buttons.forEach(btn => btn.classList.remove("active"));
-        const target = evt?.target?.closest(".mode-btn") || evt?.target;
-        if (target) target.classList.add("active");
-        
-        // Show/hide containers
+        this.formModeBtn.classList.toggle("active", mode === "form");
+        this.codeModeBtn.classList.toggle("active", mode === "code");
         this.formContainer.style.display = mode === "form" ? "block" : "none";
         this.codeContainer.style.display = mode === "code" ? "block" : "none";
+    }
+
+    /**
+     * Parse the code editor and validate the fields the preset needs.
+     */
+    parseCode() {
+        let data;
+        try {
+            data = JSON.parse(this.codeEditor.value);
+        } catch (e) {
+            alert("JSON 格式错误: " + e.message);
+            return null;
+        }
+        if (!data || typeof data !== "object" || Array.isArray(data)) {
+            alert("JSON 必须是对象");
+            return null;
+        }
+        if (!data.params || typeof data.params !== "object" || Array.isArray(data.params)) {
+            alert("params 必须是对象");
+            return null;
+        }
+        return data;
+    }
+
+    /**
+     * Copy parsed code-mode values back into the form controls.
+     * Params that are not in the current graph stay visible as custom entries.
+     */
+    applyEditorData(data) {
+        this.nameInput.value = typeof data.name === "string" ? data.name : "";
+        this.descInput.value = typeof data.description === "string" ? data.description : "";
+
+        const remaining = new Set(Object.keys(data.params));
+        this.parameters = this.parameters.filter(param =>
+            param.nodeType !== "自定义" || remaining.has(param.name)
+        );
+
+        for (const param of this.parameters) {
+            if (remaining.has(param.name)) {
+                param.selected = true;
+                param.value = data.params[param.name];
+                remaining.delete(param.name);
+            } else {
+                param.selected = false;
+            }
+        }
+
+        for (const name of remaining) {
+            this.parameters.push({
+                name,
+                nodeType: "自定义",
+                nodeId: "",
+                value: data.params[name],
+                selected: true,
+            });
+        }
+
+        this.renderParameterList();
     }
     
     /**
      * Get the preset data from the current mode.
+     * The ID and template always come from the dialog, not from the JSON text.
      */
     getPresetData() {
         if (this.mode === "code") {
-            try {
-                return JSON.parse(this.codeEditor.value);
-            } catch (e) {
-                alert("JSON 格式错误: " + e.message);
-                return null;
-            }
+            const parsed = this.parseCode();
+            if (!parsed) return null;
+            const name = typeof parsed.name === "string" ? parsed.name : "";
+            return {
+                id: this.presetId || this.generateId(name),
+                name,
+                description: typeof parsed.description === "string" ? parsed.description : "",
+                workflow_template: this.templateId,
+                params: parsed.params,
+            };
         }
         
         // Form mode

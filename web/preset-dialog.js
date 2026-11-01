@@ -348,7 +348,7 @@ export class PresetDialog extends ComfyDialog {
         for (const preset of this.presets) {
             const actions = $el("div.preset-item-actions", [
                 $el("button.comfy-btn.small", {
-                    textContent: "编辑",
+                    textContent: preset.source === "bundled" ? "复制" : "编辑",
                     onclick: (e) => {
                         e.stopPropagation();
                         this.onEditPreset(preset);
@@ -411,7 +411,13 @@ export class PresetDialog extends ComfyDialog {
                 this.currentTemplate = await getTemplateDetail(this.selectedTemplate);
             }
             const params = readParams(app.graph, this.currentTemplate);
-            this.editor.showForEdit(this.selectedTemplate, preset.id, presetData, params);
+            this.editor.showForEdit(
+                this.selectedTemplate,
+                preset.id,
+                presetData,
+                params,
+                preset.source === "bundled"
+            );
         } catch (error) {
             console.error("[PresetManager] Error loading preset for edit:", error);
             alert("加载预设失败: " + error.message);

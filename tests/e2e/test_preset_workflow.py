@@ -297,6 +297,119 @@ class TestPresetWorkflow:
         assert by_name["steps"] is True
 
     @pytest.mark.asyncio
+    async def test_editor_syncs_form_and_code(self, page):
+        """Switching modes must carry name, selected params, and custom params."""
+        await page.wait_for_timeout(3000)
+
+        result = await page.evaluate("""async () => {
+            const { PresetEditorDialog } = await import('/extensions/comfyui-preset-manager/preset-editor.js');
+            const editor = new PresetEditorDialog();
+            editor.showForCreate('sdxl-txt2img', [
+                { name: 'steps', nodeType: 'KSampler', nodeId: '1', value: 20, defaultSelected: true },
+                { name: 'cfg', nodeType: 'KSampler', nodeId: '1', value: 7, defaultSelected: true },
+            ]);
+
+            editor.setMode('code');
+            const data = JSON.parse(editor.codeEditor.value);
+            data.name = '同步测试';
+            data.description = 'from code';
+            data.id = 'ignored';
+            data.params.steps = 33;
+            delete data.params.cfg;
+            data.params.extra = 'custom';
+            editor.codeEditor.value = JSON.stringify(data);
+            editor.setMode('form');
+
+            const afterCodeToForm = {
+                name: editor.nameInput.value,
+                description: editor.descInput.value,
+                params: editor.parameters.map(item => ({
+                    name: item.name,
+                    selected: item.selected,
+                    value: item.value,
+                    nodeType: item.nodeType,
+                })),
+            };
+
+            const steps = editor.parameters.find(item => item.name === 'steps');
+            steps.value = 44;
+            editor.setMode('code');
+            const regenerated = JSON.parse(editor.codeEditor.value);
+            const saved = editor.getPresetData();
+            editor.close();
+            return { afterCodeToForm, regenerated, saved };
+        }""")
+
+        params = {item["name"]: item for item in result["afterCodeToForm"]["params"]}
+        assert result["afterCodeToForm"]["name"] == "同步测试"
+        assert result["afterCodeToForm"]["description"] == "from code"
+        assert params["steps"]["selected"] is True
+        assert params["steps"]["value"] == 33
+        assert params["cfg"]["selected"] is False
+        assert params["extra"]["selected"] is True
+        assert params["extra"]["nodeType"] == "自定义"
+
+        assert result["regenerated"]["params"]["steps"] == 44
+        assert result["regenerated"]["params"]["extra"] == "custom"
+        assert "cfg" not in result["regenerated"]["params"]
+        assert result["saved"]["id"] == "同步测试"
+        assert result["saved"]["workflow_template"] == "sdxl-txt2img"
+
+    @pytest.mark.asyncio
+    async def test_bundled_preset_opens_as_copy(self, page):
+        """Editing a bundled preset starts a user copy; user presets edit in place."""
+        await page.wait_for_timeout(3000)
+
+        result = await page.evaluate("""async () => {
+            const { PresetEditorDialog } = await import('/extensions/comfyui-preset-manager/preset-editor.js');
+            const params = [
+                { name: 'steps', nodeType: 'KSampler', nodeId: '1', value: 20, defaultSelected: true },
+            ];
+            const editor = new PresetEditorDialog();
+
+            editor.showForEdit(
+                'sdxl-txt2img', '_default',
+                { name: '默认配置', params: { steps: 25 } },
+                params, true
+            );
+            const copy = {
+                title: editor.titleEl.textContent,
+                name: editor.nameInput.value,
+                disabled: editor.nameInput.disabled,
+                note: editor.noteEl.textContent,
+                presetId: editor.presetId,
+            };
+
+            editor.showForEdit(
+                'sdxl-txt2img', 'mine',
+                { name: '我的配置', params: { steps: 25 } },
+                params, false
+            );
+            const edit = {
+                title: editor.titleEl.textContent,
+                name: editor.nameInput.value,
+                disabled: editor.nameInput.disabled,
+                note: editor.noteEl.textContent,
+                presetId: editor.presetId,
+            };
+
+            editor.close();
+            return { copy, edit };
+        }""")
+
+        assert result["copy"]["title"] == "复制内置预设"
+        assert result["copy"]["name"] == "默认配置 副本"
+        assert result["copy"]["disabled"] is False
+        assert result["copy"]["presetId"] is None
+        assert "内置预设保持不变" in result["copy"]["note"]
+
+        assert result["edit"]["title"] == "编辑预设"
+        assert result["edit"]["name"] == "我的配置"
+        assert result["edit"]["disabled"] is True
+        assert result["edit"]["presetId"] == "mine"
+        assert "覆盖当前用户预设" in result["edit"]["note"]
+
+    @pytest.mark.asyncio
     async def test_editor_width_consistent_between_modes(self, page):
         """Editor dialog width should not change when switching between form and code mode."""
         await page.wait_for_timeout(3000)
