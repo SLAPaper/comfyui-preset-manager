@@ -231,6 +231,7 @@ def test_load_presets_marks_user_source(preset_manager, temp_dir):
 
 BUNDLED_TEMPLATES = [
     "anima-txt2img",
+    "qwen-image-21",
     "qwen-image-edit",
     "qwen-image-txt2img",
     "flux-txt2img",

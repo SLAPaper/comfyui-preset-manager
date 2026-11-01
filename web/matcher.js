@@ -3,26 +3,101 @@
  *
  * This module is the only place that knows about match strategies. Callers
  * resolve a template once, then read, check, or apply parameter values.
+ *
+ * Nodes inside subgraphs are matched like top-level nodes. When an inner
+ * widget is promoted to a subgraph input, the value lives on the subgraph
+ * instance, so matching returns that host widget instead of the linked copy.
  */
 
-function nodesOfType(graph, type, synonyms) {
-    return (graph.nodes || []).filter(node => (synonyms[node.type] || node.type) === type);
+function* walkNodes(graph, owner = null, path = [], visiting = new Set()) {
+    if (!graph || visiting.has(graph)) return;
+    visiting.add(graph);
+
+    for (const node of graph.nodes || []) {
+        yield { node, scope: graph, owner, path };
+        if (node.subgraph?.nodes) {
+            yield* walkNodes(node.subgraph, node, [...path, node.id], visiting);
+        }
+    }
+
+    visiting.delete(graph);
 }
 
-function followToWidget(graph, nodeId, widgetName, maxDepth) {
+function nodesOfType(graph, type, synonyms) {
+    return [...walkNodes(graph)].filter(
+        ({ node }) => (synonyms[node.type] || node.type) === type
+    );
+}
+
+function getLink(scope, id) {
+    if (id == null) return null;
+    if (typeof scope.getLink === "function") return scope.getLink(id) ?? null;
+
+    const links = scope.links;
+    if (!links) return null;
+    return (typeof links.get === "function" ? links.get(id) : links[id]) ?? null;
+}
+
+function findNode(scope, id) {
+    if (typeof scope.getNodeById === "function") return scope.getNodeById(id) ?? null;
+    return (scope.nodes || []).find(node => String(node.id) === String(id)) ?? null;
+}
+
+/**
+ * Return the host widget when a node widget is promoted to a subgraph input.
+ * The linked inner widget is ignored during execution, so it is not writable.
+ */
+function promotedWidget(scope, owner, node, widgetName) {
+    if (!owner || !scope.inputs) return undefined;
+
+    const input = (node.inputs || []).find(item => item.name === widgetName);
+    if (!input || input.link == null) return undefined;
+
+    const link = getLink(scope, input.link);
+    if (!link) return undefined;
+
+    const inputNodeId = scope.inputNode?.id;
+    if (inputNodeId == null || String(link.origin_id) !== String(inputNodeId)) {
+        return undefined;
+    }
+
+    const subgraphInput = scope.inputs.find(
+        item => (item.linkIds || []).includes(input.link)
+    );
+    if (!subgraphInput) return undefined;
+
+    const slot = (owner.inputs || []).find(item =>
+        item._subgraphSlot === subgraphInput ||
+        (item._subgraphSlot?.id != null &&
+            item._subgraphSlot.id === subgraphInput.id)
+    ) || (owner.inputs || []).find(item => item.name === subgraphInput.name);
+
+    // An input connected from outside the subgraph is controlled by that link.
+    if (!slot || slot.link != null) return null;
+
+    return slot._widget ?? slot.widget ?? null;
+}
+
+function widgetFor(scope, owner, node, widgetName) {
+    const host = promotedWidget(scope, owner, node, widgetName);
+    if (host !== undefined) return host;
+    return node.widgets?.find(item => item.name === widgetName) ?? null;
+}
+
+function followToWidget(scope, owner, nodeId, widgetName, maxDepth) {
     if (maxDepth <= 0) return null;
 
-    const node = (graph.nodes || []).find(item => String(item.id) === String(nodeId));
+    const node = findNode(scope, nodeId);
     if (!node) return null;
 
-    const widget = node.widgets?.find(item => item.name === widgetName);
-    if (widget) return { node, widgetName };
+    const widget = widgetFor(scope, owner, node, widgetName);
+    if (widget) return { node, widgetName, widget };
 
     for (const input of node.inputs || []) {
         if (input.link == null) continue;
-        const link = graph.links?.[input.link];
+        const link = getLink(scope, input.link);
         if (!link) continue;
-        const result = followToWidget(graph, link.origin_id, widgetName, maxDepth - 1);
+        const result = followToWidget(scope, owner, link.origin_id, widgetName, maxDepth - 1);
         if (result) return result;
     }
 
@@ -31,54 +106,75 @@ function followToWidget(graph, nodeId, widgetName, maxDepth) {
 
 function findMatch(graph, paramDef, synonyms) {
     const classType = paramDef.class_type || paramDef.target_class_type;
+    const entries = nodesOfType(graph, classType, synonyms);
 
     if (paramDef.match_strategy === "output_connection") {
-        const targets = nodesOfType(graph, classType, synonyms);
-        if (targets.length !== 1) return null;
+        if (entries.length !== 1) return null;
 
-        const target = targets[0];
+        const entry = entries[0];
+        const target = entry.node;
         const input = (target.inputs || []).find(item => item.name === paramDef.target_input);
+
         if (input?.link != null) {
-            const link = graph.links?.[input.link];
-            if (link) {
-                const source = (graph.nodes || []).find(item => String(item.id) === String(link.origin_id));
-                if (source) return { node: source, widgetName: paramDef.widget };
+            const link = getLink(entry.scope, input.link);
+            const source = link && findNode(entry.scope, link.origin_id);
+            const widget = source && widgetFor(entry.scope, entry.owner, source, paramDef.widget);
+            if (widget) {
+                return { node: source, widgetName: paramDef.widget, widget, path: entry.path };
             }
         }
 
-        return { node: target, widgetName: paramDef.widget };
+        const widget = widgetFor(entry.scope, entry.owner, target, paramDef.widget);
+        return widget
+            ? { node: target, widgetName: paramDef.widget, widget, path: entry.path }
+            : null;
     }
 
     if (paramDef.match_strategy === "input_slot") {
-        const hubs = nodesOfType(graph, classType, synonyms);
-        if (hubs.length !== 1) return null;
+        if (entries.length !== 1) return null;
 
-        const input = (hubs[0].inputs || []).find(item => item.name === paramDef.input_name);
+        const entry = entries[0];
+        const input = (entry.node.inputs || []).find(
+            item => item.name === paramDef.input_name
+        );
         if (input?.link == null) return null;
 
-        const link = graph.links?.[input.link];
+        const link = getLink(entry.scope, input.link);
         if (!link) return null;
 
-        return followToWidget(graph, link.origin_id, paramDef.widget, 5);
+        const result = followToWidget(
+            entry.scope, entry.owner, link.origin_id, paramDef.widget, 5
+        );
+        return result ? { ...result, path: entry.path } : null;
     }
 
-    const nodes = nodesOfType(graph, classType, synonyms);
-
     if (paramDef.match_strategy === "unique_class") {
-        return nodes.length === 1 ? { node: nodes[0], widgetName: paramDef.widget } : null;
+        if (entries.length !== 1) return null;
+
+        const entry = entries[0];
+        const widget = widgetFor(entry.scope, entry.owner, entry.node, paramDef.widget);
+        return widget
+            ? { node: entry.node, widgetName: paramDef.widget, widget, path: entry.path }
+            : null;
     }
 
     if (paramDef.match_strategy === "title_keyword") {
         const keywords = (paramDef.title_keywords || []).map(keyword => keyword.toLowerCase());
-        for (const node of nodes) {
-            const title = String(node.title || "").toLowerCase();
-            if (keywords.some(keyword => title.includes(keyword))) {
-                return { node, widgetName: paramDef.widget };
+        for (const entry of entries) {
+            const title = String(entry.node.title || "").toLowerCase();
+            if (!keywords.some(keyword => title.includes(keyword))) continue;
+            const widget = widgetFor(entry.scope, entry.owner, entry.node, paramDef.widget);
+            if (widget) {
+                return { node: entry.node, widgetName: paramDef.widget, widget, path: entry.path };
             }
         }
     }
 
     return null;
+}
+
+function nodePath(path, nodeId) {
+    return [...(path || []), nodeId].join(":");
 }
 
 /**
@@ -91,13 +187,12 @@ export function resolveParams(graph, template) {
 
     for (const [name, paramDef] of Object.entries(template?.node_mapping || {})) {
         const match = findMatch(graph, paramDef, synonyms);
-        const widget = match?.node?.widgets?.find(item => item.name === match.widgetName);
-        resolved[name] = widget ? {
-            nodeId: String(match.node.id),
+        resolved[name] = match?.widget ? {
+            nodeId: nodePath(match.path, match.node.id),
             nodeType: match.node.type,
             widgetName: match.widgetName,
-            widget,
-            value: widget.value,
+            widget: match.widget,
+            value: match.widget.value,
         } : null;
     }
 

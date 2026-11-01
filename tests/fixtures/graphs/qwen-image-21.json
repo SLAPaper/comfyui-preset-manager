@@ -1,0 +1,101 @@
+{
+  "template": "qwen-image-21",
+  "nodes": [
+    {
+      "id": 459,
+      "type": "text-to-image-subgraph",
+      "title": "Text to Image (Qwen Image 2.1)",
+      "subgraph": {
+        "inputNode": { "id": -10 },
+        "inputs": [
+          { "name": "prompt", "linkIds": [656], "widget": { "name": "prompt", "value": "a photo of a cat" } },
+          { "name": "negative_prompt", "linkIds": [657], "widget": { "name": "negative_prompt", "value": "low quality" } },
+          { "name": "cfg", "linkIds": [658], "widget": { "name": "cfg", "value": 1.1 } },
+          { "name": "steps", "linkIds": [659], "widget": { "name": "steps", "value": 25 } },
+          { "name": "width", "linkIds": [660], "widget": { "name": "width", "value": 1024 } },
+          { "name": "height", "linkIds": [661], "widget": { "name": "height", "value": 1024 } },
+          { "name": "scheduler", "linkIds": [662], "widget": { "name": "scheduler", "value": "euler" } },
+          { "name": "scheduler_1", "linkIds": [668], "widget": { "name": "scheduler_1", "value": "simple" } },
+          { "name": "seed", "linkIds": [667], "widget": { "name": "seed", "value": 42 } }
+        ],
+        "nodes": [
+          {
+            "id": 452,
+            "type": "TextEncodeQwenImage21",
+            "title": "文本编码 Qwen Image 2.1",
+            "widgets": {
+              "prompt": "",
+              "negative_prompt": "",
+              "resolution": 1024
+            },
+            "inputs": {
+              "prompt": 656,
+              "negative_prompt": 657
+            }
+          },
+          {
+            "id": 456,
+            "type": "EmptyLatentImage",
+            "title": "空Latent图像",
+            "widgets": {
+              "width": 1024,
+              "height": 1024,
+              "batch_size": 1
+            },
+            "inputs": {
+              "width": 660,
+              "height": 661
+            }
+          },
+          {
+            "id": 458,
+            "type": "KSampler",
+            "title": "K采样器",
+            "widgets": {
+              "seed": 0,
+              "control_after_generate": "fixed",
+              "steps": 25,
+              "cfg": 1.1,
+              "sampler_name": "euler",
+              "scheduler": "simple",
+              "denoise": 1
+            },
+            "inputs": {
+              "positive": 653,
+              "negative": 655,
+              "latent_image": 654,
+              "seed": 667,
+              "steps": 659,
+              "cfg": 658,
+              "sampler_name": 662,
+              "scheduler": 668
+            }
+          }
+        ],
+        "links": {
+          "653": { "origin_id": 452, "origin_slot": 0 },
+          "655": { "origin_id": 452, "origin_slot": 1 },
+          "654": { "origin_id": 456, "origin_slot": 0 },
+          "656": { "origin_id": -10, "origin_slot": 0 },
+          "657": { "origin_id": -10, "origin_slot": 1 },
+          "658": { "origin_id": -10, "origin_slot": 2 },
+          "659": { "origin_id": -10, "origin_slot": 3 },
+          "660": { "origin_id": -10, "origin_slot": 4 },
+          "661": { "origin_id": -10, "origin_slot": 5 },
+          "662": { "origin_id": -10, "origin_slot": 6 },
+          "668": { "origin_id": -10, "origin_slot": 7 },
+          "667": { "origin_id": -10, "origin_slot": 8 }
+        }
+      }
+    }
+  ],
+  "expected": {
+    "positive_prompt": { "nodeId": "459:452", "widgetName": "prompt", "value": "a photo of a cat" },
+    "negative_prompt": { "nodeId": "459:452", "widgetName": "negative_prompt", "value": "low quality" },
+    "sampler": { "nodeId": "459:458", "widgetName": "sampler_name", "value": "euler" },
+    "scheduler": { "nodeId": "459:458", "widgetName": "scheduler", "value": "simple" },
+    "steps": { "nodeId": "459:458", "widgetName": "steps", "value": 25 },
+    "cfg": { "nodeId": "459:458", "widgetName": "cfg", "value": 1.1 },
+    "seed": { "nodeId": "459:458", "widgetName": "seed", "value": 42 }
+  }
+}

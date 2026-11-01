@@ -228,6 +228,53 @@
       }
     }
   },
+  "qwen-image-21": {
+    "description": "Qwen Image 2.1 文生图 workflow（支持子图）",
+    "name": "Qwen Image 2.1",
+    "node_mapping": {
+      "cfg": {
+        "class_type": "KSampler",
+        "match_strategy": "unique_class",
+        "widget": "cfg"
+      },
+      "negative_prompt": {
+        "class_type": "KSampler",
+        "input_name": "negative",
+        "match_strategy": "input_slot",
+        "widget": "negative_prompt"
+      },
+      "positive_prompt": {
+        "class_type": "KSampler",
+        "input_name": "positive",
+        "match_strategy": "input_slot",
+        "widget": "prompt"
+      },
+      "sampler": {
+        "class_type": "KSampler",
+        "match_strategy": "unique_class",
+        "widget": "sampler_name"
+      },
+      "scheduler": {
+        "class_type": "KSampler",
+        "match_strategy": "unique_class",
+        "widget": "scheduler"
+      },
+      "seed": {
+        "class_type": "KSampler",
+        "match_strategy": "unique_class",
+        "widget": "seed"
+      },
+      "steps": {
+        "class_type": "KSampler",
+        "match_strategy": "unique_class",
+        "widget": "steps"
+      }
+    },
+    "synonyms": {
+      "KSamplerAdvanced": "KSampler",
+      "KSamplerEfficient": "KSampler"
+    }
+  },
   "qwen-image-edit": {
     "description": "Qwen Image Edit 图像编辑 workflow（支持文生图和图生图）",
     "name": "Qwen Image Edit",

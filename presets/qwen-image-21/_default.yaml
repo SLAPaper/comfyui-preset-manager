@@ -1,0 +1,14 @@
+# Qwen Image 2.1 默认采样配置
+
+name: "默认配置"
+description: "Qwen Image 2.1 默认采样参数"
+workflow_template: "qwen-image-21"
+
+params:
+  positive_prompt: "masterpiece, best quality, ultra detailed"
+  negative_prompt: "worst quality, low quality, blurry"
+  steps: 25
+  cfg: 1.1
+  sampler: "euler"
+  scheduler: "simple"
+  seed: 0

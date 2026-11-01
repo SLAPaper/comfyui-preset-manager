@@ -1,0 +1,50 @@
+# Qwen Image 2.1 Text-to-Image Workflow Template
+# The official workflow nests its nodes in a subgraph. Node matching traverses
+# subgraphs and writes promoted widgets through the subgraph instance.
+
+name: "Qwen Image 2.1"
+description: "Qwen Image 2.1 文生图 workflow（支持子图）"
+
+node_mapping:
+  positive_prompt:
+    match_strategy: "input_slot"
+    class_type: "KSampler"
+    input_name: "positive"
+    widget: "prompt"
+
+  negative_prompt:
+    match_strategy: "input_slot"
+    class_type: "KSampler"
+    input_name: "negative"
+    widget: "negative_prompt"
+
+  sampler:
+    match_strategy: "unique_class"
+    class_type: "KSampler"
+    widget: "sampler_name"
+
+  scheduler:
+    match_strategy: "unique_class"
+    class_type: "KSampler"
+    widget: "scheduler"
+
+  steps:
+    match_strategy: "unique_class"
+    class_type: "KSampler"
+    widget: "steps"
+
+  cfg:
+    match_strategy: "unique_class"
+    class_type: "KSampler"
+    widget: "cfg"
+
+  seed:
+    match_strategy: "unique_class"
+    class_type: "KSampler"
+    widget: "seed"
+
+# 尺寸由 workflow 顶层的 ResolutionSelector 控制，预设不覆盖。
+
+synonyms:
+  KSamplerAdvanced: "KSampler"
+  KSamplerEfficient: "KSampler"

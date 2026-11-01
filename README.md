@@ -5,7 +5,8 @@ ComfyUI 的配置预设与参数扫描插件，用于底模评测。
 ## 功能
 
 - 保存采样配置为预设，应用到当前 workflow。
-- 支持 5 个 workflow 模板：Anima、Flux、Qwen Image Edit、Qwen Image 文生图、SDXL。
+- 支持 6 个 workflow 模板：Anima、Flux、Qwen Image 2.1、Qwen Image Edit、Qwen Image 文生图、SDXL。
+- 支持节点位于子图内的工作流。
 - 按一个或多个轴做参数扫描，逐组提交到队列。
 - 不绑定输出节点，输出方式由 workflow 决定。
 - 配置保存为 YAML，可手动编辑。
@@ -53,6 +54,7 @@ ComfyUI 的配置预设与参数扫描插件，用于底模评测。
 |---|---|---|
 | `anima-txt2img` | Anima 文生图 | UNETLoader、CLIPLoader、VAELoader |
 | `flux-txt2img` | Flux 文生图 | BasicScheduler、KSamplerSelect、FluxGuidance |
+| `qwen-image-21` | Qwen Image 2.1 文生图 | 子图内的 KSampler，尺寸由顶层 ResolutionSelector 控制 |
 | `qwen-image-edit` | Qwen Image Edit | 文生图和图生图，尺寸经 latent 输入追溯 |
 | `qwen-image-txt2img` | Qwen Image 文生图 | EmptySD3LatentImage |
 | `sdxl-txt2img` | SDXL 文生图 | CheckpointLoaderSimple、EmptyLatentImage |
@@ -69,6 +71,8 @@ ComfyUI 的配置预设与参数扫描插件，用于底模评测。
 | `input_slot` | 从枢纽节点的命名输入回溯源节点 | 提示词节点没有标题，例如 Anima |
 
 `synonyms` 字段把派生节点类型映射到标准类型，例如把 `KSamplerAdvanced` 当作 `KSampler`。
+
+匹配会进入子图内部。内层 widget 提升为子图输入时，值保存在子图实例上，插件写入实例上的 widget；被外部连线占用的子图输入不参与写入。
 
 ## 文件位置
 

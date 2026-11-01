@@ -17,15 +17,53 @@ const graphFixtures = readdirSync(join(FIXTURES, "graphs"))
     .filter(name => name.endsWith(".json"))
     .map(name => readJson(join(FIXTURES, "graphs", name)));
 
-function makeGraph(fixture) {
-    const nodes = fixture.nodes.map(node => ({
+function makeSubgraph(sub) {
+    const links = {};
+    for (const [id, link] of Object.entries(sub.links || {})) {
+        links[id] = { id: Number(id), ...link };
+    }
+
+    return {
+        nodes: (sub.nodes || []).map(makeNode),
+        links,
+        inputs: (sub.inputs || []).map(input => {
+            const widget = input.widget ? { ...input.widget } : undefined;
+            return { ...input, widget };
+        }),
+        inputNode: sub.inputNode || { id: -10 },
+    };
+}
+
+function makeNode(node) {
+    const converted = {
         id: node.id,
         type: node.type,
         title: node.title || "",
         widgets: Object.entries(node.widgets || {}).map(([name, value]) => ({ name, value })),
         inputs: Object.entries(node.inputs || {}).map(([name, link]) => ({ name, link })),
-    }));
-    return { nodes, links: fixture.links || {} };
+    };
+
+    if (node.subgraph) {
+        converted.subgraph = makeSubgraph(node.subgraph);
+        converted.inputs = converted.subgraph.inputs.map(input => ({
+            name: input.name,
+            link: null,
+            _subgraphSlot: input,
+            _widget: input.widget,
+        }));
+        converted.widgets = converted.subgraph.inputs
+            .filter(input => input.widget)
+            .map(input => input.widget);
+    }
+
+    return converted;
+}
+
+function makeGraph(fixture) {
+    return {
+        nodes: fixture.nodes.map(makeNode),
+        links: fixture.links || {},
+    };
 }
 
 function appliedValue(value) {
@@ -78,6 +116,38 @@ for (const fixture of graphFixtures) {
         }
     });
 }
+
+test("subgraph widgets are written to the host instance", () => {
+    const fixture = graphFixtures.find(item => item.template === "qwen-image-21");
+    const graph = makeGraph(fixture);
+    const template = templates["qwen-image-21"];
+    const resolved = resolveParams(graph, template);
+
+    const subgraph = graph.nodes[0].subgraph;
+    const sampler = subgraph.nodes.find(node => node.type === "KSampler");
+    const encoder = subgraph.nodes.find(node => node.type === "TextEncodeQwenImage21");
+
+    applyParams(graph, template, { steps: 8, positive_prompt: "new prompt" });
+
+    assert.equal(resolved.steps.widget.value, 8);
+    assert.equal(sampler.widgets.find(widget => widget.name === "steps").value, 25);
+    assert.equal(
+        graph.nodes[0].inputs.find(input => input.name === "steps")._widget.value,
+        8
+    );
+
+    assert.equal(resolved.positive_prompt.widget.value, "new prompt");
+    assert.equal(encoder.widgets.find(widget => widget.name === "prompt").value, "");
+});
+
+test("subgraph inputs connected from outside are not writable", () => {
+    const fixture = graphFixtures.find(item => item.template === "qwen-image-21");
+    const graph = makeGraph(fixture);
+    const slot = graph.nodes[0].inputs.find(input => input.name === "steps");
+    slot.link = 99;
+
+    assert.equal(resolveParams(graph, templates["qwen-image-21"]).steps, null);
+});
 
 test("checkParams still reports params the graph cannot match", () => {
     const fixture = graphFixtures.find(item => item.template === "flux-txt2img");
