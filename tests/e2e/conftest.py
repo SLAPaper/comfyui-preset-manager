@@ -4,13 +4,15 @@ E2E test fixtures for ComfyUI Preset Manager.
 Starts a lightweight ComfyUI instance with only the preset-manager plugin.
 """
 
-import pytest
-import pytest_asyncio
+import os
 import subprocess
 import sys
-import time
 import threading
+import time
 from pathlib import Path
+
+import pytest
+import pytest_asyncio
 
 import httpx
 
@@ -35,6 +37,8 @@ def _get_comfyui_python() -> str:
 def comfyui_server():
     """Start a lightweight ComfyUI instance with only preset-manager loaded."""
     python_exe = _get_comfyui_python()
+    env = os.environ.copy()
+    env["PYTHONIOENCODING"] = "utf-8"
     proc = subprocess.Popen(
         [
             python_exe, "main.py",
@@ -48,6 +52,9 @@ def comfyui_server():
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
+        encoding="utf-8",
+        errors="replace",
+        env=env,
     )
 
     # Drain output in background to prevent pipe blocking
