@@ -11,7 +11,7 @@ import {
     getSweeps, getSweepDetail, saveSweep, deleteSweep, expandSweep,
     getPresets, getTemplateDetail, getWorkflows
 } from "./client.js";
-import { applyParams, captureParams, checkParams, restoreParams } from "./matcher.js";
+import { applyParams, captureParams, checkParams, explainParams, restoreParams } from "./matcher.js";
 import { SweepAxes } from "./sweep-axes.js";
 import { runSweep } from "./sweep-runner.js";
 import { applyPrefixes, capturePrefixes, restorePrefixes } from "./sweep-trace.js";
@@ -430,8 +430,11 @@ export class SweepDialog {
         // Validate against the graph before queueing anything.
         const failed = checkParams(app.graph, this.template, combos[0].params);
         if (failed.length > 0) {
+            const reasons = explainParams(app.graph, this.template, failed);
             this.progress.classList.add("error");
-            this.progress.textContent = `参数无法匹配到节点: ${failed.join(", ")}`;
+            this.progress.textContent = "参数无法匹配到节点: " + failed
+                .map(name => `${name}（${reasons[name] || "未匹配"}）`)
+                .join("; ");
             return;
         }
 

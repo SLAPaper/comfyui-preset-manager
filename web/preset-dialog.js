@@ -10,7 +10,7 @@
 
 import { app } from "../../scripts/app.js";
 import { deletePreset, getWorkflows, getPresets, getPresetDetail, getTemplateDetail } from "./client.js";
-import { readParams, resolveParams, applyParams } from "./matcher.js";
+import { readParams, resolveParams, applyParams, explainParams } from "./matcher.js";
 import { PresetEditorDialog } from "./preset-editor.js";
 import { injectStyles } from "./styles.js";
 
@@ -511,9 +511,13 @@ export class PresetDialog extends ComfyDialog {
             if (!this.currentTemplate) {
                 this.currentTemplate = await getTemplateDetail(this.selectedTemplate);
             }
-            const { failed } = applyParams(app.graph, this.currentTemplate, params);
+            const { applied, failed } = applyParams(app.graph, this.currentTemplate, params);
             if (failed.length > 0) {
-                console.warn(`[PresetManager] Unmatched parameters: ${failed.join(", ")}`);
+                const reasons = explainParams(app.graph, this.currentTemplate, failed);
+                const details = failed
+                    .map(name => `${name}: ${reasons[name] || "未匹配到节点"}`)
+                    .join("\n");
+                alert(`已应用 ${applied} 个参数，以下参数未能应用：\n${details}`);
             }
 
             app.graph.extra = app.graph.extra || {};

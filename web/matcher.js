@@ -104,14 +104,24 @@ function followToWidget(scope, owner, nodeId, widgetName, maxDepth) {
     return null;
 }
 
+function uniqueEntry(entries, classType) {
+    if (entries.length === 1) return { entry: entries[0] };
+    if (entries.length === 0) return { error: `未找到 ${classType} 节点` };
+    return { error: `找到 ${entries.length} 个 ${classType} 节点，无法确定唯一节点` };
+}
+
+function missingWidget(node, widgetName) {
+    return { error: `节点 #${node.id} 的 widget ${widgetName} 不可用` };
+}
+
 function findMatch(graph, paramDef, synonyms) {
     const classType = paramDef.class_type || paramDef.target_class_type;
     const entries = nodesOfType(graph, classType, synonyms);
 
     if (paramDef.match_strategy === "output_connection") {
-        if (entries.length !== 1) return null;
+        const { entry, error } = uniqueEntry(entries, classType);
+        if (!entry) return { match: null, error };
 
-        const entry = entries[0];
         const target = entry.node;
         const input = (target.inputs || []).find(item => item.name === paramDef.target_input);
 
@@ -120,57 +130,103 @@ function findMatch(graph, paramDef, synonyms) {
             const source = link && findNode(entry.scope, link.origin_id);
             const widget = source && widgetFor(entry.scope, entry.owner, source, paramDef.widget);
             if (widget) {
-                return { node: source, widgetName: paramDef.widget, widget, path: entry.path };
+                return {
+                    match: { node: source, widgetName: paramDef.widget, widget, path: entry.path },
+                    error: null,
+                };
             }
         }
 
         const widget = widgetFor(entry.scope, entry.owner, target, paramDef.widget);
         return widget
-            ? { node: target, widgetName: paramDef.widget, widget, path: entry.path }
-            : null;
+            ? {
+                match: { node: target, widgetName: paramDef.widget, widget, path: entry.path },
+                error: null,
+            }
+            : { match: null, ...missingWidget(target, paramDef.widget) };
     }
 
     if (paramDef.match_strategy === "input_slot") {
-        if (entries.length !== 1) return null;
+        const { entry, error } = uniqueEntry(entries, classType);
+        if (!entry) return { match: null, error };
 
-        const entry = entries[0];
         const input = (entry.node.inputs || []).find(
             item => item.name === paramDef.input_name
         );
-        if (input?.link == null) return null;
+        if (!input) {
+            return {
+                match: null,
+                error: `节点 #${entry.node.id} 缺少输入 ${paramDef.input_name}`,
+            };
+        }
+        if (input.link == null) {
+            return { match: null, error: `输入 ${paramDef.input_name} 未连接` };
+        }
 
         const link = getLink(entry.scope, input.link);
-        if (!link) return null;
+        if (!link) {
+            return { match: null, error: `输入 ${paramDef.input_name} 的连线不存在` };
+        }
 
         const result = followToWidget(
             entry.scope, entry.owner, link.origin_id, paramDef.widget, 5
         );
-        return result ? { ...result, path: entry.path } : null;
+        return result
+            ? { match: { ...result, path: entry.path }, error: null }
+            : {
+                match: null,
+                error: `无法从 ${paramDef.input_name} 追溯到 widget ${paramDef.widget}`,
+            };
     }
 
     if (paramDef.match_strategy === "unique_class") {
-        if (entries.length !== 1) return null;
+        const { entry, error } = uniqueEntry(entries, classType);
+        if (!entry) return { match: null, error };
 
-        const entry = entries[0];
         const widget = widgetFor(entry.scope, entry.owner, entry.node, paramDef.widget);
         return widget
-            ? { node: entry.node, widgetName: paramDef.widget, widget, path: entry.path }
-            : null;
+            ? {
+                match: { node: entry.node, widgetName: paramDef.widget, widget, path: entry.path },
+                error: null,
+            }
+            : { match: null, ...missingWidget(entry.node, paramDef.widget) };
     }
 
     if (paramDef.match_strategy === "title_keyword") {
-        const keywords = (paramDef.title_keywords || []).map(keyword => keyword.toLowerCase());
-        for (const entry of entries) {
-            const title = String(entry.node.title || "").toLowerCase();
-            if (!keywords.some(keyword => title.includes(keyword))) continue;
-            const widget = widgetFor(entry.scope, entry.owner, entry.node, paramDef.widget);
-            if (widget) {
-                return { node: entry.node, widgetName: paramDef.widget, widget, path: entry.path };
-            }
+        if (entries.length === 0) {
+            return { match: null, error: `未找到 ${classType} 节点` };
         }
+
+        const keywords = (paramDef.title_keywords || []).map(keyword => keyword.toLowerCase());
+        const titled = entries.filter(({ node }) => {
+            const title = String(node.title || "").toLowerCase();
+            return keywords.some(keyword => title.includes(keyword));
+        });
+
+        if (titled.length === 0) {
+            return {
+                match: null,
+                error: `没有标题包含 ${keywords.join(" / ")} 的 ${classType} 节点`,
+            };
+        }
+        if (titled.length > 1) {
+            return {
+                match: null,
+                error: `找到 ${titled.length} 个标题匹配 ${keywords.join(" / ")} 的 ${classType} 节点，无法确定唯一节点`,
+            };
+        }
+
+        const entry = titled[0];
+        const widget = widgetFor(entry.scope, entry.owner, entry.node, paramDef.widget);
+        return widget
+            ? {
+                match: { node: entry.node, widgetName: paramDef.widget, widget, path: entry.path },
+                error: null,
+            }
+            : { match: null, ...missingWidget(entry.node, paramDef.widget) };
     }
 
-    return null;
+    return { match: null, error: `未知匹配策略: ${paramDef.match_strategy}` };
 }
 
 function nodePath(path, nodeId) {
@@ -186,8 +242,8 @@ export function resolveParams(graph, template) {
     const resolved = {};
 
     for (const [name, paramDef] of Object.entries(template?.node_mapping || {})) {
-        const match = findMatch(graph, paramDef, synonyms);
-        resolved[name] = match?.widget ? {
+        const { match } = findMatch(graph, paramDef, synonyms);
+        resolved[name] = match ? {
             nodeId: nodePath(match.path, match.node.id),
             nodeType: match.node.type,
             widgetName: match.widgetName,
@@ -197,6 +253,25 @@ export function resolveParams(graph, template) {
     }
 
     return resolved;
+}
+
+/**
+ * Explain why parameters cannot be matched, without changing any widget.
+ * @param {Array<string>} [names] Limit the check to these parameter names.
+ * @returns {Object<string, string>} {param: reason}
+ */
+export function explainParams(graph, template, names) {
+    const synonyms = template?.synonyms || {};
+    const wanted = names ? new Set(names) : null;
+    const errors = {};
+
+    for (const [name, paramDef] of Object.entries(template?.node_mapping || {})) {
+        if (wanted && !wanted.has(name)) continue;
+        const { match, error } = findMatch(graph, paramDef, synonyms);
+        if (!match) errors[name] = error || "未匹配到节点";
+    }
+
+    return errors;
 }
 
 /**

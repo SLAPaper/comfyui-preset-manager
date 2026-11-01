@@ -34,7 +34,7 @@
 | 策略 | 定位方式 | 限制 |
 |---|---|---|
 | `unique_class` | 按 `class_type` 查找唯一节点 | 目标类型的节点多于 1 个时失败 |
-| `title_keyword` | 按 `class_type` 查找节点，再按标题关键词筛选 | 节点标题必须包含关键词 |
+| `title_keyword` | 按 `class_type` 查找节点，再按标题关键词筛选 | 标题匹配的节点必须唯一，否则失败 |
 | `output_connection` | 从目标节点的指定输入回溯源节点；输入未连接时改用目标节点自身 | 目标节点必须唯一 |
 | `input_slot` | 从枢纽节点的命名输入回溯源节点，可沿连接递归 5 层 | 枢纽节点必须唯一，输入必须已连接 |
 
@@ -48,12 +48,13 @@
 resolveParams(graph, template) -> {param: {nodeId, widgetName, value, widget} | null}
 readParams(graph, template)     -> [{name, nodeType, nodeId, value, defaultSelected}]
 checkParams(graph, template, params) -> failed[]
+explainParams(graph, template, names) -> {param: reason}
 applyParams(graph, template, params) -> {applied, failed}
 captureParams(graph, template, names) -> [{name, widget, value}]
 restoreParams(graph, snapshot)  -> void
 ```
 
-预览、读取当前参数和参数注入调用 `resolveParams`，调用方不需要知道策略分支。扫描前用 `captureParams` 保存指定参数，结束后用 `restoreParams` 写回。`checkParams` 不修改 graph，扫描试算和逐组校验都调用这个函数。
+预览、读取当前参数和参数注入调用 `resolveParams`，调用方不需要知道策略分支。扫描前用 `captureParams` 保存指定参数，结束后用 `restoreParams` 写回。`checkParams` 不修改 graph，扫描试算和逐组校验都调用这个函数。`explainParams` 只返回匹配失败的原因，应用预设和扫描预检用它显示用户可读的失败信息。
 
 模板可以用 `include: "_loaders"` 引入 `workflows/_loaders.yaml` 中的共享参数。合并时模板自己的 `node_mapping` 覆盖同名定义，`include` 不写入加载结果。
 

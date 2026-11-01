@@ -26,7 +26,7 @@ ComfyUI 的配置预设与参数扫描插件，用于底模评测。
 3. 选择模板和预设。
 4. 点击 “Apply Preset”。
 
-应用后，插件把模板 ID 写入当前 workflow 的 `extra.preset_template`。保存 workflow 后，下次打开对话框时会自动选择该模板。旧版本的 `mapping.yaml` 不再读取。
+应用后，插件把模板 ID 写入当前 workflow 的 `extra.preset_template`。保存 workflow 后，下次打开对话框时会自动选择该模板。旧版本的 `mapping.yaml` 不再读取。若有参数匹配不到节点，插件会弹窗列出参数和原因。
 
 ### 新建和编辑预设
 
@@ -70,7 +70,7 @@ ComfyUI 的配置预设与参数扫描插件，用于底模评测。
 | 策略 | 定位方式 | 适用场景 |
 |---|---|---|
 | `unique_class` | 按 `class_type` 唯一匹配 | 场景中只有一个该类型节点 |
-| `title_keyword` | 按 `class_type` 和标题关键词匹配 | 区分多个同类型节点，例如正负提示词 |
+| `title_keyword` | 按 `class_type` 和标题关键词匹配 | 标题匹配的节点必须唯一，否则失败 |
 | `output_connection` | 从目标节点的输入回溯源节点 | 参数位于上游节点，例如 Flux 的宽高 |
 | `input_slot` | 从枢纽节点的命名输入回溯源节点 | 提示词节点没有标题，例如 Anima |
 

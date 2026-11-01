@@ -5,6 +5,7 @@ import {
     applyParams,
     captureParams,
     checkParams,
+    explainParams,
     readParams,
     resolveParams,
     restoreParams,
@@ -56,6 +57,52 @@ test("unique_class refuses ambiguous nodes", () => {
     });
 
     assert.equal(resolveParams(graph, tpl).steps, null);
+    assert.match(explainParams(graph, tpl).steps, /2 个 KSampler 节点/);
+});
+
+test("title_keyword refuses ambiguous titles", () => {
+    const graph = makeGraph([
+        makeNode(6, "CLIPTextEncode", { text: "a" }, {}, "positive"),
+        makeNode(7, "CLIPTextEncode", { text: "b" }, {}, "positive copy"),
+    ]);
+    const tpl = template({
+        positive_prompt: {
+            match_strategy: "title_keyword",
+            class_type: "CLIPTextEncode",
+            title_keywords: ["positive"],
+            widget: "text",
+        },
+    });
+
+    assert.equal(resolveParams(graph, tpl).positive_prompt, null);
+    assert.match(explainParams(graph, tpl).positive_prompt, /2 个标题匹配/);
+});
+
+test("input_slot explains an unconnected input", () => {
+    const graph = makeGraph([makeNode(3, "KSampler", {}, { positive: null })]);
+    const tpl = template({
+        positive_prompt: {
+            match_strategy: "input_slot",
+            class_type: "KSampler",
+            input_name: "positive",
+            widget: "text",
+        },
+    });
+
+    assert.equal(resolveParams(graph, tpl).positive_prompt, null);
+    assert.equal(explainParams(graph, tpl).positive_prompt, "输入 positive 未连接");
+});
+
+test("explainParams reports missing types and limits names", () => {
+    const graph = makeGraph([]);
+    const tpl = template({
+        steps: { match_strategy: "unique_class", class_type: "KSampler", widget: "steps" },
+        cfg: { match_strategy: "unique_class", class_type: "KSampler", widget: "cfg" },
+    });
+
+    assert.deepEqual(explainParams(graph, tpl, ["steps"]), {
+        steps: "未找到 KSampler 节点",
+    });
 });
 
 test("title_keyword distinguishes prompt nodes", () => {
