@@ -242,6 +242,49 @@ class TestPresetWorkflow:
         assert result["applied"] == 1
 
     @pytest.mark.asyncio
+    async def test_editor_unchecks_model_params_by_default(self, page):
+        """Loader params start unchecked; sampling params start checked."""
+        await page.wait_for_timeout(3000)
+
+        rows = await page.evaluate("""async () => {
+            const client = await import('/extensions/comfyui-preset-manager/client.js');
+            const matcher = await import('/extensions/comfyui-preset-manager/matcher.js');
+            const { PresetEditorDialog } = await import('/extensions/comfyui-preset-manager/preset-editor.js');
+
+            const template = await client.getTemplateDetail('sdxl-txt2img');
+            const graph = {
+                nodes: [
+                    {
+                        id: 1,
+                        type: 'CheckpointLoaderSimple',
+                        widgets: [{ name: 'ckpt_name', value: 'sdxl.safetensors' }],
+                        inputs: [],
+                    },
+                    {
+                        id: 2,
+                        type: 'KSampler',
+                        widgets: [{ name: 'steps', value: 20 }],
+                        inputs: [],
+                    },
+                ],
+                links: {},
+            };
+
+            const editor = new PresetEditorDialog();
+            editor.showForCreate('sdxl-txt2img', matcher.readParams(graph, template));
+            const result = [...editor.element.querySelectorAll('.param-item')].map(item => ({
+                name: item.querySelector('.param-item-name').textContent,
+                checked: item.querySelector('input').checked,
+            }));
+            editor.close();
+            return result;
+        }""")
+
+        by_name = {row["name"]: row["checked"] for row in rows}
+        assert by_name["ckpt_name"] is False
+        assert by_name["steps"] is True
+
+    @pytest.mark.asyncio
     async def test_editor_width_consistent_between_modes(self, page):
         """Editor dialog width should not change when switching between form and code mode."""
         await page.wait_for_timeout(3000)

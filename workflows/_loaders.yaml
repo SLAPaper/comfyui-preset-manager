@@ -1,0 +1,66 @@
+# 共享模型加载器参数。模板用 `include: "_loaders"` 引入，
+# 可在自己的 node_mapping 中覆盖同名参数。
+# 这些参数默认不在预设编辑器中勾选，避免预设绑定本机模型文件。
+
+node_mapping:
+  # UNET 加载器 —— 标准 / GGUF / NF4 / Nunchaku 变体
+  unet_name:
+    match_strategy: "unique_class"
+    class_type: "UNETLoader"
+    widget: "unet_name"
+    default_selected: false
+  gguf_unet_name:
+    match_strategy: "unique_class"
+    class_type: "UnetLoaderGGUF"
+    widget: "unet_name"
+    default_selected: false
+  gguf_unet_advanced_name:
+    match_strategy: "unique_class"
+    class_type: "UnetLoaderGGUFAdvanced"
+    widget: "unet_name"
+    default_selected: false
+  nf4_unet_name:
+    match_strategy: "unique_class"
+    class_type: "UNETLoaderNF4"
+    widget: "unet_name"
+    default_selected: false
+  nunchaku_model_name:
+    match_strategy: "unique_class"
+    class_type: "NunchakuQwenImageDiTLoader"
+    widget: "model_name"
+    default_selected: false
+
+  # CLIP —— 单 CLIP / 双 CLIP
+  clip_name:
+    match_strategy: "unique_class"
+    class_type: "CLIPLoader"
+    widget: "clip_name"
+    default_selected: false
+  dual_clip_name1:
+    match_strategy: "unique_class"
+    class_type: "DualCLIPLoader"
+    widget: "clip_name1"
+    default_selected: false
+
+  vae_name:
+    match_strategy: "unique_class"
+    class_type: "VAELoader"
+    widget: "vae_name"
+    default_selected: false
+
+  # Checkpoint —— 标准 / GGUF / NF4
+  ckpt_name:
+    match_strategy: "unique_class"
+    class_type: "CheckpointLoaderSimple"
+    widget: "ckpt_name"
+    default_selected: false
+  gguf_ckpt_name:
+    match_strategy: "unique_class"
+    class_type: "CheckpointLoaderGGUF"
+    widget: "ckpt_name"
+    default_selected: false
+  nf4_ckpt_name:
+    match_strategy: "unique_class"
+    class_type: "CheckpointLoaderNF4"
+    widget: "ckpt_name"
+    default_selected: false

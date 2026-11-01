@@ -325,4 +325,5 @@ test("check, apply, and read use the same resolution", () => {
     const params = readParams(graph, tpl);
     assert.deepEqual(params.map(item => item.name), ["steps", "cfg"]);
     assert.equal(params[0].value, 30);
+    assert.equal(params[0].defaultSelected, true);
 });

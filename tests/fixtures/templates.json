@@ -10,31 +10,37 @@
       },
       "ckpt_name": {
         "class_type": "CheckpointLoaderSimple",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "ckpt_name"
       },
       "clip_name": {
         "class_type": "CLIPLoader",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "clip_name"
       },
       "dual_clip_name1": {
         "class_type": "DualCLIPLoader",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "clip_name1"
       },
       "gguf_ckpt_name": {
         "class_type": "CheckpointLoaderGGUF",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "ckpt_name"
       },
       "gguf_unet_advanced_name": {
         "class_type": "UnetLoaderGGUFAdvanced",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "unet_name"
       },
       "gguf_unet_name": {
         "class_type": "UnetLoaderGGUF",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "unet_name"
       },
@@ -51,16 +57,19 @@
       },
       "nf4_ckpt_name": {
         "class_type": "CheckpointLoaderNF4",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "ckpt_name"
       },
       "nf4_unet_name": {
         "class_type": "UNETLoaderNF4",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "unet_name"
       },
       "nunchaku_model_name": {
         "class_type": "NunchakuQwenImageDiTLoader",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "model_name"
       },
@@ -87,11 +96,13 @@
       },
       "unet_name": {
         "class_type": "UNETLoader",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "unet_name"
       },
       "vae_name": {
         "class_type": "VAELoader",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "vae_name"
       },
@@ -117,11 +128,13 @@
       },
       "ckpt_name": {
         "class_type": "CheckpointLoaderSimple",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "ckpt_name"
       },
       "clip_name": {
         "class_type": "CLIPLoader",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "clip_name"
       },
@@ -132,21 +145,25 @@
       },
       "dual_clip_name1": {
         "class_type": "DualCLIPLoader",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "clip_name1"
       },
       "gguf_ckpt_name": {
         "class_type": "CheckpointLoaderGGUF",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "ckpt_name"
       },
       "gguf_unet_advanced_name": {
         "class_type": "UnetLoaderGGUFAdvanced",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "unet_name"
       },
       "gguf_unet_name": {
         "class_type": "UnetLoaderGGUF",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "unet_name"
       },
@@ -167,16 +184,19 @@
       },
       "nf4_ckpt_name": {
         "class_type": "CheckpointLoaderNF4",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "ckpt_name"
       },
       "nf4_unet_name": {
         "class_type": "UNETLoaderNF4",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "unet_name"
       },
       "nunchaku_model_name": {
         "class_type": "NunchakuQwenImageDiTLoader",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "model_name"
       },
@@ -212,11 +232,13 @@
       },
       "unet_name": {
         "class_type": "UNETLoader",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "unet_name"
       },
       "vae_name": {
         "class_type": "VAELoader",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "vae_name"
       },
@@ -237,11 +259,65 @@
         "match_strategy": "unique_class",
         "widget": "cfg"
       },
+      "ckpt_name": {
+        "class_type": "CheckpointLoaderSimple",
+        "default_selected": false,
+        "match_strategy": "unique_class",
+        "widget": "ckpt_name"
+      },
+      "clip_name": {
+        "class_type": "CLIPLoader",
+        "default_selected": false,
+        "match_strategy": "unique_class",
+        "widget": "clip_name"
+      },
+      "dual_clip_name1": {
+        "class_type": "DualCLIPLoader",
+        "default_selected": false,
+        "match_strategy": "unique_class",
+        "widget": "clip_name1"
+      },
+      "gguf_ckpt_name": {
+        "class_type": "CheckpointLoaderGGUF",
+        "default_selected": false,
+        "match_strategy": "unique_class",
+        "widget": "ckpt_name"
+      },
+      "gguf_unet_advanced_name": {
+        "class_type": "UnetLoaderGGUFAdvanced",
+        "default_selected": false,
+        "match_strategy": "unique_class",
+        "widget": "unet_name"
+      },
+      "gguf_unet_name": {
+        "class_type": "UnetLoaderGGUF",
+        "default_selected": false,
+        "match_strategy": "unique_class",
+        "widget": "unet_name"
+      },
       "negative_prompt": {
         "class_type": "KSampler",
         "input_name": "negative",
         "match_strategy": "input_slot",
         "widget": "negative_prompt"
+      },
+      "nf4_ckpt_name": {
+        "class_type": "CheckpointLoaderNF4",
+        "default_selected": false,
+        "match_strategy": "unique_class",
+        "widget": "ckpt_name"
+      },
+      "nf4_unet_name": {
+        "class_type": "UNETLoaderNF4",
+        "default_selected": false,
+        "match_strategy": "unique_class",
+        "widget": "unet_name"
+      },
+      "nunchaku_model_name": {
+        "class_type": "NunchakuQwenImageDiTLoader",
+        "default_selected": false,
+        "match_strategy": "unique_class",
+        "widget": "model_name"
       },
       "positive_prompt": {
         "class_type": "KSampler",
@@ -268,6 +344,18 @@
         "class_type": "KSampler",
         "match_strategy": "unique_class",
         "widget": "steps"
+      },
+      "unet_name": {
+        "class_type": "UNETLoader",
+        "default_selected": false,
+        "match_strategy": "unique_class",
+        "widget": "unet_name"
+      },
+      "vae_name": {
+        "class_type": "VAELoader",
+        "default_selected": false,
+        "match_strategy": "unique_class",
+        "widget": "vae_name"
       }
     },
     "synonyms": {
@@ -286,31 +374,37 @@
       },
       "ckpt_name": {
         "class_type": "CheckpointLoaderSimple",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "ckpt_name"
       },
       "clip_name": {
         "class_type": "CLIPLoader",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "clip_name"
       },
       "dual_clip_name1": {
         "class_type": "DualCLIPLoader",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "clip_name1"
       },
       "gguf_ckpt_name": {
         "class_type": "CheckpointLoaderGGUF",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "ckpt_name"
       },
       "gguf_unet_advanced_name": {
         "class_type": "UnetLoaderGGUFAdvanced",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "unet_name"
       },
       "gguf_unet_name": {
         "class_type": "UnetLoaderGGUF",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "unet_name"
       },
@@ -328,16 +422,19 @@
       },
       "nf4_ckpt_name": {
         "class_type": "CheckpointLoaderNF4",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "ckpt_name"
       },
       "nf4_unet_name": {
         "class_type": "UNETLoaderNF4",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "unet_name"
       },
       "nunchaku_model_name": {
         "class_type": "NunchakuQwenImageDiTLoader",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "model_name"
       },
@@ -364,11 +461,13 @@
       },
       "unet_name": {
         "class_type": "UNETLoader",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "unet_name"
       },
       "vae_name": {
         "class_type": "VAELoader",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "vae_name"
       },
@@ -395,31 +494,37 @@
       },
       "ckpt_name": {
         "class_type": "CheckpointLoaderSimple",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "ckpt_name"
       },
       "clip_name": {
         "class_type": "CLIPLoader",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "clip_name"
       },
       "dual_clip_name1": {
         "class_type": "DualCLIPLoader",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "clip_name1"
       },
       "gguf_ckpt_name": {
         "class_type": "CheckpointLoaderGGUF",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "ckpt_name"
       },
       "gguf_unet_advanced_name": {
         "class_type": "UnetLoaderGGUFAdvanced",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "unet_name"
       },
       "gguf_unet_name": {
         "class_type": "UnetLoaderGGUF",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "unet_name"
       },
@@ -440,16 +545,19 @@
       },
       "nf4_ckpt_name": {
         "class_type": "CheckpointLoaderNF4",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "ckpt_name"
       },
       "nf4_unet_name": {
         "class_type": "UNETLoaderNF4",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "unet_name"
       },
       "nunchaku_model_name": {
         "class_type": "NunchakuQwenImageDiTLoader",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "model_name"
       },
@@ -480,11 +588,13 @@
       },
       "unet_name": {
         "class_type": "UNETLoader",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "unet_name"
       },
       "vae_name": {
         "class_type": "VAELoader",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "vae_name"
       },
@@ -510,31 +620,37 @@
       },
       "ckpt_name": {
         "class_type": "CheckpointLoaderSimple",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "ckpt_name"
       },
       "clip_name": {
         "class_type": "CLIPLoader",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "clip_name"
       },
       "dual_clip_name1": {
         "class_type": "DualCLIPLoader",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "clip_name1"
       },
       "gguf_ckpt_name": {
         "class_type": "CheckpointLoaderGGUF",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "ckpt_name"
       },
       "gguf_unet_advanced_name": {
         "class_type": "UnetLoaderGGUFAdvanced",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "unet_name"
       },
       "gguf_unet_name": {
         "class_type": "UnetLoaderGGUF",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "unet_name"
       },
@@ -554,16 +670,19 @@
       },
       "nf4_ckpt_name": {
         "class_type": "CheckpointLoaderNF4",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "ckpt_name"
       },
       "nf4_unet_name": {
         "class_type": "UNETLoaderNF4",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "unet_name"
       },
       "nunchaku_model_name": {
         "class_type": "NunchakuQwenImageDiTLoader",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "model_name"
       },
@@ -593,11 +712,13 @@
       },
       "unet_name": {
         "class_type": "UNETLoader",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "unet_name"
       },
       "vae_name": {
         "class_type": "VAELoader",
+        "default_selected": false,
         "match_strategy": "unique_class",
         "widget": "vae_name"
       },

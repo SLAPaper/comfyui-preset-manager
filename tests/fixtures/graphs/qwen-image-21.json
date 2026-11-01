@@ -20,6 +20,30 @@
         ],
         "nodes": [
           {
+            "id": 451,
+            "type": "UNETLoader",
+            "widgets": {
+              "unet_name": "qwen_image_2.1_fp8_e4m3fn.safetensors",
+              "weight_dtype": "default"
+            }
+          },
+          {
+            "id": 453,
+            "type": "CLIPLoader",
+            "widgets": {
+              "clip_name": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+              "type": "qwen_image",
+              "device": "default"
+            }
+          },
+          {
+            "id": 454,
+            "type": "VAELoader",
+            "widgets": {
+              "vae_name": "qwen_image_vae.safetensors"
+            }
+          },
+          {
             "id": 452,
             "type": "TextEncodeQwenImage21",
             "title": "文本编码 Qwen Image 2.1",
@@ -96,6 +120,17 @@
     "scheduler": { "nodeId": "459:458", "widgetName": "scheduler", "value": "simple" },
     "steps": { "nodeId": "459:458", "widgetName": "steps", "value": 25 },
     "cfg": { "nodeId": "459:458", "widgetName": "cfg", "value": 1.1 },
-    "seed": { "nodeId": "459:458", "widgetName": "seed", "value": 42 }
+    "seed": { "nodeId": "459:458", "widgetName": "seed", "value": 42 },
+    "unet_name": { "nodeId": "459:451", "widgetName": "unet_name", "value": "qwen_image_2.1_fp8_e4m3fn.safetensors" },
+    "gguf_unet_name": null,
+    "gguf_unet_advanced_name": null,
+    "nf4_unet_name": null,
+    "nunchaku_model_name": null,
+    "clip_name": { "nodeId": "459:453", "widgetName": "clip_name", "value": "qwen_2.5_vl_7b_fp8_scaled.safetensors" },
+    "dual_clip_name1": null,
+    "vae_name": { "nodeId": "459:454", "widgetName": "vae_name", "value": "qwen_image_vae.safetensors" },
+    "ckpt_name": null,
+    "gguf_ckpt_name": null,
+    "nf4_ckpt_name": null
   }
 }

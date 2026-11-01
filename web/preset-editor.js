@@ -238,7 +238,7 @@ export class PresetEditorDialog extends ComfyDialog {
     showForCreate(templateId, parameters) {
         this.templateId = templateId;
         this.presetId = null;
-        this.parameters = parameters.map(p => ({ ...p, selected: true }));
+        this.parameters = parameters.map(p => ({ ...p, selected: p.defaultSelected !== false }));
         
         this.titleEl.textContent = "创建预设";
         this.nameInput.value = "";

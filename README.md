@@ -36,7 +36,7 @@ ComfyUI 的配置预设与参数扫描插件，用于底模评测。
 4. 编辑已有预设时，点击预设右侧的 “编辑”。
 5. 删除用户预设时，点击预设右侧的 “删除”。内置预设不显示删除按钮。
 
-说明：新建预设时，插件读取当前 workflow 的 widget 值。编辑器提供表单模式和代码模式。
+说明：新建预设时，插件读取当前 workflow 的 widget 值。编辑器提供表单模式和代码模式。模型加载器参数默认不勾选，预设不会绑定本机模型文件。
 
 ### 运行参数扫描
 
@@ -58,6 +58,8 @@ ComfyUI 的配置预设与参数扫描插件，用于底模评测。
 | `qwen-image-edit` | Qwen Image Edit | 文生图和图生图，尺寸经 latent 输入追溯 |
 | `qwen-image-txt2img` | Qwen Image 文生图 | EmptySD3LatentImage |
 | `sdxl-txt2img` | SDXL 文生图 | CheckpointLoaderSimple、EmptyLatentImage |
+
+模板用 `include: "_loaders"` 引入 `workflows/_loaders.yaml` 中的共享模型加载器参数。模板自己的 `node_mapping` 覆盖同名共享参数。以下划线开头的文件是共享片段，不作为模板出现在列表和详情接口中。
 
 ## 匹配策略
 

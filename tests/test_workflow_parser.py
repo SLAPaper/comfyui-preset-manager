@@ -31,6 +31,24 @@ def test_load_templates_template_has_required_keys(workflow_parser):
         assert "node_mapping" in template_data, f"Template {template_id} missing 'node_mapping'"
 
 
+def test_shared_include_is_merged_and_not_a_template(workflow_parser):
+    """The shared loader file is merged into templates and skipped by discovery."""
+    result = workflow_parser.load_templates()
+    assert "_loaders" not in result
+
+    for template_id, template_data in result.items():
+        node_mapping = template_data["node_mapping"]
+        assert "unet_name" in node_mapping, f"Template {template_id} missing shared loaders"
+        assert "include" not in template_data
+
+
+def test_shared_loader_params_are_not_selected_by_default(workflow_parser):
+    """Model files stay unchecked in the preset editor; other params stay checked."""
+    template = workflow_parser.get_template("sdxl-txt2img")
+    assert template["node_mapping"]["ckpt_name"]["default_selected"] is False
+    assert "default_selected" not in template["node_mapping"]["steps"]
+
+
 # === Tests for get_template() ===
 
 
@@ -45,6 +63,11 @@ def test_get_template_returns_none_for_missing(workflow_parser):
     """get_template() should return None for non-existent template."""
     result = workflow_parser.get_template("non-existent-template")
     assert result is None
+
+
+def test_get_template_hides_shared_fragment(workflow_parser):
+    """Shared include files are not addressable as templates."""
+    assert workflow_parser.get_template("_loaders") is None
 
 
 def test_get_template_includes_node_mapping(workflow_parser):

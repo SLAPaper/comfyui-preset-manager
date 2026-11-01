@@ -21,6 +21,9 @@ class TestTemplateAPI:
         data = resp.json()
         assert "node_mapping" in data
         assert "synonyms" in data
+        assert "ckpt_name" in data["node_mapping"]
+        assert data["node_mapping"]["ckpt_name"]["default_selected"] is False
+        assert "include" not in data
 
     def test_get_template_detail_404(self, api_base):
         """GET /preset-manager/template/non-existent returns 404."""

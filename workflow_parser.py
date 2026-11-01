@@ -60,35 +60,72 @@ def _is_valid_template(template_id: str, data: dict) -> bool:
     return True
 
 
-def _scan_workflow_dir(directory: Path) -> dict[str, dict]:
-    templates = scan_yaml(directory)
-    return {
-        template_id: data
-        for template_id, data in templates.items()
-        if _is_valid_template(template_id, data)
+def _merge_include(template_id: str, data: dict) -> dict:
+    """Merge the shared parameters named by a template's include field."""
+    include = data.get("include")
+    if include is None:
+        return data
+
+    shared = None
+    if is_safe_id(include):
+        include_file = _find_file(WORKFLOWS_DIR, include)
+        if include_file is not None:
+            shared = load_yaml(include_file)
+    if shared is None:
+        print(f"[PresetManager] Warning: template {template_id} includes missing {include!r}")
+        return data
+
+    merged = dict(data)
+    merged["node_mapping"] = {
+        **shared.get("node_mapping", {}),
+        **data.get("node_mapping", {}),
     }
+    merged.pop("include", None)
+    return merged
+
+
+def _load_template_file(template_id: str, path: Path) -> dict | None:
+    data = load_yaml(path)
+    if data is None:
+        return None
+    data = _merge_include(template_id, data)
+    return data if _is_valid_template(template_id, data) else None
+
+
+def _scan_workflow_dir(directory: Path) -> dict[str, dict]:
+    templates = {}
+    for template_id, data in scan_yaml(directory).items():
+        if template_id.startswith("_"):
+            continue
+        data = _merge_include(template_id, data)
+        if _is_valid_template(template_id, data):
+            templates[template_id] = data
+    return templates
+
+
+def load_bundled_templates() -> dict[str, dict]:
+    """Load bundled templates with shared includes resolved."""
+    return _scan_workflow_dir(WORKFLOWS_DIR)
 
 
 def load_templates() -> dict[str, dict]:
     """Load bundled templates, then let user templates override them by ID."""
-    templates = _scan_workflow_dir(WORKFLOWS_DIR)
+    templates = load_bundled_templates()
     templates.update(_scan_workflow_dir(_get_user_workflows_dir()))
     return templates
 
 
 def get_template(template_id: str) -> dict | None:
     """Load a single template by ID. Returns None when missing or invalid."""
-    user_file = _find_file(_get_user_workflows_dir(), template_id)
-    if user_file is not None:
-        data = load_yaml(user_file)
-        if data is not None and _is_valid_template(template_id, data):
-            return data
+    if template_id.startswith("_"):
+        return None
 
-    bundled_file = _find_file(WORKFLOWS_DIR, template_id)
-    if bundled_file is not None:
-        data = load_yaml(bundled_file)
-        if data is not None and _is_valid_template(template_id, data):
-            return data
+    for directory in (_get_user_workflows_dir(), WORKFLOWS_DIR):
+        template_file = _find_file(directory, template_id)
+        if template_file is not None:
+            data = _load_template_file(template_id, template_file)
+            if data is not None:
+                return data
 
     return None
 

@@ -6,18 +6,18 @@ Run this after an intentional template change:
 """
 
 import json
+import sys
 from pathlib import Path
-
-import yaml
 
 PLUGIN_DIR = Path(__file__).resolve().parent.parent.parent
 OUTPUT = PLUGIN_DIR / "tests" / "fixtures" / "templates.json"
 
+sys.path.insert(0, str(PLUGIN_DIR))
+from workflow_parser import load_bundled_templates
+
 
 def main() -> None:
-    templates = {}
-    for path in sorted((PLUGIN_DIR / "workflows").glob("*.yaml")):
-        templates[path.stem] = yaml.safe_load(path.read_text(encoding="utf-8"))
+    templates = load_bundled_templates()
 
     OUTPUT.write_text(
         json.dumps(templates, ensure_ascii=False, indent=2, sort_keys=True) + "\n",

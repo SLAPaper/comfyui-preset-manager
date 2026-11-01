@@ -4,7 +4,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { applyParams, checkParams, resolveParams } from "../../web/matcher.js";
+import { applyParams, checkParams, readParams, resolveParams } from "../../web/matcher.js";
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), "..", "fixtures");
 
@@ -116,6 +116,15 @@ for (const fixture of graphFixtures) {
         }
     });
 }
+
+test("loader params are unchecked by default in the editor", () => {
+    const fixture = graphFixtures.find(item => item.template === "sdxl-txt2img");
+    const params = readParams(makeGraph(fixture), templates["sdxl-txt2img"]);
+    const byName = Object.fromEntries(params.map(param => [param.name, param]));
+
+    assert.equal(byName.ckpt_name.defaultSelected, false);
+    assert.equal(byName.steps.defaultSelected, true);
+});
 
 test("subgraph widgets are written to the host instance", () => {
     const fixture = graphFixtures.find(item => item.template === "qwen-image-21");

@@ -203,6 +203,7 @@ export function resolveParams(graph, template) {
  * Read all matched parameter values from the graph.
  */
 export function readParams(graph, template) {
+    const mapping = template?.node_mapping || {};
     return Object.entries(resolveParams(graph, template))
         .filter(([, match]) => match)
         .map(([name, match]) => ({
@@ -210,6 +211,7 @@ export function readParams(graph, template) {
             nodeType: match.nodeType,
             nodeId: match.nodeId,
             value: match.value,
+            defaultSelected: mapping[name]?.default_selected !== false,
         }));
 }
 

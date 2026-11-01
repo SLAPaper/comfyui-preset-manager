@@ -45,7 +45,7 @@
 
 ```text
 resolveParams(graph, template) -> {param: {nodeId, widgetName, value, widget} | null}
-readParams(graph, template)     -> [{name, nodeType, nodeId, value}]
+readParams(graph, template)     -> [{name, nodeType, nodeId, value, defaultSelected}]
 checkParams(graph, template, params) -> failed[]
 applyParams(graph, template, params) -> {applied, failed}
 captureParams(graph, template, names) -> [{name, widget, value}]
@@ -53,6 +53,8 @@ restoreParams(graph, snapshot)  -> void
 ```
 
 预览、读取当前参数和参数注入调用 `resolveParams`，调用方不需要知道策略分支。扫描前用 `captureParams` 保存指定参数，结束后用 `restoreParams` 写回。`checkParams` 不修改 graph，扫描试算和逐组校验都调用这个函数。
+
+模板可以用 `include: "_loaders"` 引入 `workflows/_loaders.yaml` 中的共享参数。合并时模板自己的 `node_mapping` 覆盖同名定义，`include` 不写入加载结果。
 
 ## 预设
 
@@ -62,7 +64,7 @@ restoreParams(graph, snapshot)  -> void
 
 内置预设只写提示词、尺寸和采样参数，不写模型文件名。模型由当前 workflow 决定，换机器后内置预设仍可直接使用。
 
-新建预设时，前端用 `readParams()` 读取当前 graph 的参数值。编辑预设时，前端重新读取当前 graph。当前 graph 匹配不到的已存参数不会出现在编辑器中，保存后会被删除。
+新建预设时，前端用 `readParams()` 读取当前 graph 的参数值。参数默认勾选，模板里声明 `default_selected: false` 的参数除外。共享模型加载器参数都带这个标记，避免预设绑定本机模型文件。编辑预设时，前端重新读取当前 graph。当前 graph 匹配不到的已存参数不会出现在编辑器中，保存后会被删除。
 
 预设列表返回 `source` 字段，取值为 `bundled` 或 `user`。界面只对用户预设显示删除按钮。删除接口只删除用户目录的文件，内置预设无法删除。
 

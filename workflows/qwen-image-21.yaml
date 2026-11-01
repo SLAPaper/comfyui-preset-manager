@@ -4,6 +4,7 @@
 
 name: "Qwen Image 2.1"
 description: "Qwen Image 2.1 文生图 workflow（支持子图）"
+include: "_loaders"
 
 node_mapping:
   positive_prompt:
