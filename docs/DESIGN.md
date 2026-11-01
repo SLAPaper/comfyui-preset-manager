@@ -14,6 +14,7 @@
 | 前端 | `web/sweep-runner.js` | 扫描执行顺序和取消 |
 | 前端 | `web/sweep-axes.js` | 扫描轴编辑和总数显示 |
 | 前端 | `web/sweep-values.js` | 轴值解析、格式化和总数计算 |
+| 前端 | `web/sweep-trace.js` | 输出文件名标记和恢复 |
 | 前端 | `web/styles.js` | 对话框共享样式 |
 | 前端 | `web/*-dialog.js` | 对话框和表单 |
 | 后端 | `__init__.py` | 注册 HTTP 路由 |
@@ -72,6 +73,8 @@ restoreParams(graph, snapshot)  -> void
 
 扫描配置由 1 个或多个轴组成。参数轴直接给参数取值，预设轴展开为一个预设的全部参数。后端用笛卡尔积展开组合，`axes[0]` 为最外层。后应用的轴覆盖先应用的轴。
 
+每组提交前，`sweep-trace.js` 把带 `filename_prefix` 的 widget 改成 `原名_001_组合标签`，让输出文件能对应到组合。扫描结束后恢复原名。标签中的路径分隔符、控制字符和 `%` 替换为下划线。
+
 前端执行流程：
 
 1. 用 `checkParams()` 检查第一个组合能否匹配节点和 widget。
@@ -107,6 +110,7 @@ restoreParams(graph, snapshot)  -> void
 - `tests/js/templates.test.mjs` 用快照模板和真实结构图验证每个参数的匹配结果。
 - `tests/js/sweep-runner.test.mjs` 覆盖执行顺序、取消和中途失败。
 - `tests/js/sweep-values.test.mjs` 覆盖轴值解析和总数计算。
+- `tests/js/sweep-trace.test.mjs` 覆盖输出文件名标记、清理和恢复。
 - `tests/test_storage.py` 覆盖 ID 校验和原子读写。
 - `tests/test_templates_snapshot.py` 保证模板快照与 `workflows/` 一致。
 - `tests/test_preset_manager.py`、`tests/test_sweep_manager.py` 覆盖存储行为。
@@ -117,6 +121,7 @@ restoreParams(graph, snapshot)  -> void
 - 含多个 KSampler 的 workflow 无法用 `unique_class` 或 `input_slot` 匹配采样参数。
 - 编辑预设会丢失当前 graph 匹配不到的已存参数。
 - 扫描不校验枚举值。
+- 没有 `filename_prefix` 的输出节点无法写入组合标记。
 - 脚本无法通过 HTTP 应用预设。应用只在前端完成。
 
 ## 后续方向

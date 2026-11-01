@@ -198,6 +198,18 @@ class TestPresetWorkflow:
         assert await dialog.locator(".sweep-axis").count() == 1
 
     @pytest.mark.asyncio
+    async def test_sweep_dialog_offers_filename_trace(self, page):
+        """Sweeps tag output filenames by default so results stay traceable."""
+        await page.wait_for_timeout(3000)
+        await page.locator("button", has_text="Sweeps").first.click()
+
+        dialog = page.locator(".comfy-sweep-dialog")
+        await dialog.wait_for(state="visible", timeout=5000)
+
+        toggle = dialog.locator(".sweep-trace input[type='checkbox']")
+        assert await toggle.is_checked()
+
+    @pytest.mark.asyncio
     async def test_sweep_dialog_adds_axis_and_shows_total(self, page):
         """Adding a param axis with two values should report 2 runs in the summary."""
         await page.wait_for_timeout(3000)

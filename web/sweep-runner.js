@@ -10,7 +10,7 @@
  * @param {Array<{params: Object, label: string}>} options.combos
  * @param {(params: Object) => string[]} [options.check] Returns unmatched parameter names.
  * @param {(params: Object) => Object} options.apply
- * @param {() => Promise<void>} options.queue
+ * @param {(combo: Object, index: number) => Promise<void>} options.queue
  * @param {(submitted: number, combo: Object) => void} [options.onProgress]
  * @param {() => boolean} [options.isCancelled]
  * @returns {Promise<{submitted: number, cancelled: boolean}>}
@@ -29,7 +29,7 @@ export async function runSweep({ combos, check, apply, queue, onProgress, isCanc
         }
 
         apply(combo.params);
-        await queue();
+        await queue(combo, submitted);
         submitted++;
         onProgress?.(submitted, combo);
     }

@@ -14,6 +14,7 @@ import {
 import { applyParams, captureParams, checkParams, restoreParams } from "./matcher.js";
 import { SweepAxes } from "./sweep-axes.js";
 import { runSweep } from "./sweep-runner.js";
+import { applyPrefixes, capturePrefixes, restorePrefixes } from "./sweep-trace.js";
 import { injectStyles } from "./styles.js";
 
 const { $el } = window.comfyAPI.ui;
@@ -42,6 +43,7 @@ export class SweepDialog {
         this.axisList = $el("div.sweep-axis-list");
         this.summary = $el("div.sweep-summary", { textContent: "尚未配置轴" });
         this.axesEditor = new SweepAxes(this.axisList, this.summary);
+        this.traceToggle = $el("input", { type: "checkbox", checked: true });
         this.progress = $el("div.sweep-progress");
 
         this.runButton = $el("button.comfy-btn.primary", {
@@ -92,6 +94,12 @@ export class SweepDialog {
                 ]),
 
                 this.summary,
+                $el("label.sweep-trace", {
+                    title: "文件名格式：原名_001_参数=值；扫描结束后恢复原名"
+                }, [
+                    this.traceToggle,
+                    $el("span", { textContent: "在输出文件名中记录组合" })
+                ]),
                 this.progress,
 
                 $el("div.sweep-buttons", [
@@ -214,6 +222,15 @@ export class SweepDialog {
             .sweep-summary {
                 color: #a6adc8;
                 font-size: 13px;
+            }
+
+            .sweep-trace {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                color: #cdd6f4;
+                font-size: 13px;
+                cursor: pointer;
             }
 
             .sweep-progress {
@@ -420,6 +437,9 @@ export class SweepDialog {
 
         if (!confirm(`将向队列提交 ${combos.length} 次运行，确定继续？`)) return;
 
+        const tracePrefixes = this.traceToggle.checked
+            ? capturePrefixes(app.graph)
+            : [];
         const snapshot = captureParams(
             app.graph,
             this.template,
@@ -435,7 +455,10 @@ export class SweepDialog {
                 combos,
                 check: (params) => checkParams(app.graph, this.template, params),
                 apply: (params) => applyParams(app.graph, this.template, params),
-                queue: () => app.queuePrompt(0, 1),
+                queue: (combo, index) => {
+                    applyPrefixes(tracePrefixes, index, combo.label);
+                    return app.queuePrompt(0, 1);
+                },
                 isCancelled: () => this.cancelRequested,
                 onProgress: (submitted, combo) => {
                     this.progress.textContent = `${submitted}/${combos.length} — ${combo.label}`;
@@ -449,6 +472,7 @@ export class SweepDialog {
             this.progress.textContent = `运行失败: ${error.message}`;
         } finally {
             restoreParams(app.graph, snapshot);
+            restorePrefixes(app.graph, tracePrefixes);
             this.running = false;
             this.cancelRequested = false;
             this.runButton.textContent = "运行";

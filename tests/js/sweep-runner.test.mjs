@@ -27,6 +27,18 @@ test("runs every combination in order", async () => {
     assert.deepEqual(result, { submitted: 2, cancelled: false });
 });
 
+test("passes the combination and its index to queue", async () => {
+    const queued = [];
+
+    await runSweep({
+        combos: combos({ cfg: 1 }, { cfg: 2 }),
+        apply: () => {},
+        queue: async (combo, index) => queued.push([combo.label, index]),
+    });
+
+    assert.deepEqual(queued, [["combo-0", 0], ["combo-1", 1]]);
+});
+
 test("stops before applying the next combination", async () => {
     let cancelled = false;
     const applied = [];
