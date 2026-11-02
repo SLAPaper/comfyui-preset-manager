@@ -6,7 +6,8 @@
  * the matcher before being shown, so ambiguous structures are visible early.
  */
 
-import { explainParams, resolveParams } from "./matcher.js";
+import { createGraphIndex, nodePath } from "./graph-index.js";
+import { formatMatchError, resolveTemplate } from "./matcher.js";
 
 const PROMPT_WIDGETS = {
     positive: ["text", "prompt", "positive_prompt"],
@@ -24,49 +25,12 @@ const SAMPLER_WIDGETS = {
     denoise: { name: "denoise", pattern: /(Sampler|Scheduler)/ },
 };
 
-function* walkNodes(graph, owner = null, path = [], visiting = new Set()) {
-    if (!graph || visiting.has(graph)) return;
-    visiting.add(graph);
-
-    for (const node of graph.nodes || []) {
-        yield { node, scope: graph, owner, path };
-        if (node.subgraph?.nodes) {
-            yield* walkNodes(node.subgraph, node, [...path, node.id], visiting);
-        }
-    }
-
-    visiting.delete(graph);
-}
-
-function getLink(scope, id) {
-    if (id == null) return null;
-    if (typeof scope.getLink === "function") return scope.getLink(id) ?? null;
-    const links = scope.links;
-    if (!links) return null;
-    return (typeof links.get === "function" ? links.get(id) : links[id]) ?? null;
-}
-
-function findNode(scope, id) {
-    if (typeof scope.getNodeById === "function") return scope.getNodeById(id) ?? null;
-    return (scope.nodes || []).find(node => String(node.id) === String(id)) ?? null;
-}
-
-function nodePath(path, nodeId) {
-    return [...(path || []), nodeId].join(":");
-}
-
 /**
  * Every node in the graph, including nodes inside subgraphs, with the fields
  * the manual mapping form needs.
  */
 export function listNodes(graph) {
-    return [...walkNodes(graph)].map(entry => ({
-        id: nodePath(entry.path, entry.node.id),
-        type: entry.node.type,
-        title: entry.node.title || "",
-        widgets: (entry.node.widgets || []).map(widget => widget.name),
-        inputs: (entry.node.inputs || []).map(input => input.name).filter(Boolean),
-    }));
+    return createGraphIndex(graph).listNodes();
 }
 
 /**
@@ -74,14 +38,11 @@ export function listNodes(graph) {
  * validated against the current graph, so copied templates show stale fields.
  */
 export function describeMapping(graph, mapping, synonyms = {}) {
-    const candidates = [];
+    const { resolved, errors } = resolveTemplate(graph, { node_mapping: mapping, synonyms });
 
-    for (const [name, spec] of Object.entries(mapping || {})) {
-        const template = { node_mapping: { [name]: spec }, synonyms };
-        const match = resolveParams(graph, template)[name];
-        const reason = explainParams(graph, template, [name])[name];
-
-        candidates.push({
+    return Object.entries(mapping || {}).map(([name, spec]) => {
+        const match = resolved[name];
+        return {
             name,
             spec: { ...spec },
             strategy: spec.match_strategy,
@@ -97,11 +58,9 @@ export function describeMapping(graph, mapping, synonyms = {}) {
             confidence: match ? "high" : "low",
             defaultSelected: spec.default_selected !== false,
             status: match ? "matched" : "error",
-            reason: match ? null : (reason || "未匹配到节点"),
-        });
-    }
-
-    return candidates;
+            reason: match ? null : formatMatchError(errors[name]),
+        };
+    });
 }
 
 export function isSafeTemplateId(value) {
@@ -172,9 +131,9 @@ function widgetValue(node, name) {
     return node.widgets?.find(widget => widget.name === name) ?? null;
 }
 
-function findTextWidget(scope, nodeId, preferred, depth = 5) {
+function findTextWidget(index, scope, nodeId, preferred, depth = 5) {
     if (depth <= 0) return null;
-    const node = findNode(scope, nodeId);
+    const node = index.findNode(scope, nodeId);
     if (!node) return null;
 
     for (const name of preferred) {
@@ -184,9 +143,9 @@ function findTextWidget(scope, nodeId, preferred, depth = 5) {
 
     for (const input of node.inputs || []) {
         if (input.link == null) continue;
-        const link = getLink(scope, input.link);
+        const link = index.getLink(scope, input.link);
         if (!link) continue;
-        const result = findTextWidget(scope, link.origin_id, preferred, depth - 1);
+        const result = findTextWidget(index, scope, link.origin_id, preferred, depth - 1);
         if (result) return result;
     }
 
@@ -230,21 +189,21 @@ function proposalKey(item) {
     return `${item.name}:${nodePath(item.entry.path, item.entry.node.id)}:${item.widgetName}`;
 }
 
-function collectPromptProposals(entries, add) {
-    for (const entry of entries) {
+function collectPromptProposals(index, add) {
+    for (const entry of index.entries) {
         if (entry.node.subgraph) continue;
 
         for (const side of ["positive", "negative"]) {
             const input = (entry.node.inputs || []).find(item => item.name === side);
             if (!input || input.link == null) continue;
 
-            const link = getLink(entry.scope, input.link);
+            const link = index.getLink(entry.scope, input.link);
             const target = link && findTextWidget(
-                entry.scope, link.origin_id, PROMPT_WIDGETS[side]
+                index, entry.scope, link.origin_id, PROMPT_WIDGETS[side]
             );
             if (!target) continue;
 
-            const classCount = entries.filter(other => other.node.type === entry.node.type).length;
+            const classCount = index.entries.filter(other => other.node.type === entry.node.type).length;
             add(proposal({
                 name: `${side}_prompt`,
                 entry: {
@@ -363,16 +322,16 @@ function collectSamplerProposals(entries, add) {
     }
 }
 
-function collectLinkedSizes(entries, add) {
-    for (const entry of entries) {
+function collectLinkedSizes(index, add) {
+    for (const entry of index.entries) {
         if (entry.node.subgraph || !/ModelSampling/.test(entry.node.type)) continue;
 
         for (const inputName of ["width", "height"]) {
             const input = (entry.node.inputs || []).find(item => item.name === inputName);
             if (!input || input.link == null) continue;
 
-            const link = getLink(entry.scope, input.link);
-            const source = link && findNode(entry.scope, link.origin_id);
+            const link = index.getLink(entry.scope, input.link);
+            const source = link && index.findNode(entry.scope, link.origin_id);
             const widget = source?.widgets?.find(item => typeof item.value === "number");
             if (!source || !widget) continue;
 
@@ -496,7 +455,8 @@ function finalizeCandidate(item, entries) {
  * @returns {{candidates: Array, node_mapping: Object, summary: Object}}
  */
 export function analyzeGraph(graph) {
-    const entries = [...walkNodes(graph)];
+    const index = createGraphIndex(graph);
+    const entries = index.entries;
     const proposals = new Map();
 
     const add = (item) => {
@@ -504,9 +464,9 @@ export function analyzeGraph(graph) {
         if (!proposals.has(key)) proposals.set(key, item);
     };
 
-    collectPromptProposals(entries, add);
+    collectPromptProposals(index, add);
     collectTitlePromptProposals(entries, add);
-    collectLinkedSizes(entries, add);
+    collectLinkedSizes(index, add);
     collectSamplerProposals(entries, add);
 
     const byName = new Map();
@@ -528,8 +488,7 @@ export function analyzeGraph(graph) {
         if (candidate.spec) node_mapping[candidate.name] = candidate.spec;
     }
 
-    const resolved = resolveParams(graph, { node_mapping });
-    const reasons = explainParams(graph, { node_mapping });
+    const { resolved, errors } = resolveTemplate(graph, { node_mapping });
 
     for (const candidate of candidates) {
         const match = resolved[candidate.name];
@@ -545,7 +504,7 @@ export function analyzeGraph(graph) {
             candidate.value = match.value;
         } else {
             candidate.status = "error";
-            candidate.reason = reasons[candidate.name] || "未匹配到节点";
+            candidate.reason = formatMatchError(errors[candidate.name]);
             candidate.confidence = "low";
         }
     }

@@ -6,6 +6,8 @@
  * sweep ends.
  */
 
+import { walkNodes } from "./graph-index.js";
+
 const UNSAFE = /[<>:"/\\|?*%,;\x00-\x1f]+/g;
 
 export function sanitizeLabel(value) {
@@ -24,11 +26,10 @@ export function traceFilename(base, index, label) {
 }
 
 function collectPrefixWidgets(graph, widgets) {
-    for (const node of graph?.nodes || []) {
+    for (const { node } of walkNodes(graph)) {
         for (const widget of node.widgets || []) {
             if (widget.name === "filename_prefix") widgets.push(widget);
         }
-        if (node.subgraph) collectPrefixWidgets(node.subgraph, widgets);
     }
     return widgets;
 }

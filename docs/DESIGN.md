@@ -10,7 +10,8 @@
 |---|---|---|
 | 前端 | `web/preset-manager.js` | 注册扩展，添加入口按钮 |
 | 前端 | `web/client.js` | HTTP 请求 |
-| 前端 | `web/matcher.js` | 节点匹配、参数读取、检查、应用 |
+| 前端 | `web/graph-index.js` | 图遍历、子图作用域、写入目标解析 |
+| 前端 | `web/matcher.js` | 匹配策略、参数读取、检查、应用 |
 | 前端 | `web/template-analyzer.js` | 从当前 graph 识别候选模板参数 |
 | 前端 | `web/sweep-runner.js` | 扫描执行顺序和取消 |
 | 前端 | `web/sweep-axes.js` | 扫描轴编辑和总数显示 |
@@ -30,7 +31,9 @@
 
 ## 节点匹配
 
-匹配逻辑只有一份，位于 `web/matcher.js`。模板的 `node_mapping` 为每个参数声明匹配策略。
+图遍历和写入目标解析只有一份，位于 `web/graph-index.js`。`createGraphIndex()` 一次收集节点、作用域和父层关系，后续参数解析共享这个索引。子图提升、自由宿主、外部连线、多层递归和 `Primitive*` 兜底都在这里处理。
+
+匹配策略位于 `web/matcher.js`，只消费索引返回的写入目标。模板的 `node_mapping` 为每个参数声明匹配策略。
 
 | 策略 | 定位方式 | 限制 |
 |---|---|---|
@@ -52,19 +55,20 @@
 
 因此，外部连线的参数写在外部节点上，子图自身持有的参数写在子图实例上，多层嵌套按实际持有值的位置写入。
 
-匹配模块对外提供 6 个函数：
+匹配模块对外提供以下函数：
 
 ```text
-resolveParams(graph, template) -> {param: {nodeId, widgetName, value, widget} | null}
-readParams(graph, template)     -> [{name, nodeType, nodeId, value, defaultSelected}]
+resolveTemplate(graph, template) -> {resolved, errors}
+resolveParams(graph, template)   -> {param: {nodeId, widgetName, value, widget} | null}
+readParams(graph, template)      -> [{name, nodeType, nodeId, value, defaultSelected}]
 checkParams(graph, template, params) -> failed[]
 explainParams(graph, template, names) -> {param: reason}
 applyParams(graph, template, params) -> {applied, failed}
 captureParams(graph, template, names) -> [{name, widget, value}]
-restoreParams(graph, snapshot)  -> void
+restoreParams(graph, snapshot)   -> void
 ```
 
-预览、读取当前参数和参数注入调用 `resolveParams`，调用方不需要知道策略分支。扫描前用 `captureParams` 保存指定参数，结束后用 `restoreParams` 写回。`checkParams` 不修改 graph，扫描试算和逐组校验都调用这个函数。`explainParams` 只返回匹配失败的原因，应用预设和扫描预检用它显示用户可读的失败信息。
+`resolveTemplate()` 只构建一次图索引，并同时返回匹配结果和带 `code` 的错误对象。`explainParams()` 用 `formatMatchError()` 把错误码转成用户可读文本，保持现有调用方兼容。预览、读取当前参数和参数注入都共享同一套解析结果。扫描前用 `captureParams` 保存指定参数，结束后用 `restoreParams` 写回。`checkParams` 不修改 graph，扫描试算和逐组校验都调用这个函数。`explainParams` 只返回匹配失败的原因，应用预设和扫描预检用它显示用户可读的失败信息。
 
 模板可以用 `include: "_loaders"` 引入 `workflows/_loaders.yaml` 中的共享参数。合并时模板自己的 `node_mapping` 覆盖同名定义，`include` 不写入加载结果。
 
@@ -143,6 +147,7 @@ restoreParams(graph, snapshot)  -> void
 
 ## 测试面
 
+- `tests/js/graph-index.test.mjs` 覆盖图索引、跨层节点路径、`resolveTemplate` 错误码和同义词。
 - `tests/js/matcher.test.mjs` 覆盖 4 种策略、同义词、检查、应用、快照和读取。
 - `tests/js/templates.test.mjs` 用快照模板和真实结构图验证每个参数的匹配结果。
 - `tests/js/template-analyzer.test.mjs` 用 8 个代表性 workflow 和子图 fixture 验证候选识别、歧义反馈和只读行为。
