@@ -23,7 +23,6 @@ E2E 测试见 [../docs/TESTING.md](../docs/TESTING.md)。
 |---|---|
 | `../conftest.py` | mock ComfyUI 运行时模块 |
 | `conftest.py` | fixture 和被测模块导入 |
-| `test_imports.py` | 模块导入 |
 | `test_storage.py` | 存储接口和 ID 校验 |
 | `test_workflow_parser.py` | 模板加载 |
 | `test_preset_manager.py` | 预设增删改查 |

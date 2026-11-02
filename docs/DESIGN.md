@@ -128,7 +128,7 @@ restoreParams(graph, snapshot)  -> void
 
 用户点击 “Apply Preset” 后，前端把模板 ID 写入 `app.graph.extra.preset_template`。这个字段随 workflow 保存。未保存 workflow 时，关联不会持久化。下次打开预设对话框或扫描对话框时，前端读取该字段，自动选择模板。
 
-关联不再使用独立映射文件，也不依赖 workflow 名称。旧版本的 `mapping.yaml` 不再读取。
+关联不使用独立映射文件，也不依赖 workflow 名称。
 
 ## 存储与安全
 

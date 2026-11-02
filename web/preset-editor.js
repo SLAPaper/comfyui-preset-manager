@@ -100,15 +100,7 @@ export class PresetEditorDialog extends ComfyDialog {
         const style = document.createElement("style");
         style.textContent = `
             .comfy-preset-editor {
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
                 z-index: 10001;
-                background: #1e1e2e;
-                border: 1px solid #45475a;
-                border-radius: 8px;
-                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
                 width: 600px;
                 max-height: 85vh;
                 overflow-y: auto;

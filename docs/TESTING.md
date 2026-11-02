@@ -17,7 +17,6 @@ python -m pytest tests -v --ignore=tests/e2e
 
 | 文件 | 覆盖范围 |
 |---|---|
-| `test_imports.py` | 模块导入 |
 | `test_storage.py` | ID 校验、原子读写、目录扫描 |
 | `test_workflow_parser.py` | 模板发现、解析和校验 |
 | `test_preset_manager.py` | 预设增删改查、内置与用户目录覆盖 |

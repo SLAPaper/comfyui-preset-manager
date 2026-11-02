@@ -27,7 +27,7 @@ ComfyUI 的配置预设与参数扫描插件，用于底模评测。
 3. 选择模板和预设。
 4. 点击 “Apply Preset”。
 
-应用后，插件把模板 ID 写入当前 workflow 的 `extra.preset_template`。保存 workflow 后，下次打开对话框时会自动选择该模板。旧版本的 `mapping.yaml` 不再读取。若有参数匹配不到节点，插件会弹窗列出参数和原因。
+应用后，插件把模板 ID 写入当前 workflow 的 `extra.preset_template`。保存 workflow 后，下次打开对话框时会自动选择该模板。若有参数匹配不到节点，插件会弹窗列出参数和原因。
 
 ### 新建和编辑预设
 

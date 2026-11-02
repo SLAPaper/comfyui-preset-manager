@@ -128,10 +128,6 @@ export class SweepDialog {
         style.id = "comfy-sweep-dialog-styles";
         style.textContent = `
             .comfy-sweep-dialog {
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
                 z-index: 1002;
                 width: 640px;
                 max-height: 80vh;

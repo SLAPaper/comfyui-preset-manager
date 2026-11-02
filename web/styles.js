@@ -14,6 +14,17 @@ export function injectStyles() {
     const style = document.createElement("style");
     style.id = "preset-manager-shared-styles";
     style.textContent = `
+        .preset-manager-dialog {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #1e1e2e;
+            border: 1px solid #45475a;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
         .preset-manager-dialog .comfy-modal-header {
             display: flex;
             justify-content: space-between;

@@ -206,10 +206,6 @@ export class TemplateAnalyzerDialog extends ComfyDialog {
         style.id = "comfy-template-analyzer-styles";
         style.textContent = `
             .comfy-template-analyzer {
-                position: fixed;
-                top: 50%;
-                left: 50%;
-                transform: translate(-50%, -50%);
                 z-index: 10003;
                 width: 820px;
                 max-height: 88vh;
