@@ -5,7 +5,7 @@
  * - Form-based UI for preset metadata (name, description)
  * - Parameter selection with checkboxes grouped by node type
  * - Select all / deselect all per group
- * - Code editing mode for advanced users
+ * - Explicit JSON import/export for bulk edits
  */
 
 import { savePreset } from "./client.js";
@@ -21,7 +21,6 @@ export class PresetEditorDialog extends ComfyDialog {
         this.templateId = null;
         this.presetId = null; // null = create new, non-null = edit existing
         this.parameters = []; // { name, nodeType, nodeId, value, selected }
-        this.mode = 'form'; // 'form' or 'code'
         
         this.element = $el("div.comfy-modal.comfy-preset-editor.preset-manager-dialog", { parent: document.body }, [
             $el("div.comfy-modal-content", [
@@ -48,35 +47,33 @@ export class PresetEditorDialog extends ComfyDialog {
                     })
                 ]),
                 
-                // Mode toggle
-                $el("div.preset-editor-mode", [
-                    this.formModeBtn = $el("button.comfy-btn.mode-btn.active", {
-                        textContent: "表单模式",
-                        onclick: () => this.setMode('form')
-                    }),
-                    this.codeModeBtn = $el("button.comfy-btn.mode-btn", {
-                        textContent: "代码模式",
-                        onclick: () => this.setMode('code')
-                    })
-                ]),
-
                 this.noteEl = $el("div.preset-editor-note", { style: { display: "none" } }),
 
                 // Form mode: parameter list
-                this.formContainer = $el("div.preset-editor-form", [
+                $el("div.preset-editor-form", [
                     $el("label", { textContent: "要保存的参数:" }),
                     this.paramList = $el("div.preset-param-list")
                 ]),
-                
-                // Code mode: JSON editor
-                this.codeContainer = $el("div.preset-editor-code", { style: { display: "none" } }, [
-                    $el("label", { textContent: "JSON 编辑器:" }),
+
+                // Optional bulk import/export. The form remains the source of truth.
+                this.advancedContainer = $el("details.preset-editor-advanced", [
+                    $el("summary", { textContent: "高级：导入/导出 JSON" }),
                     this.codeEditor = $el("textarea.comfy-textarea", {
-                        rows: 20,
+                        rows: 12,
                         placeholder: '{"params": {...}}'
-                    })
+                    }),
+                    $el("div.preset-editor-advanced-actions", [
+                        $el("button.comfy-btn.small", {
+                            textContent: "导出表单",
+                            onclick: () => this.exportJson()
+                        }),
+                        $el("button.comfy-btn.small", {
+                            textContent: "导入到表单",
+                            onclick: () => this.importJson()
+                        })
+                    ])
                 ]),
-                
+
                 // Actions
                 $el("div.preset-editor-actions", [
                     this.saveBtn = $el("button.comfy-btn.primary", {
@@ -122,19 +119,26 @@ export class PresetEditorDialog extends ComfyDialog {
                 font-size: 14px;
             }
             
-            .preset-editor-mode {
-                display: flex;
-                gap: 10px;
+            .preset-editor-advanced {
                 margin-bottom: 15px;
+                color: #a6adc8;
+                font-size: 12px;
             }
-            
-            .mode-btn {
-                flex: 1;
+
+            .preset-editor-advanced summary {
+                cursor: pointer;
+                margin-bottom: 8px;
             }
-            
-            .mode-btn.active {
-                background: #89b4fa;
-                color: #1e1e2e;
+
+            .preset-editor-advanced .comfy-textarea {
+                min-height: 160px;
+            }
+
+            .preset-editor-advanced-actions {
+                display: flex;
+                justify-content: flex-end;
+                gap: 8px;
+                margin-top: 8px;
             }
 
             .preset-editor-note {
@@ -251,8 +255,8 @@ export class PresetEditorDialog extends ComfyDialog {
         this.noteEl.textContent = "";
         this.noteEl.style.display = "none";
         this.codeEditor.value = "";
+        this.advancedContainer.open = false;
 
-        this.resetMode();
         this.renderParameterList();
         this.element.style.display = "flex";
     }
@@ -280,7 +284,8 @@ export class PresetEditorDialog extends ComfyDialog {
             : "保存后覆盖当前用户预设。";
         this.noteEl.style.display = "block";
         this.codeEditor.value = "";
-        
+        this.advancedContainer.open = false;
+
         // Mark parameters that are in the preset as selected
         const presetParams = presetData.params || {};
         this.parameters = parameters.map(p => ({
@@ -289,20 +294,8 @@ export class PresetEditorDialog extends ComfyDialog {
             value: p.name in presetParams ? presetParams[p.name] : p.value
         }));
         
-        this.resetMode();
         this.renderParameterList();
         this.element.style.display = "flex";
-    }
-
-    /**
-     * Always reopen on the form view; neither the mode nor code text carries over.
-     */
-    resetMode() {
-        this.mode = "form";
-        this.formModeBtn.classList.add("active");
-        this.codeModeBtn.classList.remove("active");
-        this.formContainer.style.display = "block";
-        this.codeContainer.style.display = "none";
     }
     
     /**
@@ -387,32 +380,27 @@ export class PresetEditorDialog extends ComfyDialog {
     }
     
     /**
-     * Set the editor mode and carry the current data across the switch.
+     * Copy the current form state into the JSON box. This is an explicit
+     * export, not a live two-way synchronization.
      */
-    setMode(mode) {
-        if (mode === this.mode) return;
-
-        if (mode === "code") {
-            const data = this.getPresetData();
-            if (!data) return;
-            this.codeEditor.value = JSON.stringify(data, null, 2);
-        } else {
-            const data = this.parseCode();
-            if (!data) return;
-            this.applyEditorData(data);
-        }
-        
-        this.mode = mode;
-        this.formModeBtn.classList.toggle("active", mode === "form");
-        this.codeModeBtn.classList.toggle("active", mode === "code");
-        this.formContainer.style.display = mode === "form" ? "block" : "none";
-        this.codeContainer.style.display = mode === "code" ? "block" : "none";
+    exportJson() {
+        this.codeEditor.value = JSON.stringify(this.getPresetData(), null, 2);
+        this.advancedContainer.open = true;
     }
 
     /**
-     * Parse the code editor and validate the fields the preset needs.
+     * Parse the JSON box and apply it to the form.
      */
-    parseCode() {
+    importJson() {
+        const data = this.parseJson();
+        if (!data) return;
+        this.applyEditorData(data);
+    }
+
+    /**
+     * Parse the JSON box and validate the fields the preset needs.
+     */
+    parseJson() {
         let data;
         try {
             data = JSON.parse(this.codeEditor.value);
@@ -468,24 +456,10 @@ export class PresetEditorDialog extends ComfyDialog {
     }
     
     /**
-     * Get the preset data from the current mode.
-     * The ID and template always come from the dialog, not from the JSON text.
+     * Get the preset data from the form.
+     * The ID and template always come from the dialog, not from imported JSON.
      */
     getPresetData() {
-        if (this.mode === "code") {
-            const parsed = this.parseCode();
-            if (!parsed) return null;
-            const name = typeof parsed.name === "string" ? parsed.name : "";
-            return {
-                id: this.presetId || this.generateId(name),
-                name,
-                description: typeof parsed.description === "string" ? parsed.description : "",
-                workflow_template: this.templateId,
-                params: parsed.params,
-            };
-        }
-        
-        // Form mode
         const params = {};
         for (const param of this.parameters) {
             if (param.selected) {
@@ -518,8 +492,7 @@ export class PresetEditorDialog extends ComfyDialog {
      */
     async onSaveClick() {
         const data = this.getPresetData();
-        if (!data) return;
-        
+
         // Validate
         if (!data.name || data.name.trim() === "") {
             alert("请输入预设名称");

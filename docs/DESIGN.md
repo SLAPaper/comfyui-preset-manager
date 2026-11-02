@@ -8,8 +8,9 @@
 
 | 层 | 文件 | 职责 |
 |---|---|---|
-| 前端 | `web/preset-manager.js` | 注册扩展，添加入口按钮 |
+| 前端 | `web/preset-manager.js` | 注册扩展，添加单一入口按钮 |
 | 前端 | `web/client.js` | HTTP 请求 |
+| 前端 | `web/template-store.js` | 模板列表缓存与失效 |
 | 前端 | `web/graph-index.js` | 图遍历、子图作用域、写入目标解析 |
 | 前端 | `web/matcher.js` | 匹配策略、参数读取、检查、应用 |
 | 前端 | `web/template-analyzer.js` | 从当前 graph 识别候选模板参数 |
@@ -91,7 +92,8 @@ restoreParams(graph, snapshot)   -> void
 - “来源”选择已有模板时，用 `describeMapping()` 按原 `node_mapping` 重新校验当前 graph，并以 `原ID-copy` 作为新 ID、`原名 副本` 作为默认名称。
 - 勾选的候选通过 `buildTemplate()` 生成完整模板。模型加载器由 `defaultSelected` 转为 `default_selected: false`；副本保留原 `synonyms`。
 - “手动添加”按策略生成 spec：选择节点和 widget，自动选择唯一类或标题策略；输入槽和上游连接可以指定枢纽/目标输入。
-- 保存调用 `POST /preset-manager/template`，写入 `user/preset-manager/workflows/`。成功后把模板 ID 写入 `app.graph.extra.preset_template`，Presets 和 Sweeps 重新加载时即可使用。
+- 保存调用 `POST /preset-manager/template`，写入 `user/preset-manager/workflows/`。成功后把模板 ID 写入 `app.graph.extra.preset_template`，并使模板列表缓存失效，预设和参数扫描重新加载时即可使用。
+- 顶部只有一个 Presets 入口。Preset 对话框的“模板”和“参数扫描”按钮分别打开模板编辑器和扫描对话框，三个对话框共用同一份模板列表缓存。
 - 内置模板 ID 不能直接覆盖；用户模板 ID 需要确认覆盖。
 
 后端 `save_template()` 只写用户目录，并校验 ID、名称、`node_mapping` 和 `synonyms`。模板列表返回 `source` 字段，取值为 `bundled` 或 `user`。
@@ -106,7 +108,7 @@ restoreParams(graph, snapshot)   -> void
 
 新建预设时，前端用 `readParams()` 读取当前 graph 的参数值。参数默认勾选，模板里声明 `default_selected: false` 的参数除外。共享模型加载器参数都带这个标记，避免预设绑定本机模型文件。编辑预设时，前端重新读取当前 graph。当前 graph 匹配不到的已存参数不会出现在编辑器中，保存后会被删除。
 
-编辑内置预设会以 `名称 副本` 新建用户预设，内置文件保持不变。用户预设编辑后覆盖自身，ID 不变。表单模式和代码模式切换时互相同步；代码模式里新增的参数会作为“自定义”项回到表单。代码中的 `id` 和 `workflow_template` 不生效，保存时始终使用对话框当前的 ID 和模板。
+编辑内置预设会以 `名称 副本` 新建用户预设，内置文件保持不变。用户预设编辑后覆盖自身，ID 不变。编辑器以表单为准；“导出表单”把当前内容写入 JSON 文本框，“导入到表单”把 JSON 写回表单。导入时新增的参数会作为“自定义”项，取消勾选的参数会保留但不会被保存。JSON 中的 `id` 和 `workflow_template` 不生效，保存时始终使用对话框当前的 ID 和模板。
 
 预设列表返回 `source` 字段，取值为 `bundled` 或 `user`。界面只对用户预设显示删除按钮。删除接口只删除用户目录的文件，内置预设无法删除。
 

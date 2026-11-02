@@ -9,8 +9,9 @@
 import { app } from "../../scripts/app.js";
 import {
     getSweeps, getSweepDetail, saveSweep, deleteSweep, expandSweep,
-    getPresets, getTemplateDetail, getWorkflows
+    getPresets, getTemplateDetail
 } from "./client.js";
+import { loadTemplates } from "./template-store.js";
 import { applyParams, captureParams, checkParams, explainParams, restoreParams } from "./matcher.js";
 import { SweepAxes } from "./sweep-axes.js";
 import { runSweep } from "./sweep-runner.js";
@@ -261,7 +262,7 @@ export class SweepDialog {
         this.element.style.display = "flex";
 
         try {
-            const workflows = await getWorkflows();
+            const workflows = await loadTemplates();
             this.templateSelect.innerHTML = "";
             for (const w of workflows) {
                 this.templateSelect.appendChild($el("option", {

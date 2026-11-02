@@ -9,17 +9,20 @@
  */
 
 import { app } from "../../scripts/app.js";
-import { deletePreset, getWorkflows, getPresets, getPresetDetail, getTemplateDetail } from "./client.js";
+import { deletePreset, getPresets, getPresetDetail, getTemplateDetail } from "./client.js";
 import { readParams, resolveParams, applyParams, explainParams } from "./matcher.js";
 import { PresetEditorDialog } from "./preset-editor.js";
 import { injectStyles } from "./styles.js";
+import { loadTemplates } from "./template-store.js";
 
 // Use new API to avoid deprecation warnings
 const { $el, ComfyDialog } = window.comfyAPI.ui;
 
 export class PresetDialog extends ComfyDialog {
-    constructor() {
+    constructor({ onOpenTemplates, onOpenSweeps } = {}) {
         super();
+        this.onOpenTemplates = onOpenTemplates;
+        this.onOpenSweeps = onOpenSweeps;
         this.workflowTemplates = [];
         this.presets = [];
         this.selectedTemplate = null;
@@ -75,6 +78,14 @@ export class PresetDialog extends ComfyDialog {
                 
                 // Actions
                 $el("div.preset-actions", [
+                    $el("button.comfy-btn", {
+                        textContent: "模板",
+                        onclick: () => this.onOpenTemplates?.()
+                    }),
+                    $el("button.comfy-btn", {
+                        textContent: "参数扫描",
+                        onclick: () => this.onOpenSweeps?.()
+                    }),
                     $el("button.comfy-btn.primary", {
                         textContent: "Apply Preset",
                         onclick: () => this.onApply()
@@ -268,7 +279,7 @@ export class PresetDialog extends ComfyDialog {
     
     async loadData() {
         try {
-            const templates = await getWorkflows();
+            const templates = await loadTemplates({ refresh: true });
             this.workflowTemplates = templates;
 
             // Populate template selector

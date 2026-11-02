@@ -7,7 +7,7 @@
  */
 
 import { app } from "../../scripts/app.js";
-import { getTemplateDetail, getWorkflows, saveTemplate } from "./client.js";
+import { getTemplateDetail, saveTemplate } from "./client.js";
 import {
     analyzeGraph,
     buildTemplate,
@@ -15,6 +15,10 @@ import {
     listNodes,
 } from "./template-analyzer.js";
 import { injectStyles } from "./styles.js";
+import {
+    invalidateTemplates,
+    loadTemplates as getTemplateList,
+} from "./template-store.js";
 
 const { $el, ComfyDialog } = window.comfyAPI.ui;
 
@@ -428,7 +432,7 @@ export class TemplateAnalyzerDialog extends ComfyDialog {
 
     async loadTemplates() {
         try {
-            this.templates = await getWorkflows();
+            this.templates = await getTemplateList();
         } catch (error) {
             this.templates = [];
             this.setStatus(`加载模板列表失败：${error.message}`, "error");
@@ -780,6 +784,7 @@ export class TemplateAnalyzerDialog extends ComfyDialog {
             app.graph.extra.preset_template = payload.id;
             app.graph.setDirtyCanvas?.(true, true);
 
+            invalidateTemplates();
             await this.loadTemplates();
             this.setStatus(
                 `已保存模板「${payload.name}」(${payload.id})。可在 Presets 和 Sweeps 中使用。`,

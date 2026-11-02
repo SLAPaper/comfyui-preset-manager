@@ -6,6 +6,26 @@ import pytest
 import httpx
 
 
+async def open_presets(page):
+    """Open the single Presets entry and return its dialog locator."""
+    await page.locator("button", has_text="Presets").first.click()
+    dialog = page.locator(".comfy-preset-manager")
+    await dialog.wait_for(state="visible", timeout=5000)
+    return dialog
+
+
+async def open_sweeps(page):
+    """Reach the sweep dialog through the Presets entry."""
+    dialog = await open_presets(page)
+    await dialog.locator("button", has_text="参数扫描").click()
+
+
+async def open_templates(page):
+    """Reach the template analyzer through the Presets entry."""
+    dialog = await open_presets(page)
+    await dialog.locator("button", has_text="模板").click()
+
+
 @pytest.mark.e2e
 class TestPresetWorkflow:
     """Test the full preset selection and application workflow."""
@@ -156,18 +176,34 @@ class TestPresetWorkflow:
         assert result["cfg"] == 6.5
 
     @pytest.mark.asyncio
-    async def test_sweep_button_is_visible(self, page):
-        """The Sweeps top bar button should exist alongside Presets."""
+    async def test_single_entry_opens_presets_templates_and_sweeps(self, page):
+        """The top bar keeps one Presets entry that reaches templates and sweeps."""
         await page.wait_for_timeout(3000)
-        sweeps_btn = page.locator("button", has_text="Sweeps")
-        await sweeps_btn.first.wait_for(state="attached", timeout=5000)
+        await page.locator("button", has_text="Presets").first.wait_for(
+            state="attached", timeout=5000
+        )
+        assert await page.locator("button", has_text="Sweeps").count() == 0
+
+        await page.locator("button", has_text="Presets").first.click()
+        dialog = page.locator(".comfy-preset-manager")
+        await dialog.wait_for(state="visible", timeout=5000)
+
+        await dialog.locator("button", has_text="参数扫描").click()
+        sweep = page.locator(".comfy-sweep-dialog")
+        await sweep.wait_for(state="visible", timeout=5000)
+        await sweep.locator("button", has_text="关闭").click()
+        await sweep.wait_for(state="hidden", timeout=5000)
+
+        await page.locator("button", has_text="Presets").first.click()
+        await dialog.wait_for(state="visible", timeout=5000)
+        await dialog.locator("button", has_text="模板").click()
+        await page.locator(".comfy-template-analyzer").wait_for(state="visible", timeout=5000)
 
     @pytest.mark.asyncio
     async def test_sweep_dialog_opens_and_lists_templates(self, page):
         """Opening the sweep dialog should display a template selector."""
         await page.wait_for_timeout(3000)
-        sweeps_btn = page.locator("button", has_text="Sweeps").first
-        await sweeps_btn.click()
+        await open_sweeps(page)
 
         dialog = page.locator(".comfy-sweep-dialog")
         await dialog.wait_for(state="visible", timeout=5000)
@@ -179,7 +215,7 @@ class TestPresetWorkflow:
         the user can interact immediately (regression: previously addAxis threw
         because loadTemplateData was skipped when templateId was null)."""
         await page.wait_for_timeout(3000)
-        await page.locator("button", has_text="Sweeps").first.click()
+        await open_sweeps(page)
 
         dialog = page.locator(".comfy-sweep-dialog")
         await dialog.wait_for(state="visible", timeout=5000)
@@ -201,7 +237,7 @@ class TestPresetWorkflow:
     async def test_sweep_dialog_offers_filename_trace(self, page):
         """Sweeps tag output filenames by default so results stay traceable."""
         await page.wait_for_timeout(3000)
-        await page.locator("button", has_text="Sweeps").first.click()
+        await open_sweeps(page)
 
         dialog = page.locator(".comfy-sweep-dialog")
         await dialog.wait_for(state="visible", timeout=5000)
@@ -213,8 +249,7 @@ class TestPresetWorkflow:
     async def test_sweep_dialog_adds_axis_and_shows_total(self, page):
         """Adding a param axis with two values should report 2 runs in the summary."""
         await page.wait_for_timeout(3000)
-        sweeps_btn = page.locator("button", has_text="Sweeps").first
-        await sweeps_btn.click()
+        await open_sweeps(page)
 
         dialog = page.locator(".comfy-sweep-dialog")
         await dialog.wait_for(state="visible", timeout=5000)
@@ -297,8 +332,8 @@ class TestPresetWorkflow:
         assert by_name["steps"] is True
 
     @pytest.mark.asyncio
-    async def test_editor_syncs_form_and_code(self, page):
-        """Switching modes must carry name, selected params, and custom params."""
+    async def test_editor_exports_and_imports_json(self, page):
+        """JSON export/import is explicit; the form stays the source of truth."""
         await page.wait_for_timeout(3000)
 
         result = await page.evaluate("""async () => {
@@ -309,18 +344,23 @@ class TestPresetWorkflow:
                 { name: 'cfg', nodeType: 'KSampler', nodeId: '1', value: 7, defaultSelected: true },
             ]);
 
-            editor.setMode('code');
-            const data = JSON.parse(editor.codeEditor.value);
-            data.name = '同步测试';
-            data.description = 'from code';
-            data.id = 'ignored';
-            data.params.steps = 33;
-            delete data.params.cfg;
-            data.params.extra = 'custom';
-            editor.codeEditor.value = JSON.stringify(data);
-            editor.setMode('form');
+            editor.nameInput.value = '同步测试';
+            editor.descInput.value = 'from form';
+            editor.parameters.find(item => item.name === 'cfg').selected = false;
+            editor.exportJson();
+            const exported = JSON.parse(editor.codeEditor.value);
+            const exportedSnapshot = JSON.parse(JSON.stringify(exported));
 
-            const afterCodeToForm = {
+            exported.name = '导入后';
+            exported.description = 'from json';
+            exported.id = 'ignored';
+            exported.workflow_template = 'ignored';
+            exported.params.steps = 33;
+            exported.params.extra = 'custom';
+            editor.codeEditor.value = JSON.stringify(exported);
+            editor.importJson();
+
+            const afterImport = {
                 name: editor.nameInput.value,
                 description: editor.descInput.value,
                 params: editor.parameters.map(item => ({
@@ -330,29 +370,25 @@ class TestPresetWorkflow:
                     nodeType: item.nodeType,
                 })),
             };
-
-            const steps = editor.parameters.find(item => item.name === 'steps');
-            steps.value = 44;
-            editor.setMode('code');
-            const regenerated = JSON.parse(editor.codeEditor.value);
             const saved = editor.getPresetData();
             editor.close();
-            return { afterCodeToForm, regenerated, saved };
+            return { exported: exportedSnapshot, afterImport, saved };
         }""")
 
-        params = {item["name"]: item for item in result["afterCodeToForm"]["params"]}
-        assert result["afterCodeToForm"]["name"] == "同步测试"
-        assert result["afterCodeToForm"]["description"] == "from code"
+        assert result["exported"]["params"] == {"steps": 20}
+        assert result["exported"]["id"] == "同步测试"
+        assert result["exported"]["workflow_template"] == "sdxl-txt2img"
+
+        params = {item["name"]: item for item in result["afterImport"]["params"]}
+        assert result["afterImport"]["name"] == "导入后"
+        assert result["afterImport"]["description"] == "from json"
         assert params["steps"]["selected"] is True
         assert params["steps"]["value"] == 33
         assert params["cfg"]["selected"] is False
         assert params["extra"]["selected"] is True
         assert params["extra"]["nodeType"] == "自定义"
 
-        assert result["regenerated"]["params"]["steps"] == 44
-        assert result["regenerated"]["params"]["extra"] == "custom"
-        assert "cfg" not in result["regenerated"]["params"]
-        assert result["saved"]["id"] == "同步测试"
+        assert result["saved"]["id"] == "导入后"
         assert result["saved"]["workflow_template"] == "sdxl-txt2img"
 
     @pytest.mark.asyncio
@@ -422,9 +458,7 @@ class TestPresetWorkflow:
             app.graph.add(node);
         }""")
 
-        await page.locator(
-            'button[aria-label="Analyze current workflow as a template"]'
-        ).click()
+        await open_templates(page)
         dialog = page.locator(".comfy-template-analyzer")
         await dialog.wait_for(state="visible", timeout=5000)
 
@@ -471,9 +505,7 @@ class TestPresetWorkflow:
             app.graph.add(node);
         }""")
 
-        await page.locator(
-            'button[aria-label="Analyze current workflow as a template"]'
-        ).click()
+        await open_templates(page)
         dialog = page.locator(".comfy-template-analyzer")
         await dialog.wait_for(state="visible", timeout=5000)
 
