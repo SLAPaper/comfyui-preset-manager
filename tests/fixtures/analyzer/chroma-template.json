@@ -1,0 +1,392 @@
+{
+  "sample": "chroma-template",
+  "source": "image_chroma_text_to_image.json",
+  "graph": {
+    "nodes": [
+      {
+        "id": 298,
+        "type": "VAEDecode",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "samples",
+            "link": 1355
+          },
+          {
+            "name": "vae",
+            "link": 1252
+          }
+        ]
+      },
+      {
+        "id": 694,
+        "type": "CFGGuider",
+        "title": "",
+        "widgets": [
+          {
+            "name": "cfg",
+            "value": 3.5
+          }
+        ],
+        "inputs": [
+          {
+            "name": "model",
+            "link": 1370
+          },
+          {
+            "name": "positive",
+            "link": 1358
+          },
+          {
+            "name": "negative",
+            "link": 1361
+          }
+        ]
+      },
+      {
+        "id": 700,
+        "type": "KSamplerSelect",
+        "title": "",
+        "widgets": [
+          {
+            "name": "sampler_name",
+            "value": "euler"
+          }
+        ],
+        "inputs": []
+      },
+      {
+        "id": 701,
+        "type": "ModelSamplingAuraFlow",
+        "title": "Flow Shift",
+        "widgets": [
+          {
+            "name": "shift",
+            "value": 1
+          }
+        ],
+        "inputs": [
+          {
+            "name": "model",
+            "link": 1366
+          }
+        ]
+      },
+      {
+        "id": 710,
+        "type": "VAELoader",
+        "title": "",
+        "widgets": [
+          {
+            "name": "vae_name",
+            "value": "ae.safetensors"
+          }
+        ],
+        "inputs": []
+      },
+      {
+        "id": 718,
+        "type": "RandomNoise",
+        "title": "SEED",
+        "widgets": [
+          {
+            "name": "noise_seed",
+            "value": 68346347456896
+          },
+          {
+            "name": "control_after_generate",
+            "value": "randomize"
+          }
+        ],
+        "inputs": []
+      },
+      {
+        "id": 733,
+        "type": "CLIPLoader",
+        "title": "",
+        "widgets": [
+          {
+            "name": "clip_name",
+            "value": "t5xxl_fp8_e4m3fn_scaled.safetensors"
+          },
+          {
+            "name": "type",
+            "value": "chroma"
+          },
+          {
+            "name": "device",
+            "value": "default"
+          }
+        ],
+        "inputs": []
+      },
+      {
+        "id": 734,
+        "type": "BasicScheduler",
+        "title": "",
+        "widgets": [
+          {
+            "name": "scheduler",
+            "value": "beta"
+          },
+          {
+            "name": "steps",
+            "value": 26
+          },
+          {
+            "name": "denoise",
+            "value": 1
+          }
+        ],
+        "inputs": [
+          {
+            "name": "model",
+            "link": 1371
+          }
+        ]
+      },
+      {
+        "id": 737,
+        "type": "EmptySD3LatentImage",
+        "title": "",
+        "widgets": [
+          {
+            "name": "width",
+            "value": 1024
+          },
+          {
+            "name": "height",
+            "value": 1024
+          },
+          {
+            "name": "batch_size",
+            "value": 1
+          }
+        ],
+        "inputs": []
+      },
+      {
+        "id": 739,
+        "type": "Note",
+        "title": "Optional Flow Shift",
+        "widgets": [],
+        "inputs": []
+      },
+      {
+        "id": 740,
+        "type": "SaveImage",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "images",
+            "link": 1341
+          }
+        ]
+      },
+      {
+        "id": 741,
+        "type": "T5TokenizerOptions",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "clip",
+            "link": 1342
+          }
+        ]
+      },
+      {
+        "id": 742,
+        "type": "Note",
+        "title": "Optional Padding",
+        "widgets": [],
+        "inputs": []
+      },
+      {
+        "id": 747,
+        "type": "SamplerCustomAdvanced",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "noise",
+            "link": 1350
+          },
+          {
+            "name": "guider",
+            "link": 1351
+          },
+          {
+            "name": "sampler",
+            "link": 1352
+          },
+          {
+            "name": "sigmas",
+            "link": 1353
+          },
+          {
+            "name": "latent_image",
+            "link": 1354
+          }
+        ]
+      },
+      {
+        "id": 749,
+        "type": "CLIPTextEncode",
+        "title": "CLIP Text Encode (Negative Prompt)",
+        "widgets": [
+          {
+            "name": "text",
+            "value": "This low quality greyscale unfinished sketch is inaccurate and flawed. The image is very blurred and lacks detail with excessive chromatic aberrations and artifacts. The image is overly saturated with excessive bloom. It has a toony aesthet…"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "clip",
+            "link": 1359
+          }
+        ]
+      },
+      {
+        "id": 748,
+        "type": "CLIPTextEncode",
+        "title": "CLIP Text Encode (Positive Prompt)",
+        "widgets": [
+          {
+            "name": "text",
+            "value": "This is a nature documentary close-up photograph of the right side of the face of a tiger. The photograph is centered on it's highly detailed and speckled eye surrounded by intricately detailed fur. Overlaid at the center of the image is a …"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "clip",
+            "link": 1356
+          }
+        ]
+      },
+      {
+        "id": 731,
+        "type": "UNETLoader",
+        "title": "",
+        "widgets": [
+          {
+            "name": "unet_name",
+            "value": "Chroma1-HD-fp8mixed.safetensors"
+          },
+          {
+            "name": "weight_dtype",
+            "value": "default"
+          }
+        ],
+        "inputs": []
+      },
+      {
+        "id": 743,
+        "type": "MarkdownNote",
+        "title": "",
+        "widgets": [],
+        "inputs": []
+      }
+    ],
+    "links": {
+      "1252": {
+        "origin_id": 710,
+        "origin_slot": 0,
+        "target_id": 298,
+        "target_slot": 1
+      },
+      "1341": {
+        "origin_id": 298,
+        "origin_slot": 0,
+        "target_id": 740,
+        "target_slot": 0
+      },
+      "1342": {
+        "origin_id": 733,
+        "origin_slot": 0,
+        "target_id": 741,
+        "target_slot": 0
+      },
+      "1350": {
+        "origin_id": 718,
+        "origin_slot": 0,
+        "target_id": 747,
+        "target_slot": 0
+      },
+      "1351": {
+        "origin_id": 694,
+        "origin_slot": 0,
+        "target_id": 747,
+        "target_slot": 1
+      },
+      "1352": {
+        "origin_id": 700,
+        "origin_slot": 0,
+        "target_id": 747,
+        "target_slot": 2
+      },
+      "1353": {
+        "origin_id": 734,
+        "origin_slot": 0,
+        "target_id": 747,
+        "target_slot": 3
+      },
+      "1354": {
+        "origin_id": 737,
+        "origin_slot": 0,
+        "target_id": 747,
+        "target_slot": 4
+      },
+      "1355": {
+        "origin_id": 747,
+        "origin_slot": 0,
+        "target_id": 298,
+        "target_slot": 0
+      },
+      "1356": {
+        "origin_id": 741,
+        "origin_slot": 0,
+        "target_id": 748,
+        "target_slot": 0
+      },
+      "1358": {
+        "origin_id": 748,
+        "origin_slot": 0,
+        "target_id": 694,
+        "target_slot": 1
+      },
+      "1359": {
+        "origin_id": 741,
+        "origin_slot": 0,
+        "target_id": 749,
+        "target_slot": 0
+      },
+      "1361": {
+        "origin_id": 749,
+        "origin_slot": 0,
+        "target_id": 694,
+        "target_slot": 2
+      },
+      "1366": {
+        "origin_id": 731,
+        "origin_slot": 0,
+        "target_id": 701,
+        "target_slot": 0
+      },
+      "1370": {
+        "origin_id": 701,
+        "origin_slot": 0,
+        "target_id": 694,
+        "target_slot": 0
+      },
+      "1371": {
+        "origin_id": 701,
+        "origin_slot": 0,
+        "target_id": 734,
+        "target_slot": 0
+      }
+    }
+  }
+}

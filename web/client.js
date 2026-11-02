@@ -25,6 +25,14 @@ export function getTemplateDetail(templateId) {
     return request(`/template/${encodeURIComponent(templateId)}`, undefined, "加载模板详情失败");
 }
 
+export function saveTemplate(templateData) {
+    return request("/template", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(templateData),
+    }, "保存模板失败");
+}
+
 export function getPresets(templateId) {
     return request(`/presets/${encodeURIComponent(templateId)}`, undefined, "加载预设失败");
 }

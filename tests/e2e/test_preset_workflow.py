@@ -414,11 +414,27 @@ class TestPresetWorkflow:
         """Editor dialog width should not change when switching between form and code mode."""
         await page.wait_for_timeout(3000)
 
+        # The fresh E2E profile starts with an empty canvas. Add a real KSampler
+        # so + 新建 has current graph params to read.
+        await page.evaluate("""() => {
+            const app = window.comfyAPI.app.app;
+            app.graph.clear();
+            const node = window.LiteGraph.createNode('KSampler');
+            node.id = 1;
+            app.graph.add(node);
+        }""")
+
         # Open Preset Manager dialog
         presets_btn = page.locator("button", has_text="Presets")
         await presets_btn.click()
         dialog = page.locator(".comfy-preset-manager")
         await dialog.wait_for(state="visible", timeout=5000)
+
+        # Wait for the template list before creating a preset; + 新建 needs a
+        # selected template to read the current graph params.
+        await dialog.locator("select.comfy-select option").first.wait_for(
+            state="attached", timeout=10000
+        )
 
         # Click + 新建 to open editor
         create_btn = dialog.locator("button", has_text="+ 新建")
@@ -446,3 +462,79 @@ class TestPresetWorkflow:
             f"Editor content width changed between modes: "
             f"form={form_content_width}px, code={code_content_width}px"
         )
+
+    @pytest.mark.asyncio
+    async def test_template_analyzer_saves_manual_mapping(self, page, api_base):
+        """Analyzer save closes the loop: manual param -> user template -> API."""
+        await page.wait_for_timeout(3000)
+
+        await page.evaluate("""() => {
+            const app = window.comfyAPI.app.app;
+            app.graph.clear();
+            const node = window.LiteGraph.createNode('KSampler');
+            node.id = 1;
+            app.graph.add(node);
+        }""")
+
+        await page.locator(
+            'button[aria-label="Analyze current workflow as a template"]'
+        ).click()
+        dialog = page.locator(".comfy-template-analyzer")
+        await dialog.wait_for(state="visible", timeout=5000)
+
+        meta_inputs = dialog.locator(".template-analyzer-meta input")
+        await meta_inputs.nth(0).fill("e2e-ui-template")
+        await meta_inputs.nth(1).fill("E2E Analyzer Template")
+
+        await dialog.locator("button", has_text="手动添加").click()
+        manual = dialog.locator(".template-analyzer-manual")
+        await manual.wait_for(state="visible", timeout=3000)
+        await manual.locator("input").first.fill("manual_seed")
+        await manual.locator("select").nth(0).select_option("1")
+        await manual.locator("button", has_text="添加参数").click()
+
+        await dialog.locator("button", has_text="保存模板").click()
+        await page.wait_for_timeout(800)
+
+        status = await dialog.locator(".template-analyzer-status").text_content()
+        assert "已保存模板" in status
+
+        resp = httpx.get(f"{api_base}/preset-manager/template/e2e-ui-template", timeout=10)
+        assert resp.status_code == 200
+        template = resp.json()
+        assert template["node_mapping"]["manual_seed"] == {
+            "match_strategy": "unique_class",
+            "class_type": "KSampler",
+            "widget": "seed",
+        }
+
+        resp = httpx.get(f"{api_base}/preset-manager/workflows", timeout=10)
+        listed = {item["id"]: item for item in resp.json()}
+        assert listed["e2e-ui-template"]["source"] == "user"
+
+    @pytest.mark.asyncio
+    async def test_template_analyzer_copies_existing_template(self, page):
+        """Selecting an existing template loads its mapping under a copy ID."""
+        await page.wait_for_timeout(3000)
+
+        await page.evaluate("""() => {
+            const app = window.comfyAPI.app.app;
+            app.graph.clear();
+            const node = window.LiteGraph.createNode('KSampler');
+            node.id = 1;
+            app.graph.add(node);
+        }""")
+
+        await page.locator(
+            'button[aria-label="Analyze current workflow as a template"]'
+        ).click()
+        dialog = page.locator(".comfy-template-analyzer")
+        await dialog.wait_for(state="visible", timeout=5000)
+
+        await dialog.locator(".template-analyzer-meta select").select_option("sdxl-txt2img")
+        await page.wait_for_timeout(800)
+
+        meta_inputs = dialog.locator(".template-analyzer-meta input")
+        assert await meta_inputs.nth(0).input_value() == "sdxl-txt2img-copy"
+        assert "副本" in await meta_inputs.nth(1).input_value()
+        assert await dialog.locator(".template-analyzer-row").count() > 0

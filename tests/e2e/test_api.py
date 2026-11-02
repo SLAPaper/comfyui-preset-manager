@@ -60,6 +60,70 @@ class TestTemplateAPI:
 
 
 @pytest.mark.e2e
+class TestTemplateSaveAPI:
+    """Save a user template built from the analyzer payload."""
+
+    TEMPLATE_ID = "e2e-custom-template"
+
+    def payload(self):
+        return {
+            "id": self.TEMPLATE_ID,
+            "name": "E2E Custom Template",
+            "description": "Created by the API test",
+            "node_mapping": {
+                "steps": {
+                    "match_strategy": "unique_class",
+                    "class_type": "KSampler",
+                    "widget": "steps",
+                },
+                "unet_name": {
+                    "match_strategy": "unique_class",
+                    "class_type": "UNETLoader",
+                    "widget": "unet_name",
+                    "default_selected": False,
+                },
+            },
+            "synonyms": {"KSamplerAdvanced": "KSampler"},
+        }
+
+    def test_save_template_round_trips(self, api_base):
+        resp = httpx.post(
+            f"{api_base}/preset-manager/template", json=self.payload(), timeout=10
+        )
+        assert resp.status_code == 200
+        assert resp.json()["id"] == self.TEMPLATE_ID
+
+        resp = httpx.get(
+            f"{api_base}/preset-manager/template/{self.TEMPLATE_ID}", timeout=10
+        )
+        assert resp.status_code == 200
+
+        data = resp.json()
+        assert data["name"] == "E2E Custom Template"
+        assert data["node_mapping"]["unet_name"]["default_selected"] is False
+        assert data["synonyms"] == {"KSamplerAdvanced": "KSampler"}
+
+        resp = httpx.get(f"{api_base}/preset-manager/workflows", timeout=10)
+        listed = {item["id"]: item for item in resp.json()}
+        assert listed[self.TEMPLATE_ID]["source"] == "user"
+
+    def test_save_template_rejects_invalid_payload(self, api_base):
+        payload = self.payload()
+        payload["id"] = "e2e-broken-template"
+        payload["node_mapping"]["steps"]["match_strategy"] = "unknown"
+
+        resp = httpx.post(f"{api_base}/preset-manager/template", json=payload, timeout=10)
+        assert resp.status_code == 400
+
+    def test_save_template_rejects_reserved_id(self, api_base):
+        payload = self.payload()
+        payload["id"] = "_shared"
+
+        resp = httpx.post(f"{api_base}/preset-manager/template", json=payload, timeout=10)
+        assert resp.status_code == 400
+
+
+@pytest.mark.e2e
 class TestSweepAPI:
     """Test sweep config CRUD and expansion endpoints."""
 

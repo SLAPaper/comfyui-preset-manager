@@ -1,0 +1,407 @@
+{
+  "sample": "hidream-template",
+  "source": "hidream_e1_full.json",
+  "graph": {
+    "nodes": [
+      {
+        "id": 47,
+        "type": "RandomNoise",
+        "title": "",
+        "widgets": [
+          {
+            "name": "noise_seed",
+            "value": 705826023365990
+          },
+          {
+            "name": "control_after_generate",
+            "value": "randomize"
+          }
+        ],
+        "inputs": []
+      },
+      {
+        "id": 41,
+        "type": "UNETLoader",
+        "title": "",
+        "widgets": [
+          {
+            "name": "unet_name",
+            "value": "hidream_e1_full_bf16.safetensors"
+          },
+          {
+            "name": "weight_dtype",
+            "value": "default"
+          }
+        ],
+        "inputs": []
+      },
+      {
+        "id": 42,
+        "type": "QuadrupleCLIPLoader",
+        "title": "",
+        "widgets": [],
+        "inputs": []
+      },
+      {
+        "id": 43,
+        "type": "VAELoader",
+        "title": "",
+        "widgets": [
+          {
+            "name": "vae_name",
+            "value": "ae.safetensors"
+          }
+        ],
+        "inputs": []
+      },
+      {
+        "id": 6,
+        "type": "CLIPTextEncode",
+        "title": "Positive",
+        "widgets": [
+          {
+            "name": "text",
+            "value": "Let the girl put on the VR glasses full of a sense of technology, just like the scenes in Ready Player One, with CG rendering and ultra-realism."
+          }
+        ],
+        "inputs": [
+          {
+            "name": "clip",
+            "link": 420
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "type": "LoadImage",
+        "title": "",
+        "widgets": [],
+        "inputs": []
+      },
+      {
+        "id": 44,
+        "type": "ImageScale",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "image",
+            "link": 425
+          }
+        ]
+      },
+      {
+        "id": 56,
+        "type": "Note",
+        "title": "",
+        "widgets": [],
+        "inputs": []
+      },
+      {
+        "id": 52,
+        "type": "InstructPixToPixConditioning",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "positive",
+            "link": 445
+          },
+          {
+            "name": "negative",
+            "link": 446
+          },
+          {
+            "name": "vae",
+            "link": 442
+          },
+          {
+            "name": "pixels",
+            "link": 443
+          }
+        ]
+      },
+      {
+        "id": 48,
+        "type": "Reroute",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "",
+            "link": 439
+          }
+        ]
+      },
+      {
+        "id": 53,
+        "type": "DualCFGGuider",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "model",
+            "link": 430
+          },
+          {
+            "name": "cond1",
+            "link": 431
+          },
+          {
+            "name": "cond2",
+            "link": 432
+          },
+          {
+            "name": "negative",
+            "link": 447
+          }
+        ]
+      },
+      {
+        "id": 46,
+        "type": "KSamplerSelect",
+        "title": "",
+        "widgets": [
+          {
+            "name": "sampler_name",
+            "value": "euler"
+          }
+        ],
+        "inputs": []
+      },
+      {
+        "id": 49,
+        "type": "BasicScheduler",
+        "title": "",
+        "widgets": [
+          {
+            "name": "scheduler",
+            "value": "normal"
+          },
+          {
+            "name": "steps",
+            "value": 28
+          },
+          {
+            "name": "denoise",
+            "value": 1
+          }
+        ],
+        "inputs": [
+          {
+            "name": "model",
+            "link": 427
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "type": "VAEDecode",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "samples",
+            "link": 444
+          },
+          {
+            "name": "vae",
+            "link": 422
+          }
+        ]
+      },
+      {
+        "id": 54,
+        "type": "SamplerCustomAdvanced",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "noise",
+            "link": 434
+          },
+          {
+            "name": "guider",
+            "link": 435
+          },
+          {
+            "name": "sampler",
+            "link": 436
+          },
+          {
+            "name": "sigmas",
+            "link": 437
+          },
+          {
+            "name": "latent_image",
+            "link": 438
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "type": "SaveImage",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "images",
+            "link": 9
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "type": "CLIPTextEncode",
+        "title": "Negative",
+        "widgets": [
+          {
+            "name": "text",
+            "value": "low quality, blurry, distorted"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "clip",
+            "link": 421
+          }
+        ]
+      },
+      {
+        "id": 55,
+        "type": "MarkdownNote",
+        "title": "",
+        "widgets": [],
+        "inputs": []
+      }
+    ],
+    "links": {
+      "9": {
+        "origin_id": 8,
+        "origin_slot": 0,
+        "target_id": 9,
+        "target_slot": 0
+      },
+      "420": {
+        "origin_id": 42,
+        "origin_slot": 0,
+        "target_id": 6,
+        "target_slot": 0
+      },
+      "421": {
+        "origin_id": 42,
+        "origin_slot": 0,
+        "target_id": 7,
+        "target_slot": 0
+      },
+      "422": {
+        "origin_id": 43,
+        "origin_slot": 0,
+        "target_id": 8,
+        "target_slot": 1
+      },
+      "425": {
+        "origin_id": 13,
+        "origin_slot": 0,
+        "target_id": 44,
+        "target_slot": 0
+      },
+      "427": {
+        "origin_id": 48,
+        "origin_slot": 0,
+        "target_id": 49,
+        "target_slot": 0
+      },
+      "430": {
+        "origin_id": 48,
+        "origin_slot": 0,
+        "target_id": 53,
+        "target_slot": 0
+      },
+      "431": {
+        "origin_id": 52,
+        "origin_slot": 0,
+        "target_id": 53,
+        "target_slot": 1
+      },
+      "432": {
+        "origin_id": 52,
+        "origin_slot": 1,
+        "target_id": 53,
+        "target_slot": 2
+      },
+      "434": {
+        "origin_id": 47,
+        "origin_slot": 0,
+        "target_id": 54,
+        "target_slot": 0
+      },
+      "435": {
+        "origin_id": 53,
+        "origin_slot": 0,
+        "target_id": 54,
+        "target_slot": 1
+      },
+      "436": {
+        "origin_id": 46,
+        "origin_slot": 0,
+        "target_id": 54,
+        "target_slot": 2
+      },
+      "437": {
+        "origin_id": 49,
+        "origin_slot": 0,
+        "target_id": 54,
+        "target_slot": 3
+      },
+      "438": {
+        "origin_id": 52,
+        "origin_slot": 2,
+        "target_id": 54,
+        "target_slot": 4
+      },
+      "439": {
+        "origin_id": 41,
+        "origin_slot": 0,
+        "target_id": 48,
+        "target_slot": 0
+      },
+      "442": {
+        "origin_id": 43,
+        "origin_slot": 0,
+        "target_id": 52,
+        "target_slot": 2
+      },
+      "443": {
+        "origin_id": 44,
+        "origin_slot": 0,
+        "target_id": 52,
+        "target_slot": 3
+      },
+      "444": {
+        "origin_id": 54,
+        "origin_slot": 0,
+        "target_id": 8,
+        "target_slot": 0
+      },
+      "445": {
+        "origin_id": 6,
+        "origin_slot": 0,
+        "target_id": 52,
+        "target_slot": 0
+      },
+      "446": {
+        "origin_id": 7,
+        "origin_slot": 0,
+        "target_id": 52,
+        "target_slot": 1
+      },
+      "447": {
+        "origin_id": 7,
+        "origin_slot": 0,
+        "target_id": 53,
+        "target_slot": 3
+      }
+    }
+  }
+}

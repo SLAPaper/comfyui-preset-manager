@@ -1,0 +1,801 @@
+{
+  "sample": "flux-local",
+  "source": "Flux.json",
+  "graph": {
+    "nodes": [
+      {
+        "id": 22,
+        "type": "BasicGuider",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "model",
+            "link": 128
+          },
+          {
+            "name": "conditioning",
+            "link": 125
+          }
+        ]
+      },
+      {
+        "id": 17,
+        "type": "BasicScheduler",
+        "title": "",
+        "widgets": [
+          {
+            "name": "scheduler",
+            "value": "simple"
+          },
+          {
+            "name": "steps",
+            "value": 20
+          },
+          {
+            "name": "denoise",
+            "value": 1
+          }
+        ],
+        "inputs": [
+          {
+            "name": "model",
+            "link": 127
+          },
+          {
+            "name": "scheduler",
+            "link": null
+          },
+          {
+            "name": "steps",
+            "link": null
+          },
+          {
+            "name": "denoise",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 16,
+        "type": "KSamplerSelect",
+        "title": "",
+        "widgets": [
+          {
+            "name": "sampler_name",
+            "value": "euler"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "sampler_name",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 25,
+        "type": "RandomNoise",
+        "title": "",
+        "widgets": [
+          {
+            "name": "noise_seed",
+            "value": 907105043668787
+          },
+          {
+            "name": "control_after_generate",
+            "value": "fixed"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "noise_seed",
+            "link": 79
+          }
+        ]
+      },
+      {
+        "id": 46,
+        "type": "ModelSamplingFlux",
+        "title": "",
+        "widgets": [
+          {
+            "name": "max_shift",
+            "value": 1.15
+          },
+          {
+            "name": "base_shift",
+            "value": 0.5
+          },
+          {
+            "name": "width",
+            "value": 1024
+          },
+          {
+            "name": "height",
+            "value": 1024
+          }
+        ],
+        "inputs": [
+          {
+            "name": "model",
+            "link": 126
+          },
+          {
+            "name": "max_shift",
+            "link": null
+          },
+          {
+            "name": "base_shift",
+            "link": null
+          },
+          {
+            "name": "width",
+            "link": 148
+          },
+          {
+            "name": "height",
+            "link": 149
+          }
+        ]
+      },
+      {
+        "id": 38,
+        "type": "ApplyFBCacheOnModel",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "model",
+            "link": 157
+          },
+          {
+            "name": "object_to_patch",
+            "link": null
+          },
+          {
+            "name": "residual_diff_threshold",
+            "link": null
+          },
+          {
+            "name": "start",
+            "link": null
+          },
+          {
+            "name": "end",
+            "link": null
+          },
+          {
+            "name": "max_consecutive_cache_hits",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 45,
+        "type": "FluxGuidance",
+        "title": "",
+        "widgets": [
+          {
+            "name": "guidance",
+            "value": 3.5
+          }
+        ],
+        "inputs": [
+          {
+            "name": "conditioning",
+            "link": 124
+          },
+          {
+            "name": "guidance",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "type": "VAELoader",
+        "title": "",
+        "widgets": [
+          {
+            "name": "vae_name",
+            "value": "Flux\\flux_ae.safetensors"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "vae_name",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "type": "SamplerCustomAdvanced",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "noise",
+            "link": 37
+          },
+          {
+            "name": "guider",
+            "link": 30
+          },
+          {
+            "name": "sampler",
+            "link": 19
+          },
+          {
+            "name": "sigmas",
+            "link": 20
+          },
+          {
+            "name": "latent_image",
+            "link": 23
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "type": "VAEDecode",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "samples",
+            "link": 24
+          },
+          {
+            "name": "vae",
+            "link": 135
+          }
+        ]
+      },
+      {
+        "id": 51,
+        "type": "PrimitiveInt",
+        "title": "高度",
+        "widgets": [
+          {
+            "name": "value",
+            "value": 1280
+          }
+        ],
+        "inputs": [
+          {
+            "name": "value",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 50,
+        "type": "PrimitiveInt",
+        "title": "宽度",
+        "widgets": [
+          {
+            "name": "value",
+            "value": 768
+          }
+        ],
+        "inputs": [
+          {
+            "name": "value",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "type": "CLIPTextEncode",
+        "title": "",
+        "widgets": [
+          {
+            "name": "text",
+            "value": "a futuristic soldier wearing a heavy submarine mech suit with bulky armour plates, covered by black goo, struggling in a pool of black goo"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "clip",
+            "link": 142
+          },
+          {
+            "name": "text",
+            "link": 153
+          }
+        ]
+      },
+      {
+        "id": 33,
+        "type": "Seed (rgthree)",
+        "title": "",
+        "widgets": [],
+        "inputs": []
+      },
+      {
+        "id": 11,
+        "type": "DualCLIPLoader",
+        "title": "",
+        "widgets": [
+          {
+            "name": "clip_name1",
+            "value": "T5XXL\\t5xxl_fp16.safetensors"
+          },
+          {
+            "name": "clip_name2",
+            "value": "CLIP-L\\ViT-L-14-TEXT-detail-improved-hiT-GmP-TE-only-HF.safetensors"
+          },
+          {
+            "name": "type",
+            "value": "flux"
+          },
+          {
+            "name": "device",
+            "value": "default"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "clip_name1",
+            "link": null
+          },
+          {
+            "name": "clip_name2",
+            "link": null
+          },
+          {
+            "name": "type",
+            "link": null
+          },
+          {
+            "name": "device",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 27,
+        "type": "Image Save",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "images",
+            "link": 42
+          },
+          {
+            "name": "output_path",
+            "link": null
+          },
+          {
+            "name": "filename_prefix",
+            "link": null
+          },
+          {
+            "name": "filename_delimiter",
+            "link": null
+          },
+          {
+            "name": "filename_number_padding",
+            "link": null
+          },
+          {
+            "name": "filename_number_start",
+            "link": null
+          },
+          {
+            "name": "extension",
+            "link": null
+          },
+          {
+            "name": "dpi",
+            "link": null
+          },
+          {
+            "name": "quality",
+            "link": null
+          },
+          {
+            "name": "optimize_image",
+            "link": null
+          },
+          {
+            "name": "lossless_webp",
+            "link": null
+          },
+          {
+            "name": "overwrite_mode",
+            "link": null
+          },
+          {
+            "name": "show_history",
+            "link": null
+          },
+          {
+            "name": "show_history_by_prefix",
+            "link": null
+          },
+          {
+            "name": "embed_workflow",
+            "link": null
+          },
+          {
+            "name": "show_previews",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 52,
+        "type": "TIPO",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "tags",
+            "link": 152
+          },
+          {
+            "name": "nl_prompt",
+            "link": null
+          },
+          {
+            "name": "ban_tags",
+            "link": null
+          },
+          {
+            "name": "tipo_model",
+            "link": null
+          },
+          {
+            "name": "format",
+            "link": null
+          },
+          {
+            "name": "width",
+            "link": 155
+          },
+          {
+            "name": "height",
+            "link": 154
+          },
+          {
+            "name": "temperature",
+            "link": null
+          },
+          {
+            "name": "top_p",
+            "link": null
+          },
+          {
+            "name": "min_p",
+            "link": null
+          },
+          {
+            "name": "top_k",
+            "link": null
+          },
+          {
+            "name": "tag_length",
+            "link": null
+          },
+          {
+            "name": "nl_length",
+            "link": null
+          },
+          {
+            "name": "seed",
+            "link": 156
+          },
+          {
+            "name": "device",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 49,
+        "type": "SDXLPromptStyler",
+        "title": "Prompt Styler",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "text_positive",
+            "link": null
+          },
+          {
+            "name": "text_negative",
+            "link": null
+          },
+          {
+            "name": "style",
+            "link": null
+          },
+          {
+            "name": "log_prompt",
+            "link": null
+          },
+          {
+            "name": "style_positive",
+            "link": null
+          },
+          {
+            "name": "style_negative",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "type": "EmptyLatentImage",
+        "title": "",
+        "widgets": [
+          {
+            "name": "width",
+            "value": 768
+          },
+          {
+            "name": "height",
+            "value": 1280
+          },
+          {
+            "name": "batch_size",
+            "value": 4
+          }
+        ],
+        "inputs": [
+          {
+            "name": "width",
+            "link": 146
+          },
+          {
+            "name": "height",
+            "link": 147
+          },
+          {
+            "name": "batch_size",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 29,
+        "type": "UnetLoaderGGUFAdvanced",
+        "title": "",
+        "widgets": [
+          {
+            "name": "unet_name",
+            "value": "FLUX\\artsyLite_v1Q4KS.gguf"
+          },
+          {
+            "name": "dequant_dtype",
+            "value": "bfloat16"
+          },
+          {
+            "name": "patch_dtype",
+            "value": "bfloat16"
+          },
+          {
+            "name": "patch_on_device",
+            "value": true
+          }
+        ],
+        "inputs": [
+          {
+            "name": "unet_name",
+            "link": null
+          },
+          {
+            "name": "dequant_dtype",
+            "link": null
+          },
+          {
+            "name": "patch_dtype",
+            "link": null
+          },
+          {
+            "name": "patch_on_device",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "type": "UNETLoader",
+        "title": "",
+        "widgets": [
+          {
+            "name": "unet_name",
+            "value": "FLUX\\artsyVibe_v2FP8.safetensors"
+          },
+          {
+            "name": "weight_dtype",
+            "value": "default"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "unet_name",
+            "link": null
+          },
+          {
+            "name": "weight_dtype",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 30,
+        "type": "CheckpointLoaderSimple",
+        "title": "",
+        "widgets": [
+          {
+            "name": "ckpt_name",
+            "value": "z_flux\\JjdoeFlux_v10.safetensors"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "ckpt_name",
+            "link": null
+          }
+        ]
+      }
+    ],
+    "links": {
+      "19": {
+        "origin_id": 16,
+        "origin_slot": 0,
+        "target_id": 13,
+        "target_slot": 2
+      },
+      "20": {
+        "origin_id": 17,
+        "origin_slot": 0,
+        "target_id": 13,
+        "target_slot": 3
+      },
+      "23": {
+        "origin_id": 5,
+        "origin_slot": 0,
+        "target_id": 13,
+        "target_slot": 4
+      },
+      "24": {
+        "origin_id": 13,
+        "origin_slot": 0,
+        "target_id": 8,
+        "target_slot": 0
+      },
+      "30": {
+        "origin_id": 22,
+        "origin_slot": 0,
+        "target_id": 13,
+        "target_slot": 1
+      },
+      "37": {
+        "origin_id": 25,
+        "origin_slot": 0,
+        "target_id": 13,
+        "target_slot": 0
+      },
+      "42": {
+        "origin_id": 8,
+        "origin_slot": 0,
+        "target_id": 27,
+        "target_slot": 0
+      },
+      "79": {
+        "origin_id": 33,
+        "origin_slot": 0,
+        "target_id": 25,
+        "target_slot": 0
+      },
+      "124": {
+        "origin_id": 6,
+        "origin_slot": 0,
+        "target_id": 45,
+        "target_slot": 0
+      },
+      "125": {
+        "origin_id": 45,
+        "origin_slot": 0,
+        "target_id": 22,
+        "target_slot": 1
+      },
+      "126": {
+        "origin_id": 38,
+        "origin_slot": 0,
+        "target_id": 46,
+        "target_slot": 0
+      },
+      "127": {
+        "origin_id": 46,
+        "origin_slot": 0,
+        "target_id": 17,
+        "target_slot": 0
+      },
+      "128": {
+        "origin_id": 46,
+        "origin_slot": 0,
+        "target_id": 22,
+        "target_slot": 0
+      },
+      "135": {
+        "origin_id": 10,
+        "origin_slot": 0,
+        "target_id": 8,
+        "target_slot": 1
+      },
+      "142": {
+        "origin_id": 11,
+        "origin_slot": 0,
+        "target_id": 6,
+        "target_slot": 0
+      },
+      "146": {
+        "origin_id": 50,
+        "origin_slot": 0,
+        "target_id": 5,
+        "target_slot": 0
+      },
+      "147": {
+        "origin_id": 51,
+        "origin_slot": 0,
+        "target_id": 5,
+        "target_slot": 1
+      },
+      "148": {
+        "origin_id": 50,
+        "origin_slot": 0,
+        "target_id": 46,
+        "target_slot": 3
+      },
+      "149": {
+        "origin_id": 51,
+        "origin_slot": 0,
+        "target_id": 46,
+        "target_slot": 4
+      },
+      "152": {
+        "origin_id": 49,
+        "origin_slot": 0,
+        "target_id": 52,
+        "target_slot": 0
+      },
+      "153": {
+        "origin_id": 52,
+        "origin_slot": 0,
+        "target_id": 6,
+        "target_slot": 1
+      },
+      "154": {
+        "origin_id": 51,
+        "origin_slot": 0,
+        "target_id": 52,
+        "target_slot": 6
+      },
+      "155": {
+        "origin_id": 50,
+        "origin_slot": 0,
+        "target_id": 52,
+        "target_slot": 5
+      },
+      "156": {
+        "origin_id": 33,
+        "origin_slot": 0,
+        "target_id": 52,
+        "target_slot": 13
+      },
+      "157": {
+        "origin_id": 30,
+        "origin_slot": 0,
+        "target_id": 38,
+        "target_slot": 0
+      }
+    }
+  }
+}

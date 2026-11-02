@@ -1,0 +1,2158 @@
+{
+  "sample": "sdxl-local",
+  "source": "SDXL.json",
+  "graph": {
+    "nodes": [
+      {
+        "id": 308,
+        "type": "VAEDecode",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "samples",
+            "link": 1070
+          },
+          {
+            "name": "vae",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 439,
+        "type": "Reroute",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "",
+            "link": 1224
+          }
+        ]
+      },
+      {
+        "id": 440,
+        "type": "Reroute",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "",
+            "link": 1175
+          }
+        ]
+      },
+      {
+        "id": 144,
+        "type": "SDXLPromptStyler",
+        "title": "Prompt Styler",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "text_positive",
+            "link": null
+          },
+          {
+            "name": "text_negative",
+            "link": null
+          },
+          {
+            "name": "style",
+            "link": null
+          },
+          {
+            "name": "log_prompt",
+            "link": null
+          },
+          {
+            "name": "style_positive",
+            "link": null
+          },
+          {
+            "name": "style_negative",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 413,
+        "type": "CheckpointLoaderSimple",
+        "title": "",
+        "widgets": [
+          {
+            "name": "ckpt_name",
+            "value": "XL\\Base-Special\\againmixsdxl_v10.safetensors"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "ckpt_name",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 332,
+        "type": "VAEEncode",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "pixels",
+            "link": 894
+          },
+          {
+            "name": "vae",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 331,
+        "type": "ImageScaleBy",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "image",
+            "link": 893
+          },
+          {
+            "name": "upscale_method",
+            "link": null
+          },
+          {
+            "name": "scale_by",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 442,
+        "type": "DualCLIPLoader",
+        "title": "",
+        "widgets": [
+          {
+            "name": "clip_name1",
+            "value": "CLIP-L\\noMERGEUniversalCLIPFLUX_illustriousBaseCLIPL.safetensors"
+          },
+          {
+            "name": "clip_name2",
+            "value": "CLIP-L\\noMERGEUniversalCLIPFLUX_illustriousBaseCLIPG.safetensors"
+          },
+          {
+            "name": "type",
+            "value": "sdxl"
+          },
+          {
+            "name": "device",
+            "value": "default"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "clip_name1",
+            "link": null
+          },
+          {
+            "name": "clip_name2",
+            "link": null
+          },
+          {
+            "name": "type",
+            "link": null
+          },
+          {
+            "name": "device",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 172,
+        "type": "Image Save",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "images",
+            "link": 828
+          },
+          {
+            "name": "output_path",
+            "link": null
+          },
+          {
+            "name": "filename_prefix",
+            "link": null
+          },
+          {
+            "name": "filename_delimiter",
+            "link": null
+          },
+          {
+            "name": "filename_number_padding",
+            "link": null
+          },
+          {
+            "name": "filename_number_start",
+            "link": null
+          },
+          {
+            "name": "extension",
+            "link": null
+          },
+          {
+            "name": "dpi",
+            "link": null
+          },
+          {
+            "name": "quality",
+            "link": null
+          },
+          {
+            "name": "optimize_image",
+            "link": null
+          },
+          {
+            "name": "lossless_webp",
+            "link": null
+          },
+          {
+            "name": "overwrite_mode",
+            "link": null
+          },
+          {
+            "name": "show_history",
+            "link": null
+          },
+          {
+            "name": "show_history_by_prefix",
+            "link": null
+          },
+          {
+            "name": "embed_workflow",
+            "link": null
+          },
+          {
+            "name": "show_previews",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 434,
+        "type": "ImagesGridByColumns",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "images",
+            "link": 1144
+          },
+          {
+            "name": "annotation",
+            "link": null
+          },
+          {
+            "name": "gap",
+            "link": null
+          },
+          {
+            "name": "max_columns",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 437,
+        "type": "Image Save",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "images",
+            "link": 1148
+          },
+          {
+            "name": "output_path",
+            "link": null
+          },
+          {
+            "name": "filename_prefix",
+            "link": null
+          },
+          {
+            "name": "filename_delimiter",
+            "link": null
+          },
+          {
+            "name": "filename_number_padding",
+            "link": null
+          },
+          {
+            "name": "filename_number_start",
+            "link": null
+          },
+          {
+            "name": "extension",
+            "link": null
+          },
+          {
+            "name": "dpi",
+            "link": null
+          },
+          {
+            "name": "quality",
+            "link": null
+          },
+          {
+            "name": "optimize_image",
+            "link": null
+          },
+          {
+            "name": "lossless_webp",
+            "link": null
+          },
+          {
+            "name": "overwrite_mode",
+            "link": null
+          },
+          {
+            "name": "show_history",
+            "link": null
+          },
+          {
+            "name": "show_history_by_prefix",
+            "link": null
+          },
+          {
+            "name": "embed_workflow",
+            "link": null
+          },
+          {
+            "name": "show_previews",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 452,
+        "type": "Reroute",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "",
+            "link": 1329
+          }
+        ]
+      },
+      {
+        "id": 453,
+        "type": "ConditioningCombine",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "conditioning_1",
+            "link": 1327
+          },
+          {
+            "name": "conditioning_2",
+            "link": 1343
+          }
+        ]
+      },
+      {
+        "id": 326,
+        "type": "ShowText|pysssss",
+        "title": "Final Pos Prompt",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "text",
+            "link": 1174
+          }
+        ]
+      },
+      {
+        "id": 327,
+        "type": "ShowText|pysssss",
+        "title": "Final Neg Prompt",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "text",
+            "link": 1176
+          }
+        ]
+      },
+      {
+        "id": 451,
+        "type": "Reroute",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "",
+            "link": 1332
+          }
+        ]
+      },
+      {
+        "id": 421,
+        "type": "CLIPTextEncode",
+        "title": "",
+        "widgets": [
+          {
+            "name": "text",
+            "value": ""
+          }
+        ],
+        "inputs": [
+          {
+            "name": "clip",
+            "link": null
+          },
+          {
+            "name": "text",
+            "link": 1173
+          }
+        ]
+      },
+      {
+        "id": 422,
+        "type": "CLIPTextEncode",
+        "title": "",
+        "widgets": [
+          {
+            "name": "text",
+            "value": ""
+          }
+        ],
+        "inputs": [
+          {
+            "name": "clip",
+            "link": null
+          },
+          {
+            "name": "text",
+            "link": 1177
+          }
+        ]
+      },
+      {
+        "id": 450,
+        "type": "ApplyLLMToSDXLAdapter",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "llm_hidden_states",
+            "link": 1225
+          },
+          {
+            "name": "llm_adapter",
+            "link": 1228
+          }
+        ]
+      },
+      {
+        "id": 456,
+        "type": "ConditioningSetAreaStrength",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "conditioning",
+            "link": 1342
+          },
+          {
+            "name": "strength",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 457,
+        "type": "ConditioningSetAreaStrength",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "conditioning",
+            "link": 1344
+          },
+          {
+            "name": "strength",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 448,
+        "type": "ApplyLLMToSDXLAdapter",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "llm_hidden_states",
+            "link": 1220
+          },
+          {
+            "name": "llm_adapter",
+            "link": 1219
+          }
+        ]
+      },
+      {
+        "id": 432,
+        "type": "Anything Everywhere",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "anything",
+            "link": 1179
+          },
+          {
+            "name": "anything2",
+            "link": 1296
+          },
+          {
+            "name": "anything3",
+            "link": 1152
+          },
+          {
+            "name": "anything11",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 410,
+        "type": "Seed (rgthree)",
+        "title": "",
+        "widgets": [],
+        "inputs": []
+      },
+      {
+        "id": 429,
+        "type": "ResolutionSelector",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "aspect_ratio",
+            "link": null
+          },
+          {
+            "name": "megapixels",
+            "link": null
+          },
+          {
+            "name": "multiple",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "type": "EmptyLatentImage",
+        "title": "",
+        "widgets": [
+          {
+            "name": "width",
+            "value": 1280
+          },
+          {
+            "name": "height",
+            "value": 768
+          },
+          {
+            "name": "batch_size",
+            "value": 4
+          }
+        ],
+        "inputs": [
+          {
+            "name": "width",
+            "link": 1127
+          },
+          {
+            "name": "height",
+            "link": 1128
+          },
+          {
+            "name": "batch_size",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 369,
+        "type": "RebatchLatents",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "latents",
+            "link": 992
+          },
+          {
+            "name": "batch_size",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 455,
+        "type": "ConditioningCombine",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "conditioning_1",
+            "link": 1330
+          },
+          {
+            "name": "conditioning_2",
+            "link": 1345
+          }
+        ]
+      },
+      {
+        "id": 495,
+        "type": "Reroute",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "",
+            "link": 1400
+          }
+        ]
+      },
+      {
+        "id": 498,
+        "type": "Reroute",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "",
+            "link": 1401
+          }
+        ]
+      },
+      {
+        "id": 501,
+        "type": "ConditioningCombine",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "conditioning_1",
+            "link": 1403
+          },
+          {
+            "name": "conditioning_2",
+            "link": 1404
+          }
+        ]
+      },
+      {
+        "id": 502,
+        "type": "ShowText|pysssss",
+        "title": "Final Pos Prompt",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "text",
+            "link": 1405
+          }
+        ]
+      },
+      {
+        "id": 503,
+        "type": "ShowText|pysssss",
+        "title": "Final Neg Prompt",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "text",
+            "link": 1406
+          }
+        ]
+      },
+      {
+        "id": 507,
+        "type": "CLIPTextEncode",
+        "title": "",
+        "widgets": [
+          {
+            "name": "text",
+            "value": ""
+          }
+        ],
+        "inputs": [
+          {
+            "name": "clip",
+            "link": null
+          },
+          {
+            "name": "text",
+            "link": 1414
+          }
+        ]
+      },
+      {
+        "id": 508,
+        "type": "CLIPTextEncode",
+        "title": "",
+        "widgets": [
+          {
+            "name": "text",
+            "value": ""
+          }
+        ],
+        "inputs": [
+          {
+            "name": "clip",
+            "link": null
+          },
+          {
+            "name": "text",
+            "link": 1415
+          }
+        ]
+      },
+      {
+        "id": 509,
+        "type": "ApplyLLMToSDXLAdapter",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "llm_hidden_states",
+            "link": 1416
+          },
+          {
+            "name": "llm_adapter",
+            "link": 1417
+          }
+        ]
+      },
+      {
+        "id": 510,
+        "type": "ConditioningSetAreaStrength",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "conditioning",
+            "link": 1418
+          },
+          {
+            "name": "strength",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 511,
+        "type": "ConditioningSetAreaStrength",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "conditioning",
+            "link": 1419
+          },
+          {
+            "name": "strength",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 512,
+        "type": "ApplyLLMToSDXLAdapter",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "llm_hidden_states",
+            "link": 1420
+          },
+          {
+            "name": "llm_adapter",
+            "link": 1421
+          }
+        ]
+      },
+      {
+        "id": 513,
+        "type": "ConditioningCombine",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "conditioning_1",
+            "link": 1422
+          },
+          {
+            "name": "conditioning_2",
+            "link": 1423
+          }
+        ]
+      },
+      {
+        "id": 504,
+        "type": "Reroute",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "",
+            "link": 1407
+          }
+        ]
+      },
+      {
+        "id": 500,
+        "type": "Reroute",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "",
+            "link": 1402
+          }
+        ]
+      },
+      {
+        "id": 337,
+        "type": "VAEDecode",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "samples",
+            "link": 1074
+          },
+          {
+            "name": "vae",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 340,
+        "type": "Image Save",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "images",
+            "link": 907
+          },
+          {
+            "name": "output_path",
+            "link": null
+          },
+          {
+            "name": "filename_prefix",
+            "link": null
+          },
+          {
+            "name": "filename_delimiter",
+            "link": null
+          },
+          {
+            "name": "filename_number_padding",
+            "link": null
+          },
+          {
+            "name": "filename_number_start",
+            "link": null
+          },
+          {
+            "name": "extension",
+            "link": null
+          },
+          {
+            "name": "dpi",
+            "link": null
+          },
+          {
+            "name": "quality",
+            "link": null
+          },
+          {
+            "name": "optimize_image",
+            "link": null
+          },
+          {
+            "name": "lossless_webp",
+            "link": null
+          },
+          {
+            "name": "overwrite_mode",
+            "link": null
+          },
+          {
+            "name": "show_history",
+            "link": null
+          },
+          {
+            "name": "show_history_by_prefix",
+            "link": null
+          },
+          {
+            "name": "embed_workflow",
+            "link": null
+          },
+          {
+            "name": "show_previews",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 459,
+        "type": "RebatchImages",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "images",
+            "link": 1355
+          },
+          {
+            "name": "batch_size",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 515,
+        "type": "Image Save",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "images",
+            "link": 1427
+          },
+          {
+            "name": "output_path",
+            "link": null
+          },
+          {
+            "name": "filename_prefix",
+            "link": null
+          },
+          {
+            "name": "filename_delimiter",
+            "link": null
+          },
+          {
+            "name": "filename_number_padding",
+            "link": null
+          },
+          {
+            "name": "filename_number_start",
+            "link": null
+          },
+          {
+            "name": "extension",
+            "link": null
+          },
+          {
+            "name": "dpi",
+            "link": null
+          },
+          {
+            "name": "quality",
+            "link": null
+          },
+          {
+            "name": "optimize_image",
+            "link": null
+          },
+          {
+            "name": "lossless_webp",
+            "link": null
+          },
+          {
+            "name": "overwrite_mode",
+            "link": null
+          },
+          {
+            "name": "show_history",
+            "link": null
+          },
+          {
+            "name": "show_history_by_prefix",
+            "link": null
+          },
+          {
+            "name": "embed_workflow",
+            "link": null
+          },
+          {
+            "name": "show_previews",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 514,
+        "type": "VAEDecode",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "samples",
+            "link": 1426
+          },
+          {
+            "name": "vae",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 463,
+        "type": "VAEEncodeForInpaint",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "pixels",
+            "link": 1360
+          },
+          {
+            "name": "vae",
+            "link": null
+          },
+          {
+            "name": "mask",
+            "link": 1430
+          },
+          {
+            "name": "grow_mask_by",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 465,
+        "type": "PreviewImage",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "images",
+            "link": 1362
+          }
+        ]
+      },
+      {
+        "id": 464,
+        "type": "MaskToImage",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "mask",
+            "link": 1429
+          }
+        ]
+      },
+      {
+        "id": 516,
+        "type": "Mask Smooth Region",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "masks",
+            "link": 1428
+          },
+          {
+            "name": "sigma",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 458,
+        "type": "BboxDetectorCombined_v2",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "bbox_detector",
+            "link": 1358
+          },
+          {
+            "name": "image",
+            "link": 1356
+          },
+          {
+            "name": "threshold",
+            "link": null
+          },
+          {
+            "name": "dilation",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 462,
+        "type": "UltralyticsDetectorProvider",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "model_name",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 499,
+        "type": "SDXLPromptStyler",
+        "title": "Prompt Styler",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "text_positive",
+            "link": null
+          },
+          {
+            "name": "text_negative",
+            "link": null
+          },
+          {
+            "name": "style",
+            "link": null
+          },
+          {
+            "name": "log_prompt",
+            "link": null
+          },
+          {
+            "name": "style_positive",
+            "link": null
+          },
+          {
+            "name": "style_negative",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 505,
+        "type": "LLMTextEncoder",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "model",
+            "link": 1408
+          },
+          {
+            "name": "tokenizer",
+            "link": 1409
+          },
+          {
+            "name": "text",
+            "link": 1410
+          },
+          {
+            "name": "system_prompt",
+            "link": null
+          },
+          {
+            "name": "skip_first",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 506,
+        "type": "LLMTextEncoder",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "model",
+            "link": 1411
+          },
+          {
+            "name": "tokenizer",
+            "link": 1412
+          },
+          {
+            "name": "text",
+            "link": 1413
+          },
+          {
+            "name": "system_prompt",
+            "link": null
+          },
+          {
+            "name": "skip_first",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 449,
+        "type": "LLMTextEncoder",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "model",
+            "link": 1226
+          },
+          {
+            "name": "tokenizer",
+            "link": 1227
+          },
+          {
+            "name": "text",
+            "link": 1229
+          },
+          {
+            "name": "system_prompt",
+            "link": null
+          },
+          {
+            "name": "skip_first",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 445,
+        "type": "LLMTextEncoder",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "model",
+            "link": 1221
+          },
+          {
+            "name": "tokenizer",
+            "link": 1222
+          },
+          {
+            "name": "text",
+            "link": 1223
+          },
+          {
+            "name": "system_prompt",
+            "link": null
+          },
+          {
+            "name": "skip_first",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 446,
+        "type": "LLMModelLoader",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "model_name",
+            "link": null
+          },
+          {
+            "name": "device",
+            "link": null
+          },
+          {
+            "name": "force_reload",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 496,
+        "type": "LLMModelLoader",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "model_name",
+            "link": null
+          },
+          {
+            "name": "device",
+            "link": null
+          },
+          {
+            "name": "force_reload",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 519,
+        "type": "PrimitiveInt",
+        "title": "",
+        "widgets": [
+          {
+            "name": "value",
+            "value": 0
+          }
+        ],
+        "inputs": [
+          {
+            "name": "value",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 395,
+        "type": "KSampler",
+        "title": "",
+        "widgets": [
+          {
+            "name": "seed",
+            "value": 376521619413358
+          },
+          {
+            "name": "control_after_generate",
+            "value": "fixed"
+          },
+          {
+            "name": "steps",
+            "value": 20
+          },
+          {
+            "name": "cfg",
+            "value": 5
+          },
+          {
+            "name": "sampler_name",
+            "value": "euler_ancestral"
+          },
+          {
+            "name": "scheduler",
+            "value": "sgm_uniform"
+          },
+          {
+            "name": "denoise",
+            "value": 1
+          }
+        ],
+        "inputs": [
+          {
+            "name": "model",
+            "link": null
+          },
+          {
+            "name": "positive",
+            "link": 1302
+          },
+          {
+            "name": "negative",
+            "link": 1301
+          },
+          {
+            "name": "latent_image",
+            "link": 1069
+          },
+          {
+            "name": "seed",
+            "link": null
+          },
+          {
+            "name": "steps",
+            "link": null
+          },
+          {
+            "name": "cfg",
+            "link": null
+          },
+          {
+            "name": "sampler_name",
+            "link": null
+          },
+          {
+            "name": "scheduler",
+            "link": null
+          },
+          {
+            "name": "denoise",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 397,
+        "type": "KSampler",
+        "title": "",
+        "widgets": [
+          {
+            "name": "seed",
+            "value": 667027362617731
+          },
+          {
+            "name": "control_after_generate",
+            "value": "fixed"
+          },
+          {
+            "name": "steps",
+            "value": 10
+          },
+          {
+            "name": "cfg",
+            "value": 3
+          },
+          {
+            "name": "sampler_name",
+            "value": "euler_ancestral"
+          },
+          {
+            "name": "scheduler",
+            "value": "sgm_uniform"
+          },
+          {
+            "name": "denoise",
+            "value": 0.5
+          }
+        ],
+        "inputs": [
+          {
+            "name": "model",
+            "link": null
+          },
+          {
+            "name": "positive",
+            "link": 1303
+          },
+          {
+            "name": "negative",
+            "link": 1304
+          },
+          {
+            "name": "latent_image",
+            "link": 1071
+          },
+          {
+            "name": "seed",
+            "link": null
+          },
+          {
+            "name": "steps",
+            "link": null
+          },
+          {
+            "name": "cfg",
+            "link": null
+          },
+          {
+            "name": "sampler_name",
+            "link": null
+          },
+          {
+            "name": "scheduler",
+            "link": null
+          },
+          {
+            "name": "denoise",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 466,
+        "type": "KSampler",
+        "title": "",
+        "widgets": [
+          {
+            "name": "seed",
+            "value": 0
+          },
+          {
+            "name": "control_after_generate",
+            "value": "fixed"
+          },
+          {
+            "name": "steps",
+            "value": 10
+          },
+          {
+            "name": "cfg",
+            "value": 6
+          },
+          {
+            "name": "sampler_name",
+            "value": "euler"
+          },
+          {
+            "name": "scheduler",
+            "value": "sgm_uniform"
+          },
+          {
+            "name": "denoise",
+            "value": 0.30000000000000004
+          }
+        ],
+        "inputs": [
+          {
+            "name": "model",
+            "link": null
+          },
+          {
+            "name": "positive",
+            "link": 1424
+          },
+          {
+            "name": "negative",
+            "link": 1425
+          },
+          {
+            "name": "latent_image",
+            "link": 1375
+          },
+          {
+            "name": "seed",
+            "link": null
+          },
+          {
+            "name": "steps",
+            "link": null
+          },
+          {
+            "name": "cfg",
+            "link": null
+          },
+          {
+            "name": "sampler_name",
+            "link": null
+          },
+          {
+            "name": "scheduler",
+            "link": null
+          },
+          {
+            "name": "denoise",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 447,
+        "type": "LLMAdapterLoader",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "adapter_name",
+            "link": null
+          },
+          {
+            "name": "type",
+            "link": null
+          },
+          {
+            "name": "device",
+            "link": null
+          },
+          {
+            "name": "force_reload",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 497,
+        "type": "LLMAdapterLoader",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "adapter_name",
+            "link": null
+          },
+          {
+            "name": "type",
+            "link": null
+          },
+          {
+            "name": "device",
+            "link": null
+          },
+          {
+            "name": "force_reload",
+            "link": null
+          }
+        ]
+      }
+    ],
+    "links": {
+      "828": {
+        "origin_id": 308,
+        "origin_slot": 0,
+        "target_id": 172,
+        "target_slot": 0
+      },
+      "893": {
+        "origin_id": 308,
+        "origin_slot": 0,
+        "target_id": 331,
+        "target_slot": 0
+      },
+      "894": {
+        "origin_id": 331,
+        "origin_slot": 0,
+        "target_id": 332,
+        "target_slot": 0
+      },
+      "907": {
+        "origin_id": 337,
+        "origin_slot": 0,
+        "target_id": 340,
+        "target_slot": 0
+      },
+      "992": {
+        "origin_id": 5,
+        "origin_slot": 0,
+        "target_id": 369,
+        "target_slot": 0
+      },
+      "1069": {
+        "origin_id": 369,
+        "origin_slot": 0,
+        "target_id": 395,
+        "target_slot": 3
+      },
+      "1070": {
+        "origin_id": 395,
+        "origin_slot": 0,
+        "target_id": 308,
+        "target_slot": 0
+      },
+      "1071": {
+        "origin_id": 332,
+        "origin_slot": 0,
+        "target_id": 397,
+        "target_slot": 3
+      },
+      "1074": {
+        "origin_id": 397,
+        "origin_slot": 0,
+        "target_id": 337,
+        "target_slot": 0
+      },
+      "1127": {
+        "origin_id": 429,
+        "origin_slot": 0,
+        "target_id": 5,
+        "target_slot": 0
+      },
+      "1128": {
+        "origin_id": 429,
+        "origin_slot": 1,
+        "target_id": 5,
+        "target_slot": 1
+      },
+      "1144": {
+        "origin_id": 308,
+        "origin_slot": 0,
+        "target_id": 434,
+        "target_slot": 0
+      },
+      "1148": {
+        "origin_id": 434,
+        "origin_slot": 0,
+        "target_id": 437,
+        "target_slot": 0
+      },
+      "1152": {
+        "origin_id": 413,
+        "origin_slot": 2,
+        "target_id": 432,
+        "target_slot": 2
+      },
+      "1157": {
+        "origin_id": 413,
+        "origin_slot": 2,
+        "target_id": 332,
+        "target_slot": 1
+      },
+      "1158": {
+        "origin_id": 413,
+        "origin_slot": 2,
+        "target_id": 308,
+        "target_slot": 1
+      },
+      "1159": {
+        "origin_id": 413,
+        "origin_slot": 2,
+        "target_id": 337,
+        "target_slot": 1
+      },
+      "1160": {
+        "origin_id": 410,
+        "origin_slot": 0,
+        "target_id": 319,
+        "target_slot": 1
+      },
+      "1161": {
+        "origin_id": 413,
+        "origin_slot": 1,
+        "target_id": 421,
+        "target_slot": 0
+      },
+      "1162": {
+        "origin_id": 413,
+        "origin_slot": 1,
+        "target_id": 422,
+        "target_slot": 0
+      },
+      "1163": {
+        "origin_id": 413,
+        "origin_slot": 0,
+        "target_id": 397,
+        "target_slot": 0
+      },
+      "1164": {
+        "origin_id": 410,
+        "origin_slot": 0,
+        "target_id": 397,
+        "target_slot": 4
+      },
+      "1165": {
+        "origin_id": 413,
+        "origin_slot": 0,
+        "target_id": 395,
+        "target_slot": 0
+      },
+      "1166": {
+        "origin_id": 410,
+        "origin_slot": 0,
+        "target_id": 395,
+        "target_slot": 4
+      },
+      "1173": {
+        "origin_id": 439,
+        "origin_slot": 0,
+        "target_id": 421,
+        "target_slot": 1
+      },
+      "1174": {
+        "origin_id": 439,
+        "origin_slot": 0,
+        "target_id": 326,
+        "target_slot": 0
+      },
+      "1175": {
+        "origin_id": 144,
+        "origin_slot": 1,
+        "target_id": 440,
+        "target_slot": 0
+      },
+      "1176": {
+        "origin_id": 440,
+        "origin_slot": 0,
+        "target_id": 327,
+        "target_slot": 0
+      },
+      "1177": {
+        "origin_id": 440,
+        "origin_slot": 0,
+        "target_id": 422,
+        "target_slot": 1
+      },
+      "1179": {
+        "origin_id": 413,
+        "origin_slot": 0,
+        "target_id": 432,
+        "target_slot": 0
+      },
+      "1219": {
+        "origin_id": 447,
+        "origin_slot": 0,
+        "target_id": 448,
+        "target_slot": 1
+      },
+      "1220": {
+        "origin_id": 445,
+        "origin_slot": 0,
+        "target_id": 448,
+        "target_slot": 0
+      },
+      "1221": {
+        "origin_id": 446,
+        "origin_slot": 0,
+        "target_id": 445,
+        "target_slot": 0
+      },
+      "1222": {
+        "origin_id": 446,
+        "origin_slot": 1,
+        "target_id": 445,
+        "target_slot": 1
+      },
+      "1223": {
+        "origin_id": 439,
+        "origin_slot": 0,
+        "target_id": 445,
+        "target_slot": 2
+      },
+      "1224": {
+        "origin_id": 144,
+        "origin_slot": 0,
+        "target_id": 439,
+        "target_slot": 0
+      },
+      "1225": {
+        "origin_id": 449,
+        "origin_slot": 0,
+        "target_id": 450,
+        "target_slot": 0
+      },
+      "1226": {
+        "origin_id": 446,
+        "origin_slot": 0,
+        "target_id": 449,
+        "target_slot": 0
+      },
+      "1227": {
+        "origin_id": 446,
+        "origin_slot": 1,
+        "target_id": 449,
+        "target_slot": 1
+      },
+      "1228": {
+        "origin_id": 447,
+        "origin_slot": 0,
+        "target_id": 450,
+        "target_slot": 1
+      },
+      "1229": {
+        "origin_id": 440,
+        "origin_slot": 0,
+        "target_id": 449,
+        "target_slot": 2
+      },
+      "1296": {
+        "origin_id": 442,
+        "origin_slot": 0,
+        "target_id": 432,
+        "target_slot": 1
+      },
+      "1301": {
+        "origin_id": 452,
+        "origin_slot": 0,
+        "target_id": 395,
+        "target_slot": 2
+      },
+      "1302": {
+        "origin_id": 451,
+        "origin_slot": 0,
+        "target_id": 395,
+        "target_slot": 1
+      },
+      "1303": {
+        "origin_id": 451,
+        "origin_slot": 0,
+        "target_id": 397,
+        "target_slot": 1
+      },
+      "1304": {
+        "origin_id": 452,
+        "origin_slot": 0,
+        "target_id": 397,
+        "target_slot": 2
+      },
+      "1327": {
+        "origin_id": 422,
+        "origin_slot": 0,
+        "target_id": 453,
+        "target_slot": 0
+      },
+      "1329": {
+        "origin_id": 453,
+        "origin_slot": 0,
+        "target_id": 452,
+        "target_slot": 0
+      },
+      "1330": {
+        "origin_id": 421,
+        "origin_slot": 0,
+        "target_id": 455,
+        "target_slot": 0
+      },
+      "1332": {
+        "origin_id": 455,
+        "origin_slot": 0,
+        "target_id": 451,
+        "target_slot": 0
+      },
+      "1342": {
+        "origin_id": 450,
+        "origin_slot": 0,
+        "target_id": 456,
+        "target_slot": 0
+      },
+      "1343": {
+        "origin_id": 456,
+        "origin_slot": 0,
+        "target_id": 453,
+        "target_slot": 1
+      },
+      "1344": {
+        "origin_id": 448,
+        "origin_slot": 0,
+        "target_id": 457,
+        "target_slot": 0
+      },
+      "1345": {
+        "origin_id": 457,
+        "origin_slot": 0,
+        "target_id": 455,
+        "target_slot": 1
+      },
+      "1355": {
+        "origin_id": 337,
+        "origin_slot": 0,
+        "target_id": 459,
+        "target_slot": 0
+      },
+      "1356": {
+        "origin_id": 459,
+        "origin_slot": 0,
+        "target_id": 458,
+        "target_slot": 1
+      },
+      "1358": {
+        "origin_id": 462,
+        "origin_slot": 0,
+        "target_id": 458,
+        "target_slot": 0
+      },
+      "1360": {
+        "origin_id": 459,
+        "origin_slot": 0,
+        "target_id": 463,
+        "target_slot": 0
+      },
+      "1362": {
+        "origin_id": 464,
+        "origin_slot": 0,
+        "target_id": 465,
+        "target_slot": 0
+      },
+      "1375": {
+        "origin_id": 463,
+        "origin_slot": 0,
+        "target_id": 466,
+        "target_slot": 3
+      },
+      "1400": {
+        "origin_id": 499,
+        "origin_slot": 0,
+        "target_id": 495,
+        "target_slot": 0
+      },
+      "1401": {
+        "origin_id": 499,
+        "origin_slot": 1,
+        "target_id": 498,
+        "target_slot": 0
+      },
+      "1402": {
+        "origin_id": 501,
+        "origin_slot": 0,
+        "target_id": 500,
+        "target_slot": 0
+      },
+      "1403": {
+        "origin_id": 508,
+        "origin_slot": 0,
+        "target_id": 501,
+        "target_slot": 0
+      },
+      "1404": {
+        "origin_id": 510,
+        "origin_slot": 0,
+        "target_id": 501,
+        "target_slot": 1
+      },
+      "1405": {
+        "origin_id": 495,
+        "origin_slot": 0,
+        "target_id": 502,
+        "target_slot": 0
+      },
+      "1406": {
+        "origin_id": 498,
+        "origin_slot": 0,
+        "target_id": 503,
+        "target_slot": 0
+      },
+      "1407": {
+        "origin_id": 513,
+        "origin_slot": 0,
+        "target_id": 504,
+        "target_slot": 0
+      },
+      "1408": {
+        "origin_id": 496,
+        "origin_slot": 0,
+        "target_id": 505,
+        "target_slot": 0
+      },
+      "1409": {
+        "origin_id": 496,
+        "origin_slot": 1,
+        "target_id": 505,
+        "target_slot": 1
+      },
+      "1410": {
+        "origin_id": 495,
+        "origin_slot": 0,
+        "target_id": 505,
+        "target_slot": 2
+      },
+      "1411": {
+        "origin_id": 496,
+        "origin_slot": 0,
+        "target_id": 506,
+        "target_slot": 0
+      },
+      "1412": {
+        "origin_id": 496,
+        "origin_slot": 1,
+        "target_id": 506,
+        "target_slot": 1
+      },
+      "1413": {
+        "origin_id": 498,
+        "origin_slot": 0,
+        "target_id": 506,
+        "target_slot": 2
+      },
+      "1414": {
+        "origin_id": 495,
+        "origin_slot": 0,
+        "target_id": 507,
+        "target_slot": 1
+      },
+      "1415": {
+        "origin_id": 498,
+        "origin_slot": 0,
+        "target_id": 508,
+        "target_slot": 1
+      },
+      "1416": {
+        "origin_id": 506,
+        "origin_slot": 0,
+        "target_id": 509,
+        "target_slot": 0
+      },
+      "1417": {
+        "origin_id": 497,
+        "origin_slot": 0,
+        "target_id": 509,
+        "target_slot": 1
+      },
+      "1418": {
+        "origin_id": 509,
+        "origin_slot": 0,
+        "target_id": 510,
+        "target_slot": 0
+      },
+      "1419": {
+        "origin_id": 512,
+        "origin_slot": 0,
+        "target_id": 511,
+        "target_slot": 0
+      },
+      "1420": {
+        "origin_id": 505,
+        "origin_slot": 0,
+        "target_id": 512,
+        "target_slot": 0
+      },
+      "1421": {
+        "origin_id": 497,
+        "origin_slot": 0,
+        "target_id": 512,
+        "target_slot": 1
+      },
+      "1422": {
+        "origin_id": 507,
+        "origin_slot": 0,
+        "target_id": 513,
+        "target_slot": 0
+      },
+      "1423": {
+        "origin_id": 511,
+        "origin_slot": 0,
+        "target_id": 513,
+        "target_slot": 1
+      },
+      "1424": {
+        "origin_id": 504,
+        "origin_slot": 0,
+        "target_id": 466,
+        "target_slot": 1
+      },
+      "1425": {
+        "origin_id": 500,
+        "origin_slot": 0,
+        "target_id": 466,
+        "target_slot": 2
+      },
+      "1426": {
+        "origin_id": 466,
+        "origin_slot": 0,
+        "target_id": 514,
+        "target_slot": 0
+      },
+      "1427": {
+        "origin_id": 514,
+        "origin_slot": 0,
+        "target_id": 515,
+        "target_slot": 0
+      },
+      "1428": {
+        "origin_id": 458,
+        "origin_slot": 0,
+        "target_id": 516,
+        "target_slot": 0
+      },
+      "1429": {
+        "origin_id": 516,
+        "origin_slot": 0,
+        "target_id": 464,
+        "target_slot": 0
+      },
+      "1430": {
+        "origin_id": 516,
+        "origin_slot": 0,
+        "target_id": 463,
+        "target_slot": 2
+      }
+    }
+  }
+}

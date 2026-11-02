@@ -1,0 +1,364 @@
+{
+  "sample": "z-image-local",
+  "source": "z_image.json",
+  "graph": {
+    "nodes": [
+      {
+        "id": 70,
+        "type": "ModelSamplingAuraFlow",
+        "title": "",
+        "widgets": [
+          {
+            "name": "shift",
+            "value": 3
+          }
+        ],
+        "inputs": [
+          {
+            "name": "model",
+            "link": 71
+          },
+          {
+            "name": "shift",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 35,
+        "type": "MarkdownNote",
+        "title": "Model link (for local users)",
+        "widgets": [],
+        "inputs": []
+      },
+      {
+        "id": 71,
+        "type": "CLIPTextEncode",
+        "title": "CLIP Text Encode (Negative Prompt)",
+        "widgets": [
+          {
+            "name": "text",
+            "value": ""
+          }
+        ],
+        "inputs": [
+          {
+            "name": "clip",
+            "link": 82
+          },
+          {
+            "name": "text",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 72,
+        "type": "MarkdownNote",
+        "title": "Settings",
+        "widgets": [],
+        "inputs": []
+      },
+      {
+        "id": 65,
+        "type": "VAEDecode",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "samples",
+            "link": 72
+          },
+          {
+            "name": "vae",
+            "link": 73
+          }
+        ]
+      },
+      {
+        "id": 62,
+        "type": "CLIPLoader",
+        "title": "",
+        "widgets": [
+          {
+            "name": "clip_name",
+            "value": "ZImage\\qwen_3_4b.safetensors"
+          },
+          {
+            "name": "type",
+            "value": "lumina2"
+          },
+          {
+            "name": "device",
+            "value": "default"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "clip_name",
+            "link": null
+          },
+          {
+            "name": "type",
+            "link": null
+          },
+          {
+            "name": "device",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 63,
+        "type": "VAELoader",
+        "title": "",
+        "widgets": [
+          {
+            "name": "vae_name",
+            "value": "Flux\\flux_ae.safetensors"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "vae_name",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 68,
+        "type": "EmptySD3LatentImage",
+        "title": "",
+        "widgets": [
+          {
+            "name": "width",
+            "value": 1024
+          },
+          {
+            "name": "height",
+            "value": 1024
+          },
+          {
+            "name": "batch_size",
+            "value": 4
+          }
+        ],
+        "inputs": [
+          {
+            "name": "width",
+            "link": null
+          },
+          {
+            "name": "height",
+            "link": null
+          },
+          {
+            "name": "batch_size",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "type": "SaveImage",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "images",
+            "link": 79
+          },
+          {
+            "name": "filename_prefix",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 67,
+        "type": "CLIPTextEncode",
+        "title": "CLIP Text Encode (Positive Prompt)",
+        "widgets": [
+          {
+            "name": "text",
+            "value": "anime style picture of a humanoid panda that has mechanical arms and legs wearing short sleeves red hoodie with \"404\" writing on it, black shorts with white stripes, waterproof boots, labor gloves, happy sitting on the side of the road in a…"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "clip",
+            "link": 78
+          },
+          {
+            "name": "text",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 69,
+        "type": "KSampler",
+        "title": "",
+        "widgets": [
+          {
+            "name": "seed",
+            "value": 909396553000551
+          },
+          {
+            "name": "control_after_generate",
+            "value": "fixed"
+          },
+          {
+            "name": "steps",
+            "value": 50
+          },
+          {
+            "name": "cfg",
+            "value": 5
+          },
+          {
+            "name": "sampler_name",
+            "value": "euler_ancestral"
+          },
+          {
+            "name": "scheduler",
+            "value": "bong_tangent"
+          },
+          {
+            "name": "denoise",
+            "value": 1
+          }
+        ],
+        "inputs": [
+          {
+            "name": "model",
+            "link": 74
+          },
+          {
+            "name": "positive",
+            "link": 75
+          },
+          {
+            "name": "negative",
+            "link": 83
+          },
+          {
+            "name": "latent_image",
+            "link": 77
+          },
+          {
+            "name": "seed",
+            "link": null
+          },
+          {
+            "name": "steps",
+            "link": null
+          },
+          {
+            "name": "cfg",
+            "link": null
+          },
+          {
+            "name": "sampler_name",
+            "link": null
+          },
+          {
+            "name": "scheduler",
+            "link": null
+          },
+          {
+            "name": "denoise",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 66,
+        "type": "UNETLoader",
+        "title": "",
+        "widgets": [
+          {
+            "name": "unet_name",
+            "value": "ZImage\\z_image_bf16.safetensors"
+          },
+          {
+            "name": "weight_dtype",
+            "value": "default"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "unet_name",
+            "link": null
+          },
+          {
+            "name": "weight_dtype",
+            "link": null
+          }
+        ]
+      }
+    ],
+    "links": {
+      "71": {
+        "origin_id": 66,
+        "origin_slot": 0,
+        "target_id": 70,
+        "target_slot": 0
+      },
+      "72": {
+        "origin_id": 69,
+        "origin_slot": 0,
+        "target_id": 65,
+        "target_slot": 0
+      },
+      "73": {
+        "origin_id": 63,
+        "origin_slot": 0,
+        "target_id": 65,
+        "target_slot": 1
+      },
+      "74": {
+        "origin_id": 70,
+        "origin_slot": 0,
+        "target_id": 69,
+        "target_slot": 0
+      },
+      "75": {
+        "origin_id": 67,
+        "origin_slot": 0,
+        "target_id": 69,
+        "target_slot": 1
+      },
+      "77": {
+        "origin_id": 68,
+        "origin_slot": 0,
+        "target_id": 69,
+        "target_slot": 3
+      },
+      "78": {
+        "origin_id": 62,
+        "origin_slot": 0,
+        "target_id": 67,
+        "target_slot": 0
+      },
+      "79": {
+        "origin_id": 65,
+        "origin_slot": 0,
+        "target_id": 9,
+        "target_slot": 0
+      },
+      "82": {
+        "origin_id": 62,
+        "origin_slot": 0,
+        "target_id": 71,
+        "target_slot": 0
+      },
+      "83": {
+        "origin_id": 71,
+        "origin_slot": 0,
+        "target_id": 69,
+        "target_slot": 2
+      }
+    }
+  }
+}

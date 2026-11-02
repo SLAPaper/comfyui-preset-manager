@@ -1,0 +1,225 @@
+{
+  "sample": "flux-schnell-template",
+  "source": "flux_schnell.json",
+  "graph": {
+    "nodes": [
+      {
+        "id": 33,
+        "type": "CLIPTextEncode",
+        "title": "CLIP Text Encode (Negative Prompt)",
+        "widgets": [
+          {
+            "name": "text",
+            "value": ""
+          }
+        ],
+        "inputs": [
+          {
+            "name": "clip",
+            "link": 54
+          }
+        ]
+      },
+      {
+        "id": 27,
+        "type": "EmptySD3LatentImage",
+        "title": "",
+        "widgets": [
+          {
+            "name": "width",
+            "value": 1024
+          },
+          {
+            "name": "height",
+            "value": 1024
+          },
+          {
+            "name": "batch_size",
+            "value": 1
+          }
+        ],
+        "inputs": []
+      },
+      {
+        "id": 8,
+        "type": "VAEDecode",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "samples",
+            "link": 52
+          },
+          {
+            "name": "vae",
+            "link": 46
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "type": "SaveImage",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "images",
+            "link": 9
+          }
+        ]
+      },
+      {
+        "id": 31,
+        "type": "KSampler",
+        "title": "",
+        "widgets": [
+          {
+            "name": "seed",
+            "value": 173805153958730
+          },
+          {
+            "name": "control_after_generate",
+            "value": "randomize"
+          },
+          {
+            "name": "steps",
+            "value": 4
+          },
+          {
+            "name": "cfg",
+            "value": 1
+          },
+          {
+            "name": "sampler_name",
+            "value": "euler"
+          },
+          {
+            "name": "scheduler",
+            "value": "simple"
+          },
+          {
+            "name": "denoise",
+            "value": 1
+          }
+        ],
+        "inputs": [
+          {
+            "name": "model",
+            "link": 47
+          },
+          {
+            "name": "positive",
+            "link": 58
+          },
+          {
+            "name": "negative",
+            "link": 55
+          },
+          {
+            "name": "latent_image",
+            "link": 51
+          }
+        ]
+      },
+      {
+        "id": 30,
+        "type": "CheckpointLoaderSimple",
+        "title": "",
+        "widgets": [
+          {
+            "name": "ckpt_name",
+            "value": "flux1-schnell-fp8.safetensors"
+          }
+        ],
+        "inputs": []
+      },
+      {
+        "id": 6,
+        "type": "CLIPTextEncode",
+        "title": "CLIP Text Encode (Positive Prompt)",
+        "widgets": [
+          {
+            "name": "text",
+            "value": "a bottle with a beautiful rainbow galaxy inside it on top of a wooden table in the middle of a modern kitchen beside a plate of vegetables and mushrooms and a wine glasse that contains a planet earth with a plate with a half eaten apple pie…"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "clip",
+            "link": 45
+          }
+        ]
+      },
+      {
+        "id": 34,
+        "type": "Note",
+        "title": "",
+        "widgets": [],
+        "inputs": []
+      },
+      {
+        "id": 37,
+        "type": "MarkdownNote",
+        "title": "",
+        "widgets": [],
+        "inputs": []
+      }
+    ],
+    "links": {
+      "9": {
+        "origin_id": 8,
+        "origin_slot": 0,
+        "target_id": 9,
+        "target_slot": 0
+      },
+      "45": {
+        "origin_id": 30,
+        "origin_slot": 1,
+        "target_id": 6,
+        "target_slot": 0
+      },
+      "46": {
+        "origin_id": 30,
+        "origin_slot": 2,
+        "target_id": 8,
+        "target_slot": 1
+      },
+      "47": {
+        "origin_id": 30,
+        "origin_slot": 0,
+        "target_id": 31,
+        "target_slot": 0
+      },
+      "51": {
+        "origin_id": 27,
+        "origin_slot": 0,
+        "target_id": 31,
+        "target_slot": 3
+      },
+      "52": {
+        "origin_id": 31,
+        "origin_slot": 0,
+        "target_id": 8,
+        "target_slot": 0
+      },
+      "54": {
+        "origin_id": 30,
+        "origin_slot": 1,
+        "target_id": 33,
+        "target_slot": 0
+      },
+      "55": {
+        "origin_id": 33,
+        "origin_slot": 0,
+        "target_id": 31,
+        "target_slot": 2
+      },
+      "58": {
+        "origin_id": 6,
+        "origin_slot": 0,
+        "target_id": 31,
+        "target_slot": 1
+      }
+    }
+  }
+}

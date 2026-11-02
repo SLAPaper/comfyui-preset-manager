@@ -36,6 +36,59 @@ function template(nodeMapping, synonyms = {}) {
     return { node_mapping: nodeMapping, synonyms };
 }
 
+/**
+ * Build a KSampler whose `steps` widget is promoted through `levels` nested
+ * subgraphs. The outermost slot is free when `outerLink` is null, or connected
+ * to that link id so the caller can attach an outer source node.
+ */
+function nestedSteps(levels, outerLink = null) {
+    let innerId = 100;
+    const inner = makeNode(innerId, "KSampler", { steps: 20 });
+    inner.inputs.push({ name: "steps", link: 100 });
+
+    let scope = {
+        nodes: [inner],
+        links: { 100: { origin_id: -10, origin_slot: 0, target_id: innerId, target_slot: 1 } },
+        inputs: [{ name: "steps", linkIds: [100], widget: { name: "steps", value: 20 } }],
+        inputNode: { id: -10 },
+    };
+
+    let ownerId = innerId;
+    for (let level = 0; level < levels; level++) {
+        ownerId--;
+        const linkId = 200 + level;
+        const owner = {
+            id: ownerId,
+            type: `Subgraph${level}`,
+            title: "",
+            widgets: [{ name: "steps", value: 20 }],
+            inputs: [{
+                name: "steps",
+                link: level < levels - 1 ? linkId : outerLink,
+                _subgraphSlot: scope.inputs[0],
+                _widget: { name: "steps", value: 20 },
+            }],
+            subgraph: scope,
+        };
+        scope = {
+            nodes: [owner],
+            links: { [linkId]: { origin_id: -10, origin_slot: 0, target_id: ownerId, target_slot: 1 } },
+            inputs: [{
+                name: "steps",
+                linkIds: [linkId],
+                widget: { name: "steps", value: 20 },
+            }],
+            inputNode: { id: -10 },
+        };
+    }
+
+    return scope.nodes[0];
+}
+
+const STEPS_TEMPLATE = template({
+    steps: { match_strategy: "unique_class", class_type: "KSampler", widget: "steps" },
+});
+
 test("unique_class resolves a single node", () => {
     const graph = makeGraph([makeNode(3, "KSampler", { steps: 20 })]);
     const tpl = template({
@@ -352,6 +405,49 @@ test("capture and restore round-trip the named params", () => {
 
     assert.equal(graph.nodes[0].widgets[0].value, 20);
     assert.equal(graph.dirty, true);
+});
+
+test("nested promotions resolve to the outermost owned widget", () => {
+    const outer = nestedSteps(2);
+    const graph = makeGraph([outer]);
+    const resolved = resolveParams(graph, STEPS_TEMPLATE).steps;
+
+    assert.equal(resolved.nodeId, "98:99:100");
+    assert.equal(resolved.widget, outer.inputs[0]._widget);
+
+    applyParams(graph, STEPS_TEMPLATE, { steps: 8 });
+    assert.equal(outer.inputs[0]._widget.value, 8);
+});
+
+test("externally linked subgraph inputs resolve to the outer primitive", () => {
+    const outer = nestedSteps(1, 300);
+    const primitive = makeNode(50, "PrimitiveInt", { value: 1024 });
+    const graph = makeGraph([primitive, outer], {
+        300: { origin_id: 50, origin_slot: 0 },
+    });
+
+    const resolved = resolveParams(graph, STEPS_TEMPLATE).steps;
+    assert.equal(resolved.nodeId, "50");
+    assert.equal(resolved.nodeType, "PrimitiveInt");
+    assert.equal(resolved.widgetName, "value");
+    assert.equal(resolved.value, 1024);
+
+    applyParams(graph, STEPS_TEMPLATE, { steps: 8 });
+    assert.equal(primitive.widgets[0].value, 8);
+});
+
+test("computed outer outputs report why the subgraph input is not writable", () => {
+    const outer = nestedSteps(1, 301);
+    const selector = makeNode(60, "ResolutionSelector", { megapixels: 1, multiple: 8 });
+    const graph = makeGraph([selector, outer], {
+        301: { origin_id: 60, origin_slot: 0 },
+    });
+
+    assert.equal(resolveParams(graph, STEPS_TEMPLATE).steps, null);
+    assert.match(
+        explainParams(graph, STEPS_TEMPLATE).steps,
+        /由 ResolutionSelector #60 的输出控制/
+    );
 });
 
 test("check, apply, and read use the same resolution", () => {

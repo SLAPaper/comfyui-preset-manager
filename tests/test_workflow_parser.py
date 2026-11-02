@@ -117,3 +117,70 @@ def test_user_templates_override_bundled(workflow_parser, temp_dir):
         assert result["name"] == "Custom SDXL"
     finally:
         workflow_parser._get_user_workflows_dir = original_func
+
+
+# === Tests for save_template() ===
+
+
+def _custom_template():
+    return {
+        "name": "Custom workflow",
+        "description": "Saved from the analyzer",
+        "node_mapping": {
+            "steps": {
+                "match_strategy": "unique_class",
+                "class_type": "KSampler",
+                "widget": "steps",
+            }
+        },
+        "synonyms": {"KSamplerAdvanced": "KSampler"},
+    }
+
+
+def test_save_template_round_trips_through_get_template(workflow_parser, temp_dir):
+    original_func = workflow_parser._get_user_workflows_dir
+    workflow_parser._get_user_workflows_dir = lambda: temp_dir
+
+    try:
+        assert workflow_parser.save_template("custom-flow", _custom_template())
+        assert (temp_dir / "custom-flow.yaml").is_file()
+
+        result = workflow_parser.get_template("custom-flow")
+        assert result["name"] == "Custom workflow"
+        assert result["node_mapping"]["steps"]["widget"] == "steps"
+        assert result["synonyms"] == {"KSamplerAdvanced": "KSampler"}
+        assert "id" not in result
+    finally:
+        workflow_parser._get_user_workflows_dir = original_func
+
+
+def test_save_template_reports_user_source(workflow_parser, temp_dir):
+    original_func = workflow_parser._get_user_workflows_dir
+    workflow_parser._get_user_workflows_dir = lambda: temp_dir
+
+    try:
+        assert workflow_parser.template_source("sdxl-txt2img") == "bundled"
+        assert workflow_parser.save_template("sdxl-txt2img", _custom_template())
+        assert workflow_parser.template_source("sdxl-txt2img") == "user"
+    finally:
+        workflow_parser._get_user_workflows_dir = original_func
+
+
+def test_save_template_rejects_invalid_ids_and_data(workflow_parser, temp_dir):
+    original_func = workflow_parser._get_user_workflows_dir
+    workflow_parser._get_user_workflows_dir = lambda: temp_dir
+
+    try:
+        assert not workflow_parser.save_template("_shared", _custom_template())
+        assert not workflow_parser.save_template("../escape", _custom_template())
+        assert not workflow_parser.save_template("custom-flow", {"node_mapping": {}})
+        assert not workflow_parser.save_template("custom-flow", {
+            "name": "",
+            "node_mapping": _custom_template()["node_mapping"],
+        })
+
+        broken = _custom_template()
+        broken["node_mapping"]["steps"]["match_strategy"] = "unknown"
+        assert not workflow_parser.save_template("custom-flow", broken)
+    finally:
+        workflow_parser._get_user_workflows_dir = original_func

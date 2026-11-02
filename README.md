@@ -8,6 +8,7 @@ ComfyUI 的配置预设与参数扫描插件，用于底模评测。
 - 支持 6 个 workflow 模板：Anima、Flux、Qwen Image 2.1、Qwen Image Edit、Qwen Image 文生图、SDXL。
 - 支持节点位于子图内的工作流。
 - 按一个或多个轴做参数扫描，逐组提交到队列。
+- 分析当前 workflow，预览可保存为模板的参数字段。
 - 不绑定输出节点，输出方式由 workflow 决定。
 - 配置保存为 YAML，可手动编辑。
 
@@ -37,6 +38,18 @@ ComfyUI 的配置预设与参数扫描插件，用于底模评测。
 5. 删除用户预设时，点击预设右侧的 “删除”。内置预设不显示删除按钮。
 
 说明：新建预设时，插件读取当前 workflow 的 widget 值。编辑器提供表单模式和代码模式，切换模式会同步当前内容。模型加载器参数默认不勾选，预设不会绑定本机模型文件。
+
+### 新建和复制模板
+
+1. 打开 workflow。
+2. 点击顶部菜单栏的 “Templates”。
+3. 在“来源”里选择“当前 workflow”分析当前图，或选择一个已有模板复制它的映射。
+4. 勾选要保存的参数，填写模板 ID 和名称。
+5. 点击 “保存模板”。保存后会关联到当前 workflow，可在 Presets 和 Sweeps 中直接使用。
+
+“唯一类”“标题”“输入槽”“上游连接”表示候选参数的匹配方式。识别范围包括提示词、采样参数、宽高、模型加载器，以及子图内的节点。有歧义的候选会标红并显示原因，例如多个同类节点或计算节点的输出无法直接写入。模型加载器候选默认不勾选。
+
+“手动添加”可以补充未识别到的参数：选择节点、匹配方式和 widget。保存时只写入勾选且能匹配当前 workflow 的参数。副本会保留原模板的 `synonyms`，ID 默认为 `原ID-copy`。
 
 ### 运行参数扫描
 
@@ -76,7 +89,7 @@ ComfyUI 的配置预设与参数扫描插件，用于底模评测。
 
 `synonyms` 字段把派生节点类型映射到标准类型，例如把 `KSamplerAdvanced` 当作 `KSampler`。
 
-匹配会进入子图内部。内层 widget 提升为子图输入时，值保存在子图实例上，插件写入实例上的 widget；被外部连线占用的子图输入不参与写入。
+匹配会进入子图内部。内层 widget 提升为子图输入时，值保存在子图实例上，插件写入实例上的 widget。子图输入由外部连线控制时，插件沿连线找到实际持有值的节点：同名 widget 或 `Primitive*` 节点的 `value` 直接写入；多层嵌套的子图会继续向上查找。外部来源是计算节点（例如 `ResolutionSelector` 的宽高输出）时无法直接写入，插件会报告来源节点。
 
 ## 文件位置
 
@@ -92,8 +105,9 @@ ComfyUI 的配置预设与参数扫描插件，用于底模评测。
 
 | 方法 | 路径 | 说明 |
 |---|---|---|
-| GET | `/preset-manager/workflows` | 获取模板列表 |
+| GET | `/preset-manager/workflows` | 获取模板列表（含 `source`） |
 | GET | `/preset-manager/template/{template_id}` | 获取模板详情 |
+| POST | `/preset-manager/template` | 保存用户模板 |
 | GET | `/preset-manager/presets/{template_id}` | 获取预设列表 |
 | GET | `/preset-manager/preset/{template_id}/{preset_id}` | 获取预设详情 |
 | POST | `/preset-manager/preset` | 保存预设 |
@@ -121,3 +135,5 @@ E2E 测试见 [docs/TESTING.md](docs/TESTING.md)。设计说明见 [docs/DESIGN.
 
 - `unique_class` 和 `input_slot` 要求目标节点唯一。hires fix 等含多个 KSampler 的 workflow 会匹配失败。
 - 编辑预设时，当前 workflow 匹配不到的已存参数会被丢弃。
+- 模板分析只识别内置规则覆盖的字段。使用 `BasicGuider` 等自定义采样结构、且没有 `positive`/`negative` 输入的 workflow 不会自动提出提示词参数。
+- 子图输入的外部来源如果是计算节点而不是可写 widget，例如 `ResolutionSelector` 的宽高输出，插件无法直接写入该字段。

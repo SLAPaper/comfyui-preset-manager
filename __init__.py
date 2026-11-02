@@ -5,7 +5,7 @@ from server import PromptServer
 
 try:
     from .storage import is_safe_id
-    from .workflow_parser import load_templates, get_template
+    from .workflow_parser import get_template, load_templates, save_template, template_source
     from .preset_manager import load_presets, get_preset, save_preset, delete_preset
     from .sweep_manager import load_sweeps, get_sweep, save_sweep, delete_sweep, expand
 except ImportError:
@@ -19,7 +19,7 @@ except ImportError:
         _spec.loader.exec_module(_mod)
         sys.modules[_name] = _mod
     from storage import is_safe_id
-    from workflow_parser import load_templates, get_template
+    from workflow_parser import get_template, load_templates, save_template, template_source
     from preset_manager import load_presets, get_preset, save_preset, delete_preset
     from sweep_manager import load_sweeps, get_sweep, save_sweep, delete_sweep, expand
 
@@ -57,7 +57,12 @@ def _register_routes():
     async def get_workflows(request):
         templates = load_templates()
         return web.json_response([
-            {"id": tid, "name": t.get("name", tid), "description": t.get("description", "")}
+            {
+                "id": tid,
+                "name": t.get("name", tid),
+                "description": t.get("description", ""),
+                "source": template_source(tid),
+            }
             for tid, t in templates.items()
         ])
 
@@ -68,6 +73,16 @@ def _register_routes():
         if template is None:
             return web.json_response({"error": "Template not found"}, status=404)
         return web.json_response(template)
+
+    @routes.post("/preset-manager/template")
+    async def save_template_endpoint(request):
+        data = await request.json()
+        (template_id,) = _body_ids(data, "id")
+        if template_id.startswith("_"):
+            _reject_id()
+        if save_template(template_id, data):
+            return web.json_response({"status": "ok", "id": template_id})
+        return web.json_response({"error": "Invalid template"}, status=400)
 
     @routes.get("/preset-manager/presets/{template_id}")
     async def get_presets_list(request):

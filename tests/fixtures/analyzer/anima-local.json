@@ -1,0 +1,585 @@
+{
+  "sample": "anima-local",
+  "source": "Anima.json",
+  "graph": {
+    "nodes": [
+      {
+        "id": 2,
+        "type": "CLIPLoader",
+        "title": "",
+        "widgets": [
+          {
+            "name": "clip_name",
+            "value": "qwen_3_06b_base.safetensors"
+          },
+          {
+            "name": "type",
+            "value": "stable_diffusion"
+          },
+          {
+            "name": "device",
+            "value": "default"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "clip_name",
+            "link": null
+          },
+          {
+            "name": "type",
+            "link": null
+          },
+          {
+            "name": "device",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "type": "VAELoader",
+        "title": "",
+        "widgets": [
+          {
+            "name": "vae_name",
+            "value": "Image\\qwen_image_vae.safetensors"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "vae_name",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "type": "VAEDecode",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "samples",
+            "link": 16
+          },
+          {
+            "name": "vae",
+            "link": 8
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "type": "SaveImage",
+        "title": "",
+        "widgets": [
+          {
+            "name": "filename_prefix",
+            "value": "%year%-%month%-%day%/original/anima/ComfyUI"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "images",
+            "link": 9
+          },
+          {
+            "name": "filename_prefix",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 14,
+        "type": "ImagesGridByColumns",
+        "title": "",
+        "widgets": [
+          {
+            "name": "gap",
+            "value": 0
+          },
+          {
+            "name": "max_columns",
+            "value": 2
+          }
+        ],
+        "inputs": [
+          {
+            "name": "images",
+            "link": 14
+          },
+          {
+            "name": "annotation",
+            "link": null
+          },
+          {
+            "name": "gap",
+            "link": null
+          },
+          {
+            "name": "max_columns",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 15,
+        "type": "SaveImage",
+        "title": "",
+        "widgets": [
+          {
+            "name": "filename_prefix",
+            "value": "%year%-%month%-%day%/grid/anima/ComfyUI"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "images",
+            "link": 15
+          },
+          {
+            "name": "filename_prefix",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "type": "CLIPTextEncode",
+        "title": "",
+        "widgets": [
+          {
+            "name": "text",
+            "value": "masterpiece, best quality, newest, highres, absurdres, safe,\nno humans, animal focus, clothed animal, ambiguous gender, solo,\nanime style picture of a humanoid panda that has mechanical arms and legs wearing short sleeves red hoodie with \"4…"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "clip",
+            "link": 30
+          },
+          {
+            "name": "text",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "type": "CLIPTextEncode",
+        "title": "",
+        "widgets": [
+          {
+            "name": "text",
+            "value": "low quality, worst quality, normal quality, text, signature, jpeg artifacts, bad anatomy, nsfw, copyright name, watermark, artist name, signature"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "clip",
+            "link": 31
+          },
+          {
+            "name": "text",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "type": "EmptyLatentImage",
+        "title": "",
+        "widgets": [
+          {
+            "name": "width",
+            "value": 1024
+          },
+          {
+            "name": "height",
+            "value": 1024
+          },
+          {
+            "name": "batch_size",
+            "value": 4
+          }
+        ],
+        "inputs": [
+          {
+            "name": "width",
+            "link": null
+          },
+          {
+            "name": "height",
+            "link": null
+          },
+          {
+            "name": "batch_size",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 17,
+        "type": "KSampler",
+        "title": "",
+        "widgets": [
+          {
+            "name": "seed",
+            "value": 783399240628280
+          },
+          {
+            "name": "control_after_generate",
+            "value": "fixed"
+          },
+          {
+            "name": "steps",
+            "value": 35
+          },
+          {
+            "name": "cfg",
+            "value": 5
+          },
+          {
+            "name": "sampler_name",
+            "value": "euler_ancestral"
+          },
+          {
+            "name": "scheduler",
+            "value": "bong_tangent"
+          },
+          {
+            "name": "denoise",
+            "value": 1
+          }
+        ],
+        "inputs": [
+          {
+            "name": "model",
+            "link": 33
+          },
+          {
+            "name": "positive",
+            "link": 17
+          },
+          {
+            "name": "negative",
+            "link": 18
+          },
+          {
+            "name": "latent_image",
+            "link": 20
+          },
+          {
+            "name": "seed",
+            "link": null
+          },
+          {
+            "name": "steps",
+            "link": null
+          },
+          {
+            "name": "cfg",
+            "link": null
+          },
+          {
+            "name": "sampler_name",
+            "link": null
+          },
+          {
+            "name": "scheduler",
+            "link": null
+          },
+          {
+            "name": "denoise",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 1,
+        "type": "UNETLoader",
+        "title": "",
+        "widgets": [
+          {
+            "name": "unet_name",
+            "value": "anima\\flacsPastelCuteAnima_v10.safetensors"
+          },
+          {
+            "name": "weight_dtype",
+            "value": "default"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "unet_name",
+            "link": null
+          },
+          {
+            "name": "weight_dtype",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 21,
+        "type": "LoraLoaderModelOnly",
+        "title": "",
+        "widgets": [
+          {
+            "name": "lora_name",
+            "value": "Anima\\miratsu.safetensors"
+          },
+          {
+            "name": "strength_model",
+            "value": 1
+          }
+        ],
+        "inputs": [
+          {
+            "name": "model",
+            "link": 32
+          },
+          {
+            "name": "lora_name",
+            "link": null
+          },
+          {
+            "name": "strength_model",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 22,
+        "type": "TIPO",
+        "title": "",
+        "widgets": [
+          {
+            "name": "tags",
+            "value": "masterpiece, best quality, newest, highres, absurdres, safe,\nno humans, animal focus, clothed animal, ambiguous gender, solo,\n@ciloranko,"
+          },
+          {
+            "name": "nl_prompt",
+            "value": "anime style picture of a humanoid panda that has mechanical arms and legs wearing short sleeves red hoodie with \"404\" writing on it, black shorts with white stripes, waterproof boots, labor gloves, happy sitting on the side of the road in a…"
+          },
+          {
+            "name": "ban_tags",
+            "value": "low quality, worst quality, normal quality, text, signature, jpeg artifacts, bad anatomy, old, early, mini skirt, nsfw, chibi, multiple girls, multiple boys, multiple tails, multiple views, copyright name, watermark, artist name, signature"
+          },
+          {
+            "name": "tipo_model",
+            "value": "KBlueLeaf/TIPO-v2.1-1B-A200M | TIPO-v2.1-1B-A200M-f16.gguf"
+          },
+          {
+            "name": "format",
+            "value": "<|special|>,\n<|characters|>, <|copyrights|>,\n<|artist|>,\n\n<|general|>,\n\n<|extended|>.\n\n<|quality|>, <|meta|>, <|rating|>"
+          },
+          {
+            "name": "width",
+            "value": 1024
+          },
+          {
+            "name": "height",
+            "value": 1024
+          },
+          {
+            "name": "temperature",
+            "value": 0.5
+          },
+          {
+            "name": "top_p",
+            "value": 0.95
+          },
+          {
+            "name": "min_p",
+            "value": 0.05
+          },
+          {
+            "name": "top_k",
+            "value": 80
+          },
+          {
+            "name": "tag_length",
+            "value": "long"
+          },
+          {
+            "name": "nl_length",
+            "value": "long"
+          },
+          {
+            "name": "seed",
+            "value": 1234
+          },
+          {
+            "name": "control_after_generate",
+            "value": "fixed"
+          },
+          {
+            "name": "device",
+            "value": "cuda"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "tags",
+            "link": null
+          },
+          {
+            "name": "nl_prompt",
+            "link": null
+          },
+          {
+            "name": "ban_tags",
+            "link": null
+          },
+          {
+            "name": "tipo_model",
+            "link": null
+          },
+          {
+            "name": "format",
+            "link": null
+          },
+          {
+            "name": "width",
+            "link": null
+          },
+          {
+            "name": "height",
+            "link": null
+          },
+          {
+            "name": "temperature",
+            "link": null
+          },
+          {
+            "name": "top_p",
+            "link": null
+          },
+          {
+            "name": "min_p",
+            "link": null
+          },
+          {
+            "name": "top_k",
+            "link": null
+          },
+          {
+            "name": "tag_length",
+            "link": null
+          },
+          {
+            "name": "nl_length",
+            "link": null
+          },
+          {
+            "name": "seed",
+            "link": null
+          },
+          {
+            "name": "device",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 23,
+        "type": "ShowText|pysssss",
+        "title": "",
+        "widgets": [
+          {
+            "name": "text_0",
+            "value": "no humans, animal focus, clothed animal, ambiguous gender, solo, mechanical arms, outdoors, night, closed mouth, panda tail, meme, full body, rain, animal ears, mechanical legs, water, robot, puddle, wet, road sign, smile, :3, building, sky…"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "text",
+            "link": 34
+          }
+        ]
+      }
+    ],
+    "links": {
+      "8": {
+        "origin_id": 8,
+        "origin_slot": 0,
+        "target_id": 7,
+        "target_slot": 1
+      },
+      "9": {
+        "origin_id": 7,
+        "origin_slot": 0,
+        "target_id": 9,
+        "target_slot": 0
+      },
+      "14": {
+        "origin_id": 7,
+        "origin_slot": 0,
+        "target_id": 14,
+        "target_slot": 0
+      },
+      "15": {
+        "origin_id": 14,
+        "origin_slot": 0,
+        "target_id": 15,
+        "target_slot": 0
+      },
+      "16": {
+        "origin_id": 17,
+        "origin_slot": 0,
+        "target_id": 7,
+        "target_slot": 0
+      },
+      "17": {
+        "origin_id": 3,
+        "origin_slot": 0,
+        "target_id": 17,
+        "target_slot": 1
+      },
+      "18": {
+        "origin_id": 4,
+        "origin_slot": 0,
+        "target_id": 17,
+        "target_slot": 2
+      },
+      "20": {
+        "origin_id": 6,
+        "origin_slot": 0,
+        "target_id": 17,
+        "target_slot": 3
+      },
+      "30": {
+        "origin_id": 2,
+        "origin_slot": 0,
+        "target_id": 3,
+        "target_slot": 0
+      },
+      "31": {
+        "origin_id": 2,
+        "origin_slot": 0,
+        "target_id": 4,
+        "target_slot": 0
+      },
+      "32": {
+        "origin_id": 1,
+        "origin_slot": 0,
+        "target_id": 21,
+        "target_slot": 0
+      },
+      "33": {
+        "origin_id": 21,
+        "origin_slot": 0,
+        "target_id": 17,
+        "target_slot": 0
+      },
+      "34": {
+        "origin_id": 22,
+        "origin_slot": 0,
+        "target_id": 23,
+        "target_slot": 0
+      }
+    }
+  }
+}

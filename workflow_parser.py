@@ -8,9 +8,9 @@ user/preset-manager/workflows/ and override bundled templates with the same ID.
 from pathlib import Path
 
 try:
-    from .storage import is_safe_id, load_yaml, scan_yaml, user_dir
+    from .storage import is_safe_id, load_yaml, require_safe_id, save_yaml, scan_yaml, user_dir
 except ImportError:
-    from storage import is_safe_id, load_yaml, scan_yaml, user_dir
+    from storage import is_safe_id, load_yaml, require_safe_id, save_yaml, scan_yaml, user_dir
 
 PLUGIN_DIR = Path(__file__).parent
 WORKFLOWS_DIR = PLUGIN_DIR / "workflows"
@@ -30,6 +30,9 @@ def _is_valid_template(template_id: str, data: dict) -> bool:
         return False
 
     for param_name, spec in node_mapping.items():
+        if not isinstance(param_name, str) or not param_name:
+            print(f"[PresetManager] Warning: {template_id} has an invalid parameter name")
+            return False
         if not isinstance(spec, dict):
             print(f"[PresetManager] Warning: {template_id}.{param_name} is not a mapping")
             return False
@@ -55,6 +58,15 @@ def _is_valid_template(template_id: str, data: dict) -> bool:
             return False
         if strategy == "title_keyword" and not spec.get("title_keywords"):
             print(f"[PresetManager] Warning: {template_id}.{param_name} has no title_keywords")
+            return False
+
+    synonyms = data.get("synonyms")
+    if synonyms is not None:
+        if not isinstance(synonyms, dict) or not all(
+            isinstance(source, str) and isinstance(target, str)
+            for source, target in synonyms.items()
+        ):
+            print(f"[PresetManager] Warning: template {template_id} has invalid synonyms")
             return False
 
     return True
@@ -138,3 +150,49 @@ def _find_file(directory: Path, template_id: str) -> Path | None:
         if filepath.is_file():
             return filepath
     return None
+
+
+def template_source(template_id: str) -> str | None:
+    """Return where a template comes from: user, bundled, or None."""
+    if _find_file(_get_user_workflows_dir(), template_id) is not None:
+        return "user"
+    if _find_file(WORKFLOWS_DIR, template_id) is not None:
+        return "bundled"
+    return None
+
+
+def save_template(template_id: str, data: dict) -> bool:
+    """Save a complete template to the user directory.
+
+    The caller sends the full node_mapping; saving never edits bundled files.
+    """
+    if template_id.startswith("_") or not is_safe_id(template_id):
+        return False
+    if not isinstance(data, dict):
+        return False
+
+    name = data.get("name")
+    if not isinstance(name, str) or not name.strip():
+        return False
+    description = data.get("description", "")
+    if not isinstance(description, str):
+        return False
+
+    save_data = {
+        key: value
+        for key, value in data.items()
+        if key not in ("id", "source", "include")
+    }
+    if not _is_valid_template(template_id, save_data):
+        return False
+
+    try:
+        require_safe_id(template_id)
+    except ValueError:
+        return False
+
+    filepath = _get_user_workflows_dir() / f"{template_id}.yaml"
+    if save_yaml(filepath, save_data):
+        print(f"[PresetManager] Saved template: {template_id}")
+        return True
+    return False

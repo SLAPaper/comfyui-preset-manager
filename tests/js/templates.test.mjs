@@ -4,7 +4,13 @@ import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { applyParams, checkParams, readParams, resolveParams } from "../../web/matcher.js";
+import {
+    applyParams,
+    checkParams,
+    explainParams,
+    readParams,
+    resolveParams,
+} from "../../web/matcher.js";
 
 const FIXTURES = join(dirname(fileURLToPath(import.meta.url)), "..", "fixtures");
 
@@ -156,6 +162,10 @@ test("subgraph inputs connected from outside are not writable", () => {
     slot.link = 99;
 
     assert.equal(resolveParams(graph, templates["qwen-image-21"]).steps, null);
+    assert.equal(
+        explainParams(graph, templates["qwen-image-21"], ["steps"]).steps,
+        "子图输入 steps 由外部连线控制"
+    );
 });
 
 test("checkParams still reports params the graph cannot match", () => {

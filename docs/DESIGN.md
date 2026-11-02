@@ -11,6 +11,7 @@
 | 前端 | `web/preset-manager.js` | 注册扩展，添加入口按钮 |
 | 前端 | `web/client.js` | HTTP 请求 |
 | 前端 | `web/matcher.js` | 节点匹配、参数读取、检查、应用 |
+| 前端 | `web/template-analyzer.js` | 从当前 graph 识别候选模板参数 |
 | 前端 | `web/sweep-runner.js` | 扫描执行顺序和取消 |
 | 前端 | `web/sweep-axes.js` | 扫描轴编辑和总数显示 |
 | 前端 | `web/sweep-values.js` | 轴值解析、格式化和总数计算 |
@@ -19,7 +20,7 @@
 | 前端 | `web/*-dialog.js` | 对话框和表单 |
 | 后端 | `__init__.py` | 注册 HTTP 路由 |
 | 后端 | `storage.py` | 安全 ID、原子写、用户目录、YAML 扫描 |
-| 后端 | `workflow_parser.py` | 加载和校验模板 |
+| 后端 | `workflow_parser.py` | 加载、校验和保存模板 |
 | 后端 | `preset_manager.py` | 预设增删改查 |
 | 后端 | `sweep_manager.py` | 扫描配置增删改查、组合展开 |
 | 存储 | `workflows/`、`presets/` | 内置模板和预设 |
@@ -40,7 +41,16 @@
 
 `synonyms` 在比较前映射节点类型。例如 `KSamplerAdvanced` 按 `KSampler` 处理。
 
-匹配会进入子图。子图内部的 widget 如果被提升为子图输入，写入目标是子图实例上的宿主 widget：执行时读取的是宿主值，写内部节点的同名 widget 不会生效。宿主输入由外部连线驱动时，该参数视为不可写。`nodeId` 用 `实例ID:节点ID` 表示跨层节点，例如 `459:458`。
+匹配会进入子图。子图内部的 widget 如果被提升为子图输入，写入目标是子图实例上的宿主 widget：执行时读取的是宿主值，写内部节点的同名 widget 不会生效。`nodeId` 用 `实例ID:节点ID` 表示跨层节点，例如 `459:458`。
+
+宿主输入由外部连线驱动时，匹配沿连线进入父 graph：
+
+- 来源节点有同名 widget 时，写入该 widget。
+- 来源是 `Primitive*` 节点时，写入其唯一的 `value` widget，即使内层 widget 名称不同。
+- 宿主输入在父层再次被提升时，继续向上查找，直到找到自由宿主或外部来源。
+- 来源是计算节点且没有对应 widget 时，例如 `ResolutionSelector` 的宽高输出，参数匹配失败并报告来源节点。
+
+因此，外部连线的参数写在外部节点上，子图自身持有的参数写在子图实例上，多层嵌套按实际持有值的位置写入。
 
 匹配模块对外提供 6 个函数：
 
@@ -57,6 +67,30 @@ restoreParams(graph, snapshot)  -> void
 预览、读取当前参数和参数注入调用 `resolveParams`，调用方不需要知道策略分支。扫描前用 `captureParams` 保存指定参数，结束后用 `restoreParams` 写回。`checkParams` 不修改 graph，扫描试算和逐组校验都调用这个函数。`explainParams` 只返回匹配失败的原因，应用预设和扫描预检用它显示用户可读的失败信息。
 
 模板可以用 `include: "_loaders"` 引入 `workflows/_loaders.yaml` 中的共享参数。合并时模板自己的 `node_mapping` 覆盖同名定义，`include` 不写入加载结果。
+
+## 模板分析
+
+`web/template-analyzer.js` 从当前 graph 提出候选参数，用于判断一个 workflow 能否转成模板。分析只读，不写入 graph，也不保存文件。
+
+识别规则：
+
+- 提示词：从枢纽节点的 `positive`/`negative` 输入沿连接查找文本 widget；没有枢纽节点时，按标题中的 positive/negative 或“正向”“负向”回退。
+- 采样：按节点类型和 widget 名称识别 `sampler`、`scheduler`、`steps`、`cfg`、`seed`、`denoise`。`FluxGuidance.guidance` 映射为 `cfg`，`RandomNoise.noise_seed` 映射为 `seed`。
+- 宽高：`*Latent*` 节点上的 `width`/`height` 直接匹配；`ModelSampling*` 上的宽高用 `output_connection` 回溯到上游数值 widget。
+- 模型加载器：识别 UNET、GGUF、NF4、Nunchaku、CLIP、双 CLIP、VAE 和 checkpoint，默认不勾选。
+
+每个候选先转成模板 spec，再用 `resolveParams()` 和 `explainParams()` 验证。结果分为 `matched` 和 `error`。同类节点不唯一、同名标题不唯一、子图输入连接到无法直接写入的计算输出等情况都会转为 `error` 并显示原因，而不是静默选择第一个节点。子图输入连接到外部可写 widget 时，候选会报告外部节点的类型、ID 和当前值。
+
+`web/template-analyzer-dialog.js` 是模板编辑器：
+
+- 默认分析当前 workflow。
+- “来源”选择已有模板时，用 `describeMapping()` 按原 `node_mapping` 重新校验当前 graph，并以 `原ID-copy` 作为新 ID、`原名 副本` 作为默认名称。
+- 勾选的候选通过 `buildTemplate()` 生成完整模板。模型加载器由 `defaultSelected` 转为 `default_selected: false`；副本保留原 `synonyms`。
+- “手动添加”按策略生成 spec：选择节点和 widget，自动选择唯一类或标题策略；输入槽和上游连接可以指定枢纽/目标输入。
+- 保存调用 `POST /preset-manager/template`，写入 `user/preset-manager/workflows/`。成功后把模板 ID 写入 `app.graph.extra.preset_template`，Presets 和 Sweeps 重新加载时即可使用。
+- 内置模板 ID 不能直接覆盖；用户模板 ID 需要确认覆盖。
+
+后端 `save_template()` 只写用户目录，并校验 ID、名称、`node_mapping` 和 `synonyms`。模板列表返回 `source` 字段，取值为 `bundled` 或 `user`。
 
 ## 预设
 
@@ -111,13 +145,14 @@ restoreParams(graph, snapshot)  -> void
 
 - `tests/js/matcher.test.mjs` 覆盖 4 种策略、同义词、检查、应用、快照和读取。
 - `tests/js/templates.test.mjs` 用快照模板和真实结构图验证每个参数的匹配结果。
+- `tests/js/template-analyzer.test.mjs` 用 8 个代表性 workflow 和子图 fixture 验证候选识别、歧义反馈和只读行为。
 - `tests/js/sweep-runner.test.mjs` 覆盖执行顺序、取消和中途失败。
 - `tests/js/sweep-values.test.mjs` 覆盖轴值解析和总数计算。
 - `tests/js/sweep-trace.test.mjs` 覆盖输出文件名标记、清理和恢复。
 - `tests/test_storage.py` 覆盖 ID 校验和原子读写。
 - `tests/test_templates_snapshot.py` 保证模板快照与 `workflows/` 一致。
 - `tests/test_preset_manager.py`、`tests/test_sweep_manager.py` 覆盖存储行为。
-- `tests/e2e/` 覆盖 HTTP 接口和界面流程。
+- `tests/e2e/` 覆盖 HTTP 接口、模板保存、分析编辑器保存/复制和界面流程。
 
 ## 已知限制
 
@@ -126,9 +161,12 @@ restoreParams(graph, snapshot)  -> void
 - 扫描不校验枚举值。
 - 没有 `filename_prefix` 的输出节点无法写入组合标记。
 - 脚本无法通过 HTTP 应用预设。应用只在前端完成。
+- 模板分析只覆盖内置识别规则。自定义采样结构如果没有 `positive`/`negative` 输入，不会提出提示词参数。
 
 ## 后续方向
 
+- 支持删除或重命名用户模板。
+- 为计算节点的输出提供可配置的映射规则。
 - 支持按标题或序号选择多个同类型节点。
 - 编辑预设时保留当前 graph 匹配不到的已存参数。
 - 用 `graphToPrompt()` 预构造 prompt，避免扫描期间修改 graph。

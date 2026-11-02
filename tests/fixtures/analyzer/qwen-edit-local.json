@@ -1,0 +1,496 @@
+{
+  "sample": "qwen-edit-local",
+  "source": "qwen_image_edit.json",
+  "graph": {
+    "nodes": [
+      {
+        "id": 77,
+        "type": "TextEncodeQwenImageEdit",
+        "title": "",
+        "widgets": [
+          {
+            "name": "prompt",
+            "value": ""
+          }
+        ],
+        "inputs": [
+          {
+            "name": "clip",
+            "link": 132
+          },
+          {
+            "name": "vae",
+            "link": 161
+          },
+          {
+            "name": "image",
+            "link": 180
+          },
+          {
+            "name": "prompt",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 75,
+        "type": "CFGNorm",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "model",
+            "link": 141
+          },
+          {
+            "name": "strength",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 66,
+        "type": "ModelSamplingAuraFlow",
+        "title": "",
+        "widgets": [
+          {
+            "name": "shift",
+            "value": 3
+          }
+        ],
+        "inputs": [
+          {
+            "name": "model",
+            "link": 185
+          },
+          {
+            "name": "shift",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "type": "VAEDecode",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "samples",
+            "link": 128
+          },
+          {
+            "name": "vae",
+            "link": 76
+          }
+        ]
+      },
+      {
+        "id": 88,
+        "type": "VAEEncode",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "pixels",
+            "link": 178
+          },
+          {
+            "name": "vae",
+            "link": 168
+          }
+        ]
+      },
+      {
+        "id": 97,
+        "type": "MarkdownNote",
+        "title": "KSampler settings",
+        "widgets": [],
+        "inputs": []
+      },
+      {
+        "id": 96,
+        "type": "MarkdownNote",
+        "title": "",
+        "widgets": [],
+        "inputs": []
+      },
+      {
+        "id": 99,
+        "type": "MarkdownNote",
+        "title": "Model links",
+        "widgets": [],
+        "inputs": []
+      },
+      {
+        "id": 37,
+        "type": "UNETLoader",
+        "title": "",
+        "widgets": [
+          {
+            "name": "unet_name",
+            "value": "QwenImage\\qwen_image_edit_fp8_e4m3fn.safetensors"
+          },
+          {
+            "name": "weight_dtype",
+            "value": "default"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "unet_name",
+            "link": null
+          },
+          {
+            "name": "weight_dtype",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 38,
+        "type": "CLIPLoader",
+        "title": "",
+        "widgets": [
+          {
+            "name": "clip_name",
+            "value": "Qwen25VL\\qwen_2.5_vl_7b_fp8_scaled.safetensors"
+          },
+          {
+            "name": "type",
+            "value": "qwen_image"
+          },
+          {
+            "name": "device",
+            "value": "default"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "clip_name",
+            "link": null
+          },
+          {
+            "name": "type",
+            "link": null
+          },
+          {
+            "name": "device",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 39,
+        "type": "VAELoader",
+        "title": "",
+        "widgets": [
+          {
+            "name": "vae_name",
+            "value": "Image\\qwen_image_vae.safetensors"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "vae_name",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 93,
+        "type": "ImageScaleToTotalPixels",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "image",
+            "link": 177
+          },
+          {
+            "name": "upscale_method",
+            "link": null
+          },
+          {
+            "name": "megapixels",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "type": "KSampler",
+        "title": "",
+        "widgets": [
+          {
+            "name": "seed",
+            "value": 976480016588017
+          },
+          {
+            "name": "control_after_generate",
+            "value": "fixed"
+          },
+          {
+            "name": "steps",
+            "value": 20
+          },
+          {
+            "name": "cfg",
+            "value": 2.5
+          },
+          {
+            "name": "sampler_name",
+            "value": "euler"
+          },
+          {
+            "name": "scheduler",
+            "value": "simple"
+          },
+          {
+            "name": "denoise",
+            "value": 1
+          }
+        ],
+        "inputs": [
+          {
+            "name": "model",
+            "link": 186
+          },
+          {
+            "name": "positive",
+            "link": 164
+          },
+          {
+            "name": "negative",
+            "link": 163
+          },
+          {
+            "name": "latent_image",
+            "link": 170
+          },
+          {
+            "name": "seed",
+            "link": null
+          },
+          {
+            "name": "steps",
+            "link": null
+          },
+          {
+            "name": "cfg",
+            "link": null
+          },
+          {
+            "name": "sampler_name",
+            "link": null
+          },
+          {
+            "name": "scheduler",
+            "link": null
+          },
+          {
+            "name": "denoise",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 60,
+        "type": "SaveImage",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "images",
+            "link": 110
+          },
+          {
+            "name": "filename_prefix",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 89,
+        "type": "LoraLoaderModelOnly",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "model",
+            "link": 184
+          },
+          {
+            "name": "lora_name",
+            "link": null
+          },
+          {
+            "name": "strength_model",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 78,
+        "type": "LoadImage",
+        "title": "",
+        "widgets": [],
+        "inputs": [
+          {
+            "name": "image",
+            "link": null
+          },
+          {
+            "name": "upload",
+            "link": null
+          }
+        ]
+      },
+      {
+        "id": 76,
+        "type": "TextEncodeQwenImageEdit",
+        "title": "",
+        "widgets": [
+          {
+            "name": "prompt",
+            "value": "Put this logo onto a cardboard saying \"In maintenance\", hanging on a glass door, inside is a server room that catching fire on servers"
+          }
+        ],
+        "inputs": [
+          {
+            "name": "clip",
+            "link": 131
+          },
+          {
+            "name": "vae",
+            "link": 162
+          },
+          {
+            "name": "image",
+            "link": 179
+          },
+          {
+            "name": "prompt",
+            "link": null
+          }
+        ]
+      }
+    ],
+    "links": {
+      "76": {
+        "origin_id": 39,
+        "origin_slot": 0,
+        "target_id": 8,
+        "target_slot": 1
+      },
+      "110": {
+        "origin_id": 8,
+        "origin_slot": 0,
+        "target_id": 60,
+        "target_slot": 0
+      },
+      "128": {
+        "origin_id": 3,
+        "origin_slot": 0,
+        "target_id": 8,
+        "target_slot": 0
+      },
+      "131": {
+        "origin_id": 38,
+        "origin_slot": 0,
+        "target_id": 76,
+        "target_slot": 0
+      },
+      "132": {
+        "origin_id": 38,
+        "origin_slot": 0,
+        "target_id": 77,
+        "target_slot": 0
+      },
+      "141": {
+        "origin_id": 66,
+        "origin_slot": 0,
+        "target_id": 75,
+        "target_slot": 0
+      },
+      "161": {
+        "origin_id": 39,
+        "origin_slot": 0,
+        "target_id": 77,
+        "target_slot": 1
+      },
+      "162": {
+        "origin_id": 39,
+        "origin_slot": 0,
+        "target_id": 76,
+        "target_slot": 1
+      },
+      "163": {
+        "origin_id": 77,
+        "origin_slot": 0,
+        "target_id": 3,
+        "target_slot": 2
+      },
+      "164": {
+        "origin_id": 76,
+        "origin_slot": 0,
+        "target_id": 3,
+        "target_slot": 1
+      },
+      "168": {
+        "origin_id": 39,
+        "origin_slot": 0,
+        "target_id": 88,
+        "target_slot": 1
+      },
+      "170": {
+        "origin_id": 88,
+        "origin_slot": 0,
+        "target_id": 3,
+        "target_slot": 3
+      },
+      "177": {
+        "origin_id": 78,
+        "origin_slot": 0,
+        "target_id": 93,
+        "target_slot": 0
+      },
+      "178": {
+        "origin_id": 93,
+        "origin_slot": 0,
+        "target_id": 88,
+        "target_slot": 0
+      },
+      "179": {
+        "origin_id": 93,
+        "origin_slot": 0,
+        "target_id": 76,
+        "target_slot": 2
+      },
+      "180": {
+        "origin_id": 93,
+        "origin_slot": 0,
+        "target_id": 77,
+        "target_slot": 2
+      },
+      "184": {
+        "origin_id": 37,
+        "origin_slot": 0,
+        "target_id": 89,
+        "target_slot": 0
+      },
+      "185": {
+        "origin_id": 89,
+        "origin_slot": 0,
+        "target_id": 66,
+        "target_slot": 0
+      },
+      "186": {
+        "origin_id": 75,
+        "origin_slot": 0,
+        "target_id": 3,
+        "target_slot": 0
+      }
+    }
+  }
+}
