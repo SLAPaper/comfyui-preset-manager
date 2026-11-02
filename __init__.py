@@ -175,5 +175,4 @@ def _register_routes():
         return web.json_response({"combinations": combos})
 
 
-if hasattr(PromptServer.instance.routes, 'get'):
-    _register_routes()
+_register_routes()

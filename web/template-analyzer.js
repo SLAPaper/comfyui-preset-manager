@@ -14,6 +14,20 @@ const PROMPT_WIDGETS = {
     negative: ["negative_prompt", "text", "prompt"],
 };
 
+export const LOADER_RULES = [
+    { name: "nunchaku_model_name", nodeType: "NunchakuQwenImageDiTLoader", widget: "model_name" },
+    { name: "gguf_unet_advanced_name", nodeType: "UnetLoaderGGUFAdvanced", widget: "unet_name" },
+    { name: "gguf_unet_name", nodeType: "UnetLoaderGGUF", widget: "unet_name" },
+    { name: "nf4_unet_name", nodeType: "UNETLoaderNF4", widget: "unet_name" },
+    { name: "unet_name", nodeType: "UNETLoader", widget: "unet_name" },
+    { name: "gguf_ckpt_name", nodeType: "CheckpointLoaderGGUF", widget: "ckpt_name" },
+    { name: "nf4_ckpt_name", nodeType: "CheckpointLoaderNF4", widget: "ckpt_name" },
+    { name: "ckpt_name", nodeType: "CheckpointLoaderSimple", widget: "ckpt_name" },
+    { name: "clip_name", nodeType: "CLIPLoader", widget: "clip_name" },
+    { name: "dual_clip_name1", nodeType: "DualCLIPLoader", widget: "clip_name1" },
+    { name: "vae_name", nodeType: "VAELoader", widget: "vae_name" },
+];
+
 const SAMPLER_WIDGETS = {
     sampler_name: { name: "sampler", pattern: /Sampler/ },
     scheduler: { name: "scheduler", pattern: /(Sampler|Scheduler)/ },
@@ -159,24 +173,10 @@ function findTextWidget(index, scope, nodeId, preferred, depth = 5) {
 }
 
 function loaderName(nodeType, widgetName) {
-    if (widgetName === "model_name" && nodeType === "NunchakuQwenImageDiTLoader") {
-        return "nunchaku_model_name";
-    }
-    if (widgetName === "unet_name") {
-        if (nodeType === "UnetLoaderGGUFAdvanced") return "gguf_unet_advanced_name";
-        if (nodeType === "UnetLoaderGGUF") return "gguf_unet_name";
-        if (nodeType === "UNETLoaderNF4") return "nf4_unet_name";
-        if (nodeType === "UNETLoader") return "unet_name";
-    }
-    if (widgetName === "ckpt_name") {
-        if (nodeType === "CheckpointLoaderGGUF") return "gguf_ckpt_name";
-        if (nodeType === "CheckpointLoaderNF4") return "nf4_ckpt_name";
-        if (nodeType === "CheckpointLoaderSimple") return "ckpt_name";
-    }
-    if (widgetName === "clip_name" && nodeType === "CLIPLoader") return "clip_name";
-    if (widgetName === "clip_name1" && nodeType === "DualCLIPLoader") return "dual_clip_name1";
-    if (widgetName === "vae_name" && nodeType === "VAELoader") return "vae_name";
-    return null;
+    const rule = LOADER_RULES.find(item =>
+        item.nodeType === nodeType && item.widget === widgetName
+    );
+    return rule?.name ?? null;
 }
 
 function proposal({ name, entry, widgetName, widget, strategy = null, priority = 1, extra = {} }) {

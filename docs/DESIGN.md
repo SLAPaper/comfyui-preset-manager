@@ -164,6 +164,7 @@ restoreParams(graph, snapshot)   -> void
 - `tests/js/matcher.test.mjs` 覆盖 4 种策略、同义词、检查、应用、快照和读取。
 - `tests/js/templates.test.mjs` 用快照模板和真实结构图验证每个参数的匹配结果。
 - `tests/js/template-analyzer.test.mjs` 用 8 个代表性 workflow 和子图 fixture 验证候选识别、歧义反馈和只读行为。
+- `tests/js/analyzer-rules.test.mjs` 校验分析器加载器规则与 `workflows/_loaders.yaml` 一致。
 - `tests/js/sweep-runner.test.mjs` 覆盖执行顺序、逐组恢复、取消和中途失败。
 - `tests/js/graph-lock.test.mjs` 覆盖 graph 写锁的独占和释放。
 - `tests/js/sweep-values.test.mjs` 覆盖轴值解析和总数计算。

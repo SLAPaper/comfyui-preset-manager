@@ -46,6 +46,7 @@ export class TemplateAnalyzerDialog extends ComfyDialog {
         this.synonyms = {};
         this.nodes = [];
         this.saving = false;
+        this.sourceRequest = 0;
 
         this.statusEl = $el("div.template-analyzer-status");
         this.summaryEl = $el("div.template-analyzer-summary");
@@ -414,6 +415,7 @@ export class TemplateAnalyzerDialog extends ComfyDialog {
     }
 
     show() {
+        const request = ++this.sourceRequest;
         this.element.style.display = "flex";
         this.setStatus("");
         this.candidates = [];
@@ -425,7 +427,9 @@ export class TemplateAnalyzerDialog extends ComfyDialog {
         this.sourceSelect.value = "";
         this.deleteButton.disabled = true;
         this.toggleManual(false);
-        this.loadTemplates().then(() => this.analyzeCurrent());
+        this.loadTemplates().then(() => {
+            if (request === this.sourceRequest) this.analyzeCurrent();
+        });
     }
 
     close() {
@@ -492,6 +496,7 @@ export class TemplateAnalyzerDialog extends ComfyDialog {
     }
 
     analyzeCurrent() {
+        this.sourceRequest++;
         const result = analyzeGraph(app.graph);
         this.candidates = result.candidates.map(candidate => ({ ...candidate, manual: false }));
         this.synonyms = {};
@@ -506,7 +511,15 @@ export class TemplateAnalyzerDialog extends ComfyDialog {
     }
 
     async loadTemplate(templateId, suggest = true) {
-        const template = await getTemplateDetail(templateId);
+        const request = ++this.sourceRequest;
+        let template;
+        try {
+            template = await getTemplateDetail(templateId);
+        } catch (error) {
+            if (request === this.sourceRequest) throw error;
+            return false;
+        }
+        if (request !== this.sourceRequest) return false;
         this.candidates = describeMapping(
             app.graph,
             template.node_mapping,
@@ -765,6 +778,7 @@ export class TemplateAnalyzerDialog extends ComfyDialog {
         if (!template || template.source !== "user") return;
         if (!confirm(`删除用户模板「${template.name}」？`)) return;
 
+        const request = ++this.sourceRequest;
         try {
             await deleteTemplate(templateId);
             if (app.graph.extra?.preset_template === templateId) {
@@ -773,10 +787,12 @@ export class TemplateAnalyzerDialog extends ComfyDialog {
             }
             invalidateTemplates();
             await this.loadTemplates();
+            if (request !== this.sourceRequest) return;
             this.sourceSelect.value = "";
             this.analyzeCurrent();
             this.setStatus(`已删除模板「${template.name}」`, "success");
         } catch (error) {
+            if (request !== this.sourceRequest) return;
             this.setStatus(`删除模板失败：${error.message}`, "error");
         }
     }

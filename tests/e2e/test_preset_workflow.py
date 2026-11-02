@@ -2,6 +2,9 @@
 E2E Playwright tests for Preset Manager UI workflow.
 """
 
+import asyncio
+import json
+
 import pytest
 import httpx
 
@@ -83,6 +86,47 @@ class TestPresetWorkflow:
         )
         assert await dialog.locator("select.comfy-select").first.input_value() == ""
         assert "请选择 Workflow 模板" in await dialog.locator(".preset-list").text_content()
+
+    @pytest.mark.asyncio
+    async def test_stale_preset_response_is_discarded(self, page):
+        """A slow response for the previous template must not overwrite the list."""
+        async def delayed_presets(route):
+            await asyncio.sleep(1)
+            await route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps([{
+                    "id": "_stale",
+                    "name": "STALE_RESPONSE",
+                    "description": "",
+                    "source": "user",
+                }]),
+            )
+
+        await page.route(
+            "**/preset-manager/presets/anima-txt2img",
+            delayed_presets,
+        )
+
+        await page.wait_for_timeout(3000)
+        dialog = await open_presets(page)
+        select = dialog.locator("select.comfy-select").first
+        await select.locator('option[value="anima-txt2img"]').wait_for(
+            state="attached", timeout=10000
+        )
+
+        await select.select_option("anima-txt2img")
+        await select.select_option("sdxl-txt2img")
+
+        preset_list = dialog.locator(".preset-list")
+        await preset_list.locator(
+            ".preset-item", has_text="_default"
+        ).first.wait_for(state="attached", timeout=5000)
+        await page.wait_for_timeout(1500)
+
+        assert await select.input_value() == "sdxl-txt2img"
+        assert "STALE_RESPONSE" not in await preset_list.text_content()
+        assert "_default" in await preset_list.text_content()
 
     @pytest.mark.asyncio
     async def test_template_selector_has_options(self, page):

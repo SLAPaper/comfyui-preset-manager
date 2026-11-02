@@ -24,7 +24,18 @@ sys.modules["aiohttp.web"] = aiohttp.web
 server = types.ModuleType("server")
 server.PromptServer = types.ModuleType("server.PromptServer")
 server.PromptServer.instance = types.ModuleType("server.PromptServer.instance")
-server.PromptServer.instance.routes = types.ModuleType("server.PromptServer.instance.routes")
+
+routes = types.SimpleNamespace()
+
+
+def _route(*args, **kwargs):
+    return lambda handler: handler
+
+
+routes.get = _route
+routes.post = _route
+routes.delete = _route
+server.PromptServer.instance.routes = routes
 sys.modules["server"] = server
 
 folder_paths = types.ModuleType("folder_paths")

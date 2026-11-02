@@ -34,6 +34,8 @@ export class SweepDialog {
         this.running = false;
         this.cancelRequested = false;
         this.templateLocked = false;
+        this.templateRequest = 0;
+        this.sweepRequest = 0;
         this.createDialog();
     }
 
@@ -259,6 +261,8 @@ export class SweepDialog {
         this.element.style.display = "flex";
         if (this.running) return;
 
+        const request = ++this.templateRequest;
+        this.sweepRequest++;
         this.currentSweepId = null;
         this.axesEditor.clear();
         this.cancelRequested = false;
@@ -273,6 +277,8 @@ export class SweepDialog {
 
         try {
             const workflows = await loadTemplates();
+            if (request !== this.templateRequest) return;
+
             this.templateSelect.innerHTML = "";
             this.templateSelect.appendChild($el("option", {
                 value: "",
@@ -297,9 +303,12 @@ export class SweepDialog {
             }
 
             if (!this.templateId) return;
-            await this.loadTemplateData();
+            const data = await this.fetchTemplateData(this.templateId);
+            if (request !== this.templateRequest) return;
+            this.applyTemplateData(data);
             this.axesEditor.render();
         } catch (error) {
+            if (request !== this.templateRequest) return;
             this.reportError(error, "加载失败");
         }
     }
@@ -333,12 +342,16 @@ export class SweepDialog {
         this.runButton.disabled = running ? false : !this.templateId;
     }
 
-    async loadTemplateData() {
+    async fetchTemplateData(templateId) {
         const [template, presets, sweeps] = await Promise.all([
-            getTemplateDetail(this.templateId),
-            getPresets(this.templateId),
-            getSweeps(this.templateId)
+            getTemplateDetail(templateId),
+            getPresets(templateId),
+            getSweeps(templateId)
         ]);
+        return { template, presets, sweeps };
+    }
+
+    applyTemplateData({ template, presets, sweeps }) {
         this.template = template;
         this.presets = presets;
         this.sweeps = sweeps;
@@ -357,6 +370,8 @@ export class SweepDialog {
     async onTemplateChange() {
         if (this.running) return;
 
+        const request = ++this.templateRequest;
+        this.sweepRequest++;
         this.templateId = this.templateSelect.value || null;
         this.currentSweepId = null;
         this.nameInput.value = "";
@@ -370,9 +385,12 @@ export class SweepDialog {
         this.axesEditor.setSources(null, []);
         this.axesEditor.clear();
         try {
-            await this.loadTemplateData();
+            const data = await this.fetchTemplateData(this.templateId);
+            if (request !== this.templateRequest) return;
+            this.applyTemplateData(data);
             this.axesEditor.render();
         } catch (error) {
+            if (request !== this.templateRequest) return;
             this.reportError(error, "加载失败");
         }
     }
@@ -389,6 +407,7 @@ export class SweepDialog {
     async onSweepSelect() {
         if (this.running) return;
 
+        const request = ++this.sweepRequest;
         const sweepId = this.sweepSelect.value;
         if (!sweepId) {
             this.currentSweepId = null;
@@ -399,10 +418,12 @@ export class SweepDialog {
 
         try {
             const sweep = await getSweepDetail(this.templateId, sweepId);
+            if (request !== this.sweepRequest) return;
             this.currentSweepId = sweepId;
             this.nameInput.value = sweep.name || sweepId;
             this.axesEditor.setAxes(sweep.axes || []);
         } catch (error) {
+            if (request !== this.sweepRequest) return;
             this.reportError(error, "加载扫描配置失败");
         }
     }

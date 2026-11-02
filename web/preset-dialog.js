@@ -24,12 +24,13 @@ export class PresetDialog extends ComfyDialog {
         super();
         this.onOpenTemplates = onOpenTemplates;
         this.onOpenSweeps = onOpenSweeps;
-        this.workflowTemplates = [];
         this.presets = [];
         this.selectedTemplate = null;
         this.selectedPreset = null;
         this.presetDetail = null;
         this.currentTemplate = null;
+        this.listRequest = 0;
+        this.detailRequest = 0;
         
         // Initialize editor dialog
         this.editor = new PresetEditorDialog((data) => {
@@ -51,12 +52,9 @@ export class PresetDialog extends ComfyDialog {
                 // Template selector
                 $el("div.preset-section", [
                     $el("label", { textContent: "Workflow Template:" }),
-                    $el("div.template-selector", [
-                        this.templateSelect = $el("select.comfy-select", {
-                            onchange: () => this.onTemplateChange()
-                        }),
-                        $el("span.auto-detect-badge", { textContent: "Auto" })
-                    ])
+                    this.templateSelect = $el("select.comfy-select", {
+                        onchange: () => this.onTemplateChange()
+                    })
                 ]),
                 
                 // Preset list with create button
@@ -139,20 +137,9 @@ export class PresetDialog extends ComfyDialog {
             .preset-list-header label {
                 margin-bottom: 0;
             }
-            
-            .template-selector {
-                display: flex;
-                gap: 10px;
-                align-items: center;
-            }
-            
-            .auto-detect-badge {
-                background: #89b4fa;
-                color: #1e1e2e;
-                padding: 2px 8px;
-                border-radius: 4px;
-                font-size: 12px;
-                font-weight: bold;
+
+            .comfy-preset-manager .comfy-select {
+                width: 100%;
             }
             
             .preset-list {
@@ -279,9 +266,10 @@ export class PresetDialog extends ComfyDialog {
     }
     
     async loadData() {
+        const request = ++this.listRequest;
         try {
             const templates = await loadTemplates({ refresh: true });
-            this.workflowTemplates = templates;
+            if (request !== this.listRequest) return;
 
             // Populate template selector. A template must be chosen explicitly;
             // the first entry is only a placeholder, not an implicit binding.
@@ -301,6 +289,7 @@ export class PresetDialog extends ComfyDialog {
             await this.selectStoredTemplate();
             
         } catch (error) {
+            if (request !== this.listRequest) return;
             console.error("[PresetManager] Error loading data:", error);
             this.presetPreview.textContent = `Error: ${error.message}`;
         }
@@ -321,6 +310,7 @@ export class PresetDialog extends ComfyDialog {
     }
 
     showNoTemplate() {
+        this.detailRequest++;
         this.selectedTemplate = null;
         this.selectedPreset = null;
         this.presetDetail = null;
@@ -334,6 +324,8 @@ export class PresetDialog extends ComfyDialog {
     }
     
     async onTemplateChange() {
+        const request = ++this.listRequest;
+        this.detailRequest++;
         const templateId = this.templateSelect.value;
         if (!templateId) {
             this.showNoTemplate();
@@ -350,12 +342,15 @@ export class PresetDialog extends ComfyDialog {
                 getPresets(templateId),
                 getTemplateDetail(templateId)
             ]);
+            if (request !== this.listRequest) return;
             this.presets = presets;
             this.currentTemplate = template;
             this.renderPresetList();
             this.presetPreview.textContent = "Select a preset to preview";
         } catch (error) {
+            if (request !== this.listRequest) return;
             console.error("[PresetManager] Error loading presets:", error);
+            this.presets = [];
             this.presetList.innerHTML = `<div class="preset-item">Error loading presets</div>`;
         }
     }
@@ -462,6 +457,7 @@ export class PresetDialog extends ComfyDialog {
     }
 
     async onPresetSelect(preset, event) {
+        const request = ++this.detailRequest;
         this.selectedPreset = preset;
         
         // Update UI selection
@@ -473,9 +469,12 @@ export class PresetDialog extends ComfyDialog {
         
         // Load and display preset detail
         try {
-            this.presetDetail = await getPresetDetail(this.selectedTemplate, preset.id);
+            const detail = await getPresetDetail(this.selectedTemplate, preset.id);
+            if (request !== this.detailRequest) return;
+            this.presetDetail = detail;
             this.renderPresetPreview();
         } catch (error) {
+            if (request !== this.detailRequest) return;
             console.error("[PresetManager] Error loading preset detail:", error);
             this.presetPreview.textContent = `Error: ${error.message}`;
         }
@@ -530,18 +529,21 @@ export class PresetDialog extends ComfyDialog {
             return;
         }
 
+        const templateId = this.selectedTemplate;
+        const presetId = this.selectedPreset.id;
         try {
             // Load preset detail to get params
-            const presetDetail = await getPresetDetail(this.selectedTemplate, this.selectedPreset.id);
+            const presetDetail = await getPresetDetail(templateId, presetId);
             const params = presetDetail.params || {};
             
             // Ensure template is loaded
-            if (!this.currentTemplate) {
-                this.currentTemplate = await getTemplateDetail(this.selectedTemplate);
+            let template = this.currentTemplate;
+            if (!template) {
+                template = await getTemplateDetail(templateId);
             }
-            const { applied, failed } = applyParams(app.graph, this.currentTemplate, params);
+            const { applied, failed } = applyParams(app.graph, template, params);
             if (failed.length > 0) {
-                const reasons = explainParams(app.graph, this.currentTemplate, failed);
+                const reasons = explainParams(app.graph, template, failed);
                 const details = failed
                     .map(name => `${name}: ${reasons[name] || "未匹配到节点"}`)
                     .join("\n");
@@ -549,7 +551,7 @@ export class PresetDialog extends ComfyDialog {
             }
 
             app.graph.extra = app.graph.extra || {};
-            app.graph.extra.preset_template = this.selectedTemplate;
+            app.graph.extra.preset_template = templateId;
 
             this.close();
             

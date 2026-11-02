@@ -80,7 +80,6 @@ axes:
 ## 待定
 
 - 入队前是否提示 `control_after_generate != fixed`。只提示，不修改。
-- 抽取三个对话框的公共 CSS。
 
 ## 测试
 
