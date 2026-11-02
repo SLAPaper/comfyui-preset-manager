@@ -26,6 +26,16 @@ async def open_templates(page):
     await dialog.locator("button", has_text="模板").click()
 
 
+async def select_first_template(dialog):
+    """Choose the first real template, skipping the placeholder option."""
+    select = dialog.locator("select.comfy-select").first
+    options = select.locator('option:not([value=""])')
+    await options.first.wait_for(state="attached", timeout=10000)
+    value = await options.first.get_attribute("value")
+    await select.select_option(value)
+    return value
+
+
 @pytest.mark.e2e
 class TestPresetWorkflow:
     """Test the full preset selection and application workflow."""
@@ -46,6 +56,19 @@ class TestPresetWorkflow:
         assert await dialog.is_visible()
 
     @pytest.mark.asyncio
+    async def test_preset_dialog_requires_explicit_template(self, page):
+        """Without a graph binding, no template is picked implicitly."""
+        await page.wait_for_timeout(3000)
+        dialog = await open_presets(page)
+
+        await dialog.locator('select.comfy-select option:not([value=""])').first.wait_for(
+            state="attached", timeout=10000
+        )
+        assert await dialog.locator("select.comfy-select").first.input_value() == ""
+        assert "请选择 Workflow 模板" in await dialog.locator(".preset-list").text_content()
+        assert "选择模板后显示预设" in await dialog.locator(".preset-preview").text_content()
+
+    @pytest.mark.asyncio
     async def test_template_selector_has_options(self, page):
         """The template selector should have at least one option."""
         await page.wait_for_timeout(3000)
@@ -57,9 +80,9 @@ class TestPresetWorkflow:
         await dialog.wait_for(state="visible", timeout=5000)
 
         # Options are filled asynchronously after the template list request
-        option = dialog.locator("select.comfy-select option").first
+        option = dialog.locator('select.comfy-select option:not([value=""])').first
         await option.wait_for(state="attached", timeout=10000)
-        assert await dialog.locator("select.comfy-select option").count() > 0
+        assert await dialog.locator('select.comfy-select option:not([value=""])').count() > 0
 
     @pytest.mark.asyncio
     async def test_preset_list_populated(self, page):
@@ -72,8 +95,11 @@ class TestPresetWorkflow:
         dialog = page.locator(".comfy-preset-manager")
         await dialog.wait_for(state="visible", timeout=5000)
 
-        # Wait for preset list to load
-        await page.wait_for_timeout(1000)
+        # Templates are explicit now; choose one before expecting presets
+        await select_first_template(dialog)
+        await dialog.locator(".preset-item:not(.empty)").first.wait_for(
+            state="attached", timeout=5000
+        )
 
         # Check that preset items exist
         items = dialog.locator(".preset-item:not(.empty)")
@@ -95,9 +121,10 @@ class TestPresetWorkflow:
         dialog = page.locator(".comfy-preset-manager")
         await dialog.wait_for(state="visible", timeout=5000)
 
-        # Wait for presets to load and click the first one
-        await page.wait_for_timeout(1000)
+        # Choose a template, then wait for presets to load and click the first one
+        await select_first_template(dialog)
         first_item = dialog.locator(".preset-item:not(.empty) .preset-item-name").first
+        await first_item.wait_for(state="visible", timeout=5000)
         await first_item.click()
 
         # Wait for preview to populate (API call may take time)
@@ -130,9 +157,10 @@ class TestPresetWorkflow:
         dialog = page.locator(".comfy-preset-manager")
         await dialog.wait_for(state="visible", timeout=5000)
 
-        # Wait for presets to load and click the first one
-        await page.wait_for_timeout(1000)
+        # Choose a template, then wait for presets to load and click the first one
+        await select_first_template(dialog)
         first_item = dialog.locator(".preset-item:not(.empty) .preset-item-name").first
+        await first_item.wait_for(state="visible", timeout=5000)
         await first_item.click()
 
         # Wait for preview
@@ -210,28 +238,27 @@ class TestPresetWorkflow:
         assert await dialog.is_visible()
 
     @pytest.mark.asyncio
-    async def test_sweep_dialog_usable_without_pre_selected_template(self, page):
-        """When no template is pre-selected, the dialog should auto-pick one so
-        the user can interact immediately (regression: previously addAxis threw
-        because loadTemplateData was skipped when templateId was null)."""
+    async def test_sweep_dialog_requires_template_selection(self, page):
+        """Without a graph binding the dialog waits for an explicit template."""
         await page.wait_for_timeout(3000)
         await open_sweeps(page)
 
         dialog = page.locator(".comfy-sweep-dialog")
         await dialog.wait_for(state="visible", timeout=5000)
 
-        # Wait for the template list to fill (no template pre-selected)
-        template_options = dialog.locator("select.comfy-select").first.locator("option")
-        await template_options.first.wait_for(state="attached", timeout=5000)
+        await dialog.locator('select.comfy-select option:not([value=""])').first.wait_for(
+            state="attached", timeout=5000
+        )
+        assert await dialog.locator("select.comfy-select").first.input_value() == ""
+        assert await dialog.locator("button", has_text="运行").is_disabled()
 
-        # The auto-pick must trigger loadTemplateData — sweepSelect gets a placeholder
-        sweep_options = dialog.locator("select.comfy-select").nth(1).locator("option")
-        await sweep_options.first.wait_for(state="attached", timeout=5000)
-
-        # Now + 参数轴 should work (previously threw because template was null)
+        # Choosing a template enables axes and the run button
+        await select_first_template(dialog)
+        await page.wait_for_timeout(500)
         await dialog.locator("button", has_text="+ 参数轴").click()
         await page.locator(".sweep-axis input").first.wait_for(state="visible", timeout=2000)
         assert await dialog.locator(".sweep-axis").count() == 1
+        assert not await dialog.locator("button", has_text="运行").is_disabled()
 
     @pytest.mark.asyncio
     async def test_sweep_dialog_offers_filename_trace(self, page):
@@ -254,11 +281,9 @@ class TestPresetWorkflow:
         dialog = page.locator(".comfy-sweep-dialog")
         await dialog.wait_for(state="visible", timeout=5000)
 
-        # Pick the first available template so the axes area becomes interactive
-        template_options = dialog.locator("select.comfy-select").first.locator("option")
-        await template_options.first.wait_for(state="attached", timeout=5000)
-        first_value = await template_options.first.get_attribute("value")
-        await dialog.locator("select.comfy-select").first.select_option(first_value)
+        # Pick a template explicitly so the axes area becomes interactive
+        await select_first_template(dialog)
+        await page.wait_for_timeout(500)
         await dialog.locator("button", has_text="+ 参数轴").click()
 
         value_input = dialog.locator(".sweep-axis input").first
@@ -390,6 +415,43 @@ class TestPresetWorkflow:
 
         assert result["saved"]["id"] == "导入后"
         assert result["saved"]["workflow_template"] == "sdxl-txt2img"
+
+    @pytest.mark.asyncio
+    async def test_editor_preserves_unmatched_preset_params(self, page):
+        """Stored params the current graph cannot match survive an edit."""
+        await page.wait_for_timeout(3000)
+
+        result = await page.evaluate("""async () => {
+            const { PresetEditorDialog } = await import('/extensions/comfyui-preset-manager/preset-editor.js');
+            const editor = new PresetEditorDialog();
+            editor.showForEdit(
+                'sdxl-txt2img', 'mine',
+                { name: '保留测试', params: { steps: 25, missing_param: 'kept' } },
+                [
+                    { name: 'steps', nodeType: 'KSampler', nodeId: '1', value: 20 },
+                    { name: 'cfg', nodeType: 'KSampler', nodeId: '1', value: 7 },
+                ],
+                false
+            );
+
+            const rows = [...editor.element.querySelectorAll('.param-group')].map(group => ({
+                nodeType: group.querySelector('.param-group-title').textContent,
+                items: [...group.querySelectorAll('.param-item')].map(item => ({
+                    name: item.querySelector('.param-item-name').textContent,
+                    checked: item.querySelector('input').checked,
+                })),
+            }));
+            const saved = editor.getPresetData();
+            const note = editor.noteEl.textContent;
+            editor.close();
+            return { rows, saved, note };
+        }""")
+
+        assert result["saved"]["params"] == {"steps": 25, "missing_param": "kept"}
+        assert "1 个参数在当前 workflow 中未匹配" in result["note"]
+
+        custom = next(row for row in result["rows"] if row["nodeType"] == "未匹配")
+        assert custom["items"] == [{"name": "missing_param", "checked": True}]
 
     @pytest.mark.asyncio
     async def test_bundled_preset_opens_as_copy(self, page):

@@ -286,14 +286,31 @@ export class PresetEditorDialog extends ComfyDialog {
         this.codeEditor.value = "";
         this.advancedContainer.open = false;
 
-        // Mark parameters that are in the preset as selected
+        // Mark parameters that are in the preset as selected. Stored params that
+        // the current graph cannot match stay visible and are saved unchanged.
         const presetParams = presetData.params || {};
+        const known = new Set(parameters.map(p => p.name));
         this.parameters = parameters.map(p => ({
             ...p,
             selected: p.name in presetParams,
             value: p.name in presetParams ? presetParams[p.name] : p.value
         }));
-        
+        for (const [name, value] of Object.entries(presetParams)) {
+            if (known.has(name)) continue;
+            this.parameters.push({
+                name,
+                nodeType: "未匹配",
+                nodeId: "",
+                value,
+                selected: true,
+            });
+        }
+
+        const unmatched = Object.keys(presetParams).filter(name => !known.has(name)).length;
+        if (unmatched > 0) {
+            this.noteEl.textContent += ` 有 ${unmatched} 个参数在当前 workflow 中未匹配，保存时会保留。`;
+        }
+
         this.renderParameterList();
         this.element.style.display = "flex";
     }

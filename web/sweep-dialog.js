@@ -49,6 +49,7 @@ export class SweepDialog {
 
         this.runButton = $el("button.comfy-btn.primary", {
             textContent: "运行",
+            disabled: true,
             onclick: () => this.onRun()
         });
 
@@ -259,11 +260,17 @@ export class SweepDialog {
 
         this.templateSelect.disabled = !!templateId;
         this.templateId = templateId;
+        this.clearTemplate();
         this.element.style.display = "flex";
 
         try {
             const workflows = await loadTemplates();
             this.templateSelect.innerHTML = "";
+            this.templateSelect.appendChild($el("option", {
+                value: "",
+                textContent: "（请选择模板）",
+                selected: !this.templateId
+            }));
             for (const w of workflows) {
                 this.templateSelect.appendChild($el("option", {
                     value: w.id,
@@ -272,12 +279,12 @@ export class SweepDialog {
                 }));
             }
 
-            // Fall back to the first template when none is stored or the stored
-            // template no longer exists, so the dialog stays usable.
-            if (!workflows.some(w => w.id === this.templateId)) {
-                this.templateId = workflows[0]?.id ?? null;
-                this.templateSelect.disabled = !this.templateId;
-                if (this.templateId) this.templateSelect.value = this.templateId;
+            // A stored binding that no longer exists is dropped, not replaced
+            // with another template.
+            if (this.templateId && !workflows.some(w => w.id === this.templateId)) {
+                this.templateId = null;
+                this.templateSelect.value = "";
+                this.templateSelect.disabled = false;
             }
 
             if (!this.templateId) return;
@@ -286,6 +293,20 @@ export class SweepDialog {
         } catch (error) {
             this.reportError(error, "加载失败");
         }
+    }
+
+    clearTemplate() {
+        this.template = null;
+        this.presets = [];
+        this.sweeps = [];
+        this.currentSweepId = null;
+        this.axesEditor.setSources(null, []);
+        this.axesEditor.clear();
+        this.sweepSelect.innerHTML = "";
+        this.sweepSelect.appendChild($el("option", { value: "", textContent: "（新建）" }));
+        this.nameInput.value = "";
+        this.progress.textContent = "";
+        this.runButton.disabled = true;
     }
 
     async loadTemplateData() {
@@ -297,6 +318,7 @@ export class SweepDialog {
         this.template = template;
         this.presets = presets;
         this.sweeps = sweeps;
+        this.runButton.disabled = false;
         this.axesEditor.setSources(template, presets);
 
         this.sweepSelect.innerHTML = "";
@@ -309,9 +331,17 @@ export class SweepDialog {
     }
 
     async onTemplateChange() {
-        this.templateId = this.templateSelect.value;
+        this.templateId = this.templateSelect.value || null;
         this.currentSweepId = null;
         this.nameInput.value = "";
+        if (!this.templateId) {
+            this.clearTemplate();
+            return;
+        }
+
+        this.template = null;
+        this.runButton.disabled = true;
+        this.axesEditor.setSources(null, []);
         this.axesEditor.clear();
         try {
             await this.loadTemplateData();
@@ -354,6 +384,11 @@ export class SweepDialog {
     }
 
     async onSave() {
+        if (!this.templateId) {
+            alert("请先选择模板");
+            return;
+        }
+
         const name = this.nameInput.value.trim();
         if (!name) {
             alert("请填写扫描配置名称");
@@ -406,6 +441,12 @@ export class SweepDialog {
         if (this.running) {
             this.cancelRequested = true;
             this.progress.textContent = "正在取消…";
+            return;
+        }
+
+        if (!this.templateId || !this.template) {
+            this.progress.classList.add("error");
+            this.progress.textContent = "请先选择模板";
             return;
         }
 

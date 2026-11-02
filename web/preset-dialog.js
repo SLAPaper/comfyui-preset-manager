@@ -282,8 +282,13 @@ export class PresetDialog extends ComfyDialog {
             const templates = await loadTemplates({ refresh: true });
             this.workflowTemplates = templates;
 
-            // Populate template selector
+            // Populate template selector. A template must be chosen explicitly;
+            // the first entry is only a placeholder, not an implicit binding.
             this.templateSelect.innerHTML = "";
+            this.templateSelect.appendChild($el("option", {
+                value: "",
+                textContent: "（请选择模板）"
+            }));
             for (const template of templates) {
                 const option = $el("option", {
                     value: template.id,
@@ -292,8 +297,7 @@ export class PresetDialog extends ComfyDialog {
                 this.templateSelect.appendChild(option);
             }
             
-            // Auto-detect template
-            await this.autoDetectTemplate();
+            await this.selectStoredTemplate();
             
         } catch (error) {
             console.error("[PresetManager] Error loading data:", error);
@@ -301,25 +305,38 @@ export class PresetDialog extends ComfyDialog {
         }
     }
     
-    async autoDetectTemplate() {
+    async selectStoredTemplate() {
         const templateId = app.graph?.extra?.preset_template;
-        if (templateId) {
-            const option = this.templateSelect.querySelector(`option[value="${templateId}"]`);
-            if (option) {
-                this.templateSelect.value = templateId;
-                await this.onTemplateChange();
-                return;
-            }
+        if (templateId && this.templateSelect.querySelector(`option[value="${templateId}"]`)) {
+            this.templateSelect.value = templateId;
+            await this.onTemplateChange();
+            return;
         }
 
-        if (this.workflowTemplates.length > 0) {
-            this.templateSelect.value = this.workflowTemplates[0].id;
-            await this.onTemplateChange();
-        }
+        this.templateSelect.value = "";
+        this.showNoTemplate();
+    }
+
+    showNoTemplate() {
+        this.selectedTemplate = null;
+        this.selectedPreset = null;
+        this.presetDetail = null;
+        this.currentTemplate = null;
+        this.presets = [];
+        this.presetList.innerHTML = "";
+        this.presetList.appendChild($el("div.preset-item.empty", {
+            textContent: "请选择 Workflow 模板"
+        }));
+        this.presetPreview.textContent = "选择模板后显示预设";
     }
     
     async onTemplateChange() {
         const templateId = this.templateSelect.value;
+        if (!templateId) {
+            this.showNoTemplate();
+            return;
+        }
+
         this.selectedTemplate = templateId;
         this.selectedPreset = null;
         this.presetDetail = null;
