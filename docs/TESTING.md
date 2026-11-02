@@ -55,7 +55,11 @@ python -m pytest tests/e2e/test_preset_workflow.py -v -m e2e
 启动参数：
 
 ```bash
-python main.py --cpu --port 18188 \
+python main.py --cpu --port <空闲端口> \
+  --user-directory <临时目录>/user \
+  --output-directory <临时目录>/output \
+  --temp-directory <临时目录>/temp \
+  --input-directory <临时目录>/input \
   --disable-all-custom-nodes \
   --whitelist-custom-nodes comfyui-preset-manager \
   --disable-api-nodes \
@@ -65,6 +69,8 @@ python main.py --cpu --port 18188 \
 参数说明：
 
 - `--cpu`：不要求 GPU。
+- `--user-directory` 等目录：每次会话使用独立临时目录，不读写真实用户数据、输出或临时文件。
+- `--port`：每次会话动态选择空闲端口，避免残留服务占用固定端口。
 - `--disable-all-custom-nodes --whitelist-custom-nodes`：只加载本插件。
 - `--database-url "sqlite:///:memory:"`：使用内存数据库，避免文件锁。
 
@@ -74,9 +80,9 @@ fixture 优先使用 `ComfyUI/venv` 的 Python 启动服务，找不到时使用
 
 | Fixture | 作用域 | 说明 |
 |---|---|---|
-| `comfyui_server` | session | 启动 ComfyUI，返回地址 |
+| `comfyui_server` | session | 用临时目录和空闲端口启动 ComfyUI，返回地址 |
 | `api_base` | function | 返回 API 地址 |
-| `page` | function | 打开浏览器页面，接受 `beforeunload` 对话框 |
+| `page` | function | 打开浏览器页面，接受 `beforeunload` 对话框，并关闭空用户目录首次打开时的模板对话框 |
 
 ## 注意事项
 
