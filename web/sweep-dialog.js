@@ -12,7 +12,10 @@ import {
     getPresets, getTemplateDetail
 } from "./client.js";
 import { loadTemplates } from "./template-store.js";
-import { applyParams, captureParams, checkParams, explainParams, restoreParams } from "./matcher.js";
+import {
+    applyParams, captureParams, checkParams, explainParams, resolveParams, restoreParams
+} from "./matcher.js";
+import { acquireGraphLock, releaseGraphLock } from "./graph-lock.js";
 import { SweepAxes } from "./sweep-axes.js";
 import { runSweep } from "./sweep-runner.js";
 import { applyPrefixes, capturePrefixes, restorePrefixes } from "./sweep-trace.js";
@@ -30,6 +33,7 @@ export class SweepDialog {
         this.currentSweepId = null;
         this.running = false;
         this.cancelRequested = false;
+        this.templateLocked = false;
         this.createDialog();
     }
 
@@ -47,6 +51,22 @@ export class SweepDialog {
         this.traceToggle = $el("input", { type: "checkbox", checked: true });
         this.progress = $el("div.sweep-progress");
 
+        this.saveButton = $el("button.comfy-btn", {
+            textContent: "保存",
+            onclick: () => this.onSave()
+        });
+        this.deleteButton = $el("button.comfy-btn.small", {
+            textContent: "删除",
+            onclick: () => this.onDelete()
+        });
+        this.addParamButton = $el("button.comfy-btn.small", {
+            textContent: "+ 参数轴",
+            onclick: () => this.axesEditor.addAxis("param")
+        });
+        this.addPresetButton = $el("button.comfy-btn.small", {
+            textContent: "+ 预设轴",
+            onclick: () => this.axesEditor.addAxis("preset")
+        });
         this.runButton = $el("button.comfy-btn.primary", {
             textContent: "运行",
             disabled: true,
@@ -66,13 +86,7 @@ export class SweepDialog {
 
                 $el("div.sweep-section", [
                     $el("label", { textContent: "已保存的扫描配置" }),
-                    $el("div.sweep-row", [
-                        this.sweepSelect,
-                        $el("button.comfy-btn.small", {
-                            textContent: "删除",
-                            onclick: () => this.onDelete()
-                        })
-                    ])
+                    $el("div.sweep-row", [this.sweepSelect, this.deleteButton])
                 ]),
 
                 $el("div.sweep-section", [
@@ -83,14 +97,8 @@ export class SweepDialog {
                 $el("div.sweep-section", [
                     $el("div.sweep-row", [
                         $el("label", { textContent: "扫描轴（第一条为最外层循环）" }),
-                        $el("button.comfy-btn.small", {
-                            textContent: "+ 参数轴",
-                            onclick: () => this.axesEditor.addAxis("param")
-                        }),
-                        $el("button.comfy-btn.small", {
-                            textContent: "+ 预设轴",
-                            onclick: () => this.axesEditor.addAxis("preset")
-                        })
+                        this.addParamButton,
+                        this.addPresetButton
                     ]),
                     this.axisList
                 ]),
@@ -105,10 +113,7 @@ export class SweepDialog {
                 this.progress,
 
                 $el("div.sweep-buttons", [
-                    $el("button.comfy-btn", {
-                        textContent: "保存",
-                        onclick: () => this.onSave()
-                    }),
+                    this.saveButton,
                     this.runButton,
                     $el("button.comfy-btn", {
                         textContent: "关闭",
@@ -251,6 +256,9 @@ export class SweepDialog {
     }
 
     async show(templateId) {
+        this.element.style.display = "flex";
+        if (this.running) return;
+
         this.currentSweepId = null;
         this.axesEditor.clear();
         this.cancelRequested = false;
@@ -258,10 +266,10 @@ export class SweepDialog {
         this.progress.classList.remove("error");
         this.nameInput.value = "";
 
-        this.templateSelect.disabled = !!templateId;
+        this.templateLocked = !!templateId;
+        this.templateSelect.disabled = this.templateLocked;
         this.templateId = templateId;
         this.clearTemplate();
-        this.element.style.display = "flex";
 
         try {
             const workflows = await loadTemplates();
@@ -283,6 +291,7 @@ export class SweepDialog {
             // with another template.
             if (this.templateId && !workflows.some(w => w.id === this.templateId)) {
                 this.templateId = null;
+                this.templateLocked = false;
                 this.templateSelect.value = "";
                 this.templateSelect.disabled = false;
             }
@@ -309,6 +318,21 @@ export class SweepDialog {
         this.runButton.disabled = true;
     }
 
+    setRunning(running) {
+        this.running = running;
+        this.templateSelect.disabled = running || this.templateLocked;
+        this.sweepSelect.disabled = running;
+        this.nameInput.disabled = running;
+        this.traceToggle.disabled = running;
+        this.saveButton.disabled = running;
+        this.deleteButton.disabled = running;
+        this.addParamButton.disabled = running;
+        this.addPresetButton.disabled = running;
+        this.axesEditor.setDisabled(running);
+        this.runButton.textContent = running ? "取消" : "运行";
+        this.runButton.disabled = running ? false : !this.templateId;
+    }
+
     async loadTemplateData() {
         const [template, presets, sweeps] = await Promise.all([
             getTemplateDetail(this.templateId),
@@ -331,6 +355,8 @@ export class SweepDialog {
     }
 
     async onTemplateChange() {
+        if (this.running) return;
+
         this.templateId = this.templateSelect.value || null;
         this.currentSweepId = null;
         this.nameInput.value = "";
@@ -361,6 +387,8 @@ export class SweepDialog {
     }
 
     async onSweepSelect() {
+        if (this.running) return;
+
         const sweepId = this.sweepSelect.value;
         if (!sweepId) {
             this.currentSweepId = null;
@@ -384,6 +412,7 @@ export class SweepDialog {
     }
 
     async onSave() {
+        if (this.running) return;
         if (!this.templateId) {
             alert("请先选择模板");
             return;
@@ -426,7 +455,7 @@ export class SweepDialog {
     }
 
     async onDelete() {
-        if (!this.currentSweepId) return;
+        if (this.running || !this.currentSweepId) return;
         if (!confirm(`删除扫描配置「${this.nameInput.value}」？`)) return;
 
         try {
@@ -444,18 +473,30 @@ export class SweepDialog {
             return;
         }
 
-        if (!this.templateId || !this.template) {
+        const templateId = this.templateId;
+        const template = this.template;
+        const graph = app.graph;
+        if (!templateId || !template) {
             this.progress.classList.add("error");
             this.progress.textContent = "请先选择模板";
             return;
         }
 
+        const sweep = this.collectSweep();
+        const sweepKey = JSON.stringify(sweep);
         let combos;
         try {
-            combos = await expandSweep(this.templateId, this.collectSweep());
+            combos = await expandSweep(templateId, sweep);
         } catch (error) {
             this.progress.classList.add("error");
             this.progress.textContent = `展开失败: ${error.message}`;
+            return;
+        }
+
+        if (this.templateId !== templateId || this.template !== template
+            || JSON.stringify(this.collectSweep()) !== sweepKey) {
+            this.progress.classList.add("error");
+            this.progress.textContent = "配置已变更，请重新运行";
             return;
         }
 
@@ -465,40 +506,59 @@ export class SweepDialog {
             return;
         }
 
-        // Validate against the graph before queueing anything.
-        const failed = checkParams(app.graph, this.template, combos[0].params);
-        if (failed.length > 0) {
-            const reasons = explainParams(app.graph, this.template, failed);
-            this.progress.classList.add("error");
-            this.progress.textContent = "参数无法匹配到节点: " + failed
+        // Validate every combination before queueing anything. Preset axes can
+        // contribute different parameter sets, so the first combo is not enough.
+        const resolved = resolveParams(graph, template);
+        const invalid = combos
+            .map((combo, index) => ({
+                index,
+                label: combo.label,
+                failed: Object.keys(combo.params).filter(name => !resolved[name]),
+            }))
+            .filter(item => item.failed.length > 0);
+
+        if (invalid.length > 0) {
+            const first = invalid[0];
+            const reasons = explainParams(graph, template, first.failed);
+            const details = first.failed
                 .map(name => `${name}（${reasons[name] || "未匹配"}）`)
                 .join("; ");
+            const more = invalid.length > 1 ? `；共 ${invalid.length} 个组合无法匹配` : "";
+            this.progress.classList.add("error");
+            this.progress.textContent =
+                `组合 ${first.index + 1}（${first.label}）无法匹配: ${details}${more}`;
             return;
         }
 
         if (!confirm(`将向队列提交 ${combos.length} 次运行，确定继续？`)) return;
 
-        const tracePrefixes = this.traceToggle.checked
-            ? capturePrefixes(app.graph)
-            : [];
-        const snapshot = captureParams(
-            app.graph,
-            this.template,
-            new Set(combos.flatMap(combo => Object.keys(combo.params)))
-        );
-        this.running = true;
-        this.cancelRequested = false;
-        this.runButton.textContent = "取消";
-        this.progress.classList.remove("error");
+        if (!acquireGraphLock("sweep")) {
+            this.progress.classList.add("error");
+            this.progress.textContent = "另一个操作正在修改 workflow，请稍后再试";
+            return;
+        }
 
+        this.progress.classList.remove("error");
         try {
+            this.setRunning(true);
+            this.cancelRequested = false;
+
+            const tracePrefixes = this.traceToggle.checked
+                ? capturePrefixes(graph)
+                : [];
+            const snapshot = captureParams(
+                graph,
+                template,
+                new Set(combos.flatMap(combo => Object.keys(combo.params)))
+            );
+
             const result = await runSweep({
                 combos,
-                check: (params) => checkParams(app.graph, this.template, params),
-                apply: (params) => applyParams(app.graph, this.template, params),
+                check: (params) => checkParams(graph, template, params),
+                apply: (params) => applyParams(graph, template, params),
                 restore: () => {
-                    restoreParams(app.graph, snapshot);
-                    restorePrefixes(app.graph, tracePrefixes);
+                    restoreParams(graph, snapshot);
+                    restorePrefixes(graph, tracePrefixes);
                 },
                 queue: (combo, index) => {
                     applyPrefixes(tracePrefixes, index, combo.label);
@@ -516,9 +576,9 @@ export class SweepDialog {
             this.progress.classList.add("error");
             this.progress.textContent = `运行失败: ${error.message}`;
         } finally {
-            this.running = false;
             this.cancelRequested = false;
-            this.runButton.textContent = "运行";
+            this.setRunning(false);
+            releaseGraphLock("sweep");
         }
     }
 }

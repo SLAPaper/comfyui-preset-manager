@@ -33,7 +33,7 @@ E2E 测试见 [../docs/TESTING.md](../docs/TESTING.md)。
 | `fixtures/analyzer/` | 8 个代表性 workflow 的 graph，供模板分析测试读取 |
 | `tools/dump_templates.py` | 模板改动后重新生成快照 |
 | `tools/dump_analyzer_fixtures.py` | 重新生成代表性 workflow 的分析 fixture |
-| `js/` | 前端 matcher、模板分析、扫描执行、扫描值解析和模板匹配单元测试 |
+| `js/` | 前端 matcher、模板分析、扫描执行、graph 写锁、扫描值解析和模板匹配单元测试 |
 | `e2e/` | 启动真实 ComfyUI 的 API 和界面测试 |
 
 修改 `workflows/*.yaml` 后，运行 `python tests/tools/dump_templates.py` 更新快照，并同步调整 `fixtures/graphs/` 中对应模板的预期结果。

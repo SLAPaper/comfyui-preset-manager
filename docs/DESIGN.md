@@ -14,6 +14,7 @@
 | 前端 | `web/graph-index.js` | 图遍历、子图作用域、写入目标解析 |
 | 前端 | `web/matcher.js` | 匹配策略、参数读取、检查、应用 |
 | 前端 | `web/template-analyzer.js` | 从当前 graph 识别候选模板参数 |
+| 前端 | `web/graph-lock.js` | 扫描与预设应用之间的 graph 写锁 |
 | 前端 | `web/sweep-runner.js` | 扫描执行顺序和取消 |
 | 前端 | `web/sweep-axes.js` | 扫描轴编辑和总数显示 |
 | 前端 | `web/sweep-values.js` | 轴值解析、格式化和总数计算 |
@@ -123,11 +124,14 @@ restoreParams(graph, snapshot)   -> void
 前端执行流程：
 
 0. 使用 workflow 绑定的模板；未绑定时等待用户显式选择，不自动选择第一个模板。
-1. 用 `checkParams()` 检查第一个组合能否匹配节点和 widget。
+1. 用一次 `resolveParams()` 检查全部组合。预设轴可能让不同组合带不同的参数集，只检查第一个组合不足以发现后续失败。
 2. 用户确认提交次数。
-3. 保存快照。快照覆盖所有组合用到的参数。
+3. 获取 graph 写锁，保存快照。快照覆盖所有组合用到的参数。
 4. `sweep-runner.js` 逐组检查、应用、提交队列；每组在 `finally` 中恢复快照和输出文件名。
 5. 下一组从同一基线重新应用，避免上一组独有的参数残留。
+6. 运行结束或异常时释放写锁。
+
+运行开始时捕获模板、graph 和组合，后续检查和写入只使用这些局部值。运行期间锁定模板选择、扫描配置、扫描轴和保存/删除按钮；关闭对话框不中断运行，重新打开时保留运行界面。Presets 的“Apply Preset”通过同一把 `graph-lock.js` 写锁避免与扫描同时改写 graph。
 
 `runSweep()` 接收检查、应用、恢复、提交、进度和取消回调，不依赖 DOM。恢复在每组的 `finally` 中执行，因此入队失败也会回到基线。取消只停止后续提交，已进入队列的任务继续执行。
 
@@ -135,7 +139,7 @@ restoreParams(graph, snapshot)   -> void
 
 ## 模板关联
 
-用户点击 “Apply Preset” 后，前端把模板 ID 写入 `app.graph.extra.preset_template`。这个字段随 workflow 保存。未保存 workflow 时，关联不会持久化。下次打开预设对话框或扫描对话框时，前端读取该字段，自动选择模板。
+用户点击 “Apply Preset” 后，前端把模板 ID 写入 `app.graph.extra.preset_template`。这个字段随 workflow 保存。未保存 workflow 时，关联不会持久化。下次打开预设对话框或扫描对话框时，前端读取该字段并选中该模板。
 
 关联不使用独立映射文件，也不依赖 workflow 名称。
 

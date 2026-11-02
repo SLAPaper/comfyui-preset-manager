@@ -30,11 +30,14 @@ axes:
 ## 执行流程
 
 1. 后端展开 `axes`，得到组合列表。预设轴在后端展开为完整参数。
-2. 前端用 `checkParams()` 检查第一个组合，不修改 graph。
-3. 检查失败时停止。
-4. 用户确认提交次数后，前端用 `captureParams()` 保存快照。快照覆盖所有组合用到的参数。
+2. 前端解析一次模板，检查全部组合；不修改 graph。任意组合无法匹配时停止。
+3. 用户确认提交次数后，前端获取 graph 写锁，锁定模板、扫描轴和配置按钮。
+4. 前端用 `captureParams()` 保存快照。快照覆盖所有组合用到的参数。
 5. `sweep-runner.js` 逐组检查、应用参数，调用 `app.queuePrompt(0, 1)` 提交。
 6. 每组提交后，前端用 `restoreParams()` 写回快照并恢复输出文件名；下一组从同一基线应用。
+7. 运行结束或异常时释放写锁并恢复界面。
+
+运行期使用开始时的模板和 graph 快照，不读取之后被修改的对话框状态。关闭扫描对话框不中断运行；重新打开时保留运行界面。扫描运行期间不能应用预设。
 
 检查只确认参数能否匹配节点和 widget。插件不检查枚举值是否在 `widget.options.values` 内。
 
@@ -83,5 +86,6 @@ axes:
 
 - `tests/test_sweep_manager.py` 覆盖展开顺序、覆盖规则、预设轴解析和增删改查。
 - `tests/js/sweep-runner.test.mjs` 覆盖执行顺序、逐组恢复、取消和中途失败。
+- `tests/js/graph-lock.test.mjs` 覆盖 graph 写锁的独占和释放。
 - `tests/e2e/test_api.py` 覆盖扫描配置接口和组合展开。
-- `tests/e2e/test_preset_workflow.py` 覆盖扫描对话框的交互。
+- `tests/e2e/test_preset_workflow.py` 覆盖扫描对话框交互、全组合预检和运行期隔离。

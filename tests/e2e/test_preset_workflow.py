@@ -294,6 +294,166 @@ class TestPresetWorkflow:
         assert "2 次运行" in summary_text
 
     @pytest.mark.asyncio
+    async def test_sweep_preflight_checks_every_combination(self, page, api_base):
+        """A later invalid preset must stop the sweep before anything queues."""
+        valid_id = "_e2e_preflight_valid"
+        invalid_id = "_e2e_preflight_invalid"
+        preset_url = f"{api_base}/preset-manager/preset"
+
+        try:
+            for payload in (
+                {
+                    "workflow_template": "sdxl-txt2img",
+                    "id": valid_id,
+                    "name": "Valid",
+                    "params": {"steps": 10},
+                },
+                {
+                    "workflow_template": "sdxl-txt2img",
+                    "id": invalid_id,
+                    "name": "Invalid",
+                    "params": {"steps": 10, "no_such_param": 1},
+                },
+            ):
+                resp = httpx.post(preset_url, json=payload, timeout=10)
+                assert resp.status_code == 200
+
+            await page.wait_for_timeout(3000)
+            result = await page.evaluate("""async ({ validId, invalidId }) => {
+                const { SweepDialog } = await import('/extensions/comfyui-preset-manager/sweep-dialog.js');
+                const app = window.comfyAPI.app.app;
+                app.graph.clear();
+                const node = window.LiteGraph.createNode('KSampler');
+                node.id = 1;
+                app.graph.add(node);
+                const steps = node.widgets.find(widget => widget.name === 'steps');
+                steps.value = 33;
+
+                const dialog = new SweepDialog();
+                await dialog.show('sdxl-txt2img');
+                dialog.axesEditor.setAxes([
+                    { type: 'preset', values: [validId, invalidId] },
+                ]);
+
+                let queued = 0;
+                const originalQueue = app.queuePrompt;
+                app.queuePrompt = async () => { queued++; };
+                try {
+                    await dialog.onRun();
+                } finally {
+                    app.queuePrompt = originalQueue;
+                }
+
+                const outcome = {
+                    queued,
+                    progress: dialog.progress.textContent,
+                    steps: steps.value,
+                };
+                dialog.close();
+                return outcome;
+            }""", {"validId": valid_id, "invalidId": invalid_id})
+        finally:
+            for preset_id in (valid_id, invalid_id):
+                httpx.delete(
+                    f"{preset_url}/sdxl-txt2img/{preset_id}",
+                    timeout=10,
+                )
+
+        assert result["queued"] == 0
+        assert "组合 2" in result["progress"]
+        assert "no_such_param" in result["progress"]
+        assert result["steps"] == 33
+
+    @pytest.mark.asyncio
+    async def test_sweep_run_locks_controls_and_uses_captured_template(self, page):
+        """A run keeps its template even if dialog state is changed mid-flight."""
+        await page.wait_for_timeout(3000)
+
+        result = await page.evaluate("""async () => {
+            const { SweepDialog } = await import('/extensions/comfyui-preset-manager/sweep-dialog.js');
+            const lock = await import('/extensions/comfyui-preset-manager/graph-lock.js');
+            const app = window.comfyAPI.app.app;
+            app.graph.clear();
+            const node = window.LiteGraph.createNode('KSampler');
+            node.id = 1;
+            app.graph.add(node);
+            const steps = node.widgets.find(widget => widget.name === 'steps');
+            steps.value = 33;
+
+            const dialog = new SweepDialog();
+            await dialog.show('sdxl-txt2img');
+            dialog.axesEditor.setAxes([
+                { type: 'param', param: 'steps', values: [10, 20] },
+            ]);
+
+            let releaseFirst;
+            const gate = new Promise(resolve => { releaseFirst = resolve; });
+            const queued = [];
+            const originalQueue = app.queuePrompt;
+            app.queuePrompt = async () => {
+                queued.push(steps.value);
+                if (queued.length === 1) await gate;
+            };
+
+            try {
+                const run = dialog.onRun();
+                for (let i = 0; i < 300 && queued.length === 0; i++) {
+                    await new Promise(resolve => setTimeout(resolve, 10));
+                }
+                if (queued.length === 0) throw new Error("sweep did not queue");
+
+                const locked = {
+                    running: dialog.running,
+                    template: dialog.templateSelect.disabled,
+                    name: dialog.nameInput.disabled,
+                    save: dialog.saveButton.disabled,
+                    axes: [...dialog.axisList.querySelectorAll('input,select,button')]
+                        .every(control => control.disabled),
+                    runText: dialog.runButton.textContent,
+                    owner: lock.getGraphLockOwner(),
+                };
+
+                // Simulate a forced state change while the first queue is pending.
+                dialog.template = null;
+                releaseFirst();
+                await run;
+
+                return {
+                    locked,
+                    queued,
+                    steps: steps.value,
+                    progress: dialog.progress.textContent,
+                    ownerAfter: lock.getGraphLockOwner(),
+                    runningAfter: dialog.running,
+                    nameAfter: dialog.nameInput.disabled,
+                    saveAfter: dialog.saveButton.disabled,
+                    runTextAfter: dialog.runButton.textContent,
+                };
+            } finally {
+                app.queuePrompt = originalQueue;
+                dialog.close();
+            }
+        }""")
+
+        assert result["locked"] == {
+            "running": True,
+            "template": True,
+            "name": True,
+            "save": True,
+            "axes": True,
+            "runText": "取消",
+            "owner": "sweep",
+        }
+        assert result["queued"] == [10, 20]
+        assert result["steps"] == 33
+        assert "完成，已提交 2 次运行" in result["progress"]
+        assert result["ownerAfter"] is None
+        assert result["runningAfter"] is False
+        assert result["nameAfter"] is False
+        assert result["saveAfter"] is False
+        assert result["runTextAfter"] == "运行"
+
+    @pytest.mark.asyncio
     async def test_apply_params_reports_unmatched_params(self, page):
         """Params with no mapping should be reported in failed, not silently dropped."""
         await page.wait_for_timeout(3000)

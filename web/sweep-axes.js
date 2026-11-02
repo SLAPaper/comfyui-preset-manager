@@ -16,6 +16,12 @@ export class SweepAxes {
         this.template = null;
         this.presets = [];
         this.axes = [];
+        this.disabled = false;
+    }
+
+    setDisabled(disabled) {
+        this.disabled = disabled;
+        this.render();
     }
 
     setSources(template, presets) {
@@ -41,7 +47,7 @@ export class SweepAxes {
     }
 
     addAxis(type) {
-        if (!this.template) return;
+        if (this.disabled || !this.template) return;
 
         this.axes.push(type === "preset"
             ? { type: "preset", values: [] }
@@ -66,6 +72,7 @@ export class SweepAxes {
 
             if (axis.type === "param") {
                 const select = $el("select", {
+                    disabled: this.disabled,
                     onchange: (event) => { axis.param = event.target.value; }
                 });
                 for (const name of paramNames) {
@@ -80,6 +87,7 @@ export class SweepAxes {
                     type: "text",
                     placeholder: "值，逗号分隔",
                     value: formatValues(axis.values),
+                    disabled: this.disabled,
                     oninput: (event) => {
                         axis.values = parseValues(event.target.value);
                         this.updateSummary();
@@ -92,6 +100,7 @@ export class SweepAxes {
                         type: "checkbox",
                         value: preset.id,
                         checked: axis.values.includes(preset.id),
+                        disabled: this.disabled,
                         onchange: (event) => {
                             if (event.target.checked) {
                                 axis.values.push(preset.id);
@@ -111,14 +120,17 @@ export class SweepAxes {
 
             controls.push($el("button.comfy-btn.small", {
                 textContent: "↑",
+                disabled: this.disabled,
                 onclick: () => this.moveAxis(index, -1)
             }));
             controls.push($el("button.comfy-btn.small", {
                 textContent: "↓",
+                disabled: this.disabled,
                 onclick: () => this.moveAxis(index, 1)
             }));
             controls.push($el("button.comfy-btn.small", {
                 textContent: "✕",
+                disabled: this.disabled,
                 onclick: () => {
                     this.axes.splice(index, 1);
                     this.render();

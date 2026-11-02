@@ -11,6 +11,7 @@
 import { app } from "../../scripts/app.js";
 import { deletePreset, getPresets, getPresetDetail, getTemplateDetail } from "./client.js";
 import { readParams, resolveParams, applyParams, explainParams } from "./matcher.js";
+import { acquireGraphLock, releaseGraphLock } from "./graph-lock.js";
 import { PresetEditorDialog } from "./preset-editor.js";
 import { injectStyles } from "./styles.js";
 import { loadTemplates } from "./template-store.js";
@@ -521,7 +522,11 @@ export class PresetDialog extends ComfyDialog {
             alert("Please select a template and preset first");
             return;
         }
-        
+        if (!acquireGraphLock("preset")) {
+            alert("另一个操作正在修改 workflow，请稍后再试");
+            return;
+        }
+
         try {
             // Load preset detail to get params
             const presetDetail = await getPresetDetail(this.selectedTemplate, this.selectedPreset.id);
@@ -548,6 +553,8 @@ export class PresetDialog extends ComfyDialog {
         } catch (error) {
             console.error("[PresetManager] Error applying preset:", error);
             alert(`Error applying preset: ${error.message}`);
+        } finally {
+            releaseGraphLock("preset");
         }
     }
     
