@@ -8,9 +8,15 @@ user/preset-manager/workflows/ and override bundled templates with the same ID.
 from pathlib import Path
 
 try:
-    from .storage import is_safe_id, load_yaml, require_safe_id, save_yaml, scan_yaml, user_dir
+    from .storage import (
+        find_yaml_file, is_safe_id, load_yaml, remove_alternate_yaml, require_safe_id,
+        save_yaml, scan_yaml, user_dir,
+    )
 except ImportError:
-    from storage import is_safe_id, load_yaml, require_safe_id, save_yaml, scan_yaml, user_dir
+    from storage import (
+        find_yaml_file, is_safe_id, load_yaml, remove_alternate_yaml, require_safe_id,
+        save_yaml, scan_yaml, user_dir,
+    )
 
 PLUGIN_DIR = Path(__file__).parent
 WORKFLOWS_DIR = PLUGIN_DIR / "workflows"
@@ -127,36 +133,37 @@ def load_templates() -> dict[str, dict]:
     return templates
 
 
+def _load_template_from(directory: Path, template_id: str) -> dict | None:
+    template_file = _find_file(directory, template_id)
+    return (
+        _load_template_file(template_id, template_file)
+        if template_file is not None
+        else None
+    )
+
+
 def get_template(template_id: str) -> dict | None:
     """Load a single template by ID. Returns None when missing or invalid."""
     if template_id.startswith("_"):
         return None
 
-    for directory in (_get_user_workflows_dir(), WORKFLOWS_DIR):
-        template_file = _find_file(directory, template_id)
-        if template_file is not None:
-            data = _load_template_file(template_id, template_file)
-            if data is not None:
-                return data
-
-    return None
+    return (
+        _load_template_from(_get_user_workflows_dir(), template_id)
+        or _load_template_from(WORKFLOWS_DIR, template_id)
+    )
 
 
 def _find_file(directory: Path, template_id: str) -> Path | None:
     if not is_safe_id(template_id):
         return None
-    for ext in (".yaml", ".yml"):
-        filepath = directory / f"{template_id}{ext}"
-        if filepath.is_file():
-            return filepath
-    return None
+    return find_yaml_file(directory, template_id)
 
 
 def template_source(template_id: str) -> str | None:
-    """Return where a template comes from: user, bundled, or None."""
-    if _find_file(_get_user_workflows_dir(), template_id) is not None:
+    """Return the layer of the template that actually loads: user, bundled, or None."""
+    if _load_template_from(_get_user_workflows_dir(), template_id) is not None:
         return "user"
-    if _find_file(WORKFLOWS_DIR, template_id) is not None:
+    if _load_template_from(WORKFLOWS_DIR, template_id) is not None:
         return "bundled"
     return None
 
@@ -193,6 +200,7 @@ def save_template(template_id: str, data: dict) -> bool:
 
     filepath = _get_user_workflows_dir() / f"{template_id}.yaml"
     if save_yaml(filepath, save_data):
+        remove_alternate_yaml(filepath)
         print(f"[PresetManager] Saved template: {template_id}")
         return True
     return False

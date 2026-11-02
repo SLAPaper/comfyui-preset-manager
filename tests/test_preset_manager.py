@@ -149,6 +149,70 @@ def test_save_preset_strips_id_field(preset_manager, temp_dir):
         preset_manager.get_user_presets_dir = original_func
 
 
+def test_save_preset_strips_derived_fields(preset_manager, temp_dir):
+    """Template membership comes from the directory, not the payload."""
+    original_func = preset_manager.get_user_presets_dir
+    preset_manager.get_user_presets_dir = lambda: temp_dir
+    try:
+        preset_manager.save_preset("sdxl-txt2img", "mine", {
+            "id": "other",
+            "source": "bundled",
+            "workflow_template": "other-template",
+            "name": "Mine",
+            "params": {"steps": 20},
+        })
+
+        filepath = temp_dir / "sdxl-txt2img" / "mine.yaml"
+        loaded = yaml.safe_load(filepath.read_text(encoding="utf-8"))
+        assert "id" not in loaded
+        assert "source" not in loaded
+        assert "workflow_template" not in loaded
+
+        detail = preset_manager.get_preset("sdxl-txt2img", "mine")
+        assert detail["id"] == "mine"
+        assert detail["workflow_template"] == "sdxl-txt2img"
+    finally:
+        preset_manager.get_user_presets_dir = original_func
+
+
+def test_get_and_delete_preset_with_yml_extension(preset_manager, temp_dir):
+    preset_dir = temp_dir / "sdxl-txt2img"
+    preset_dir.mkdir(parents=True)
+    (preset_dir / "legacy.yml").write_text(
+        yaml.dump({"name": "Legacy"}), encoding="utf-8"
+    )
+
+    original_func = preset_manager.get_user_presets_dir
+    preset_manager.get_user_presets_dir = lambda: temp_dir
+    try:
+        assert preset_manager.get_preset("sdxl-txt2img", "legacy")["name"] == "Legacy"
+        assert preset_manager.delete_preset("sdxl-txt2img", "legacy") is True
+        assert not (preset_dir / "legacy.yml").exists()
+    finally:
+        preset_manager.get_user_presets_dir = original_func
+
+
+def test_save_preset_migrates_yml_to_yaml(preset_manager, temp_dir):
+    preset_dir = temp_dir / "sdxl-txt2img"
+    preset_dir.mkdir(parents=True)
+    (preset_dir / "legacy.yml").write_text(
+        yaml.dump({"name": "Old"}), encoding="utf-8"
+    )
+
+    original_func = preset_manager.get_user_presets_dir
+    preset_manager.get_user_presets_dir = lambda: temp_dir
+    try:
+        assert preset_manager.save_preset("sdxl-txt2img", "legacy", {
+            "name": "New",
+            "params": {"steps": 30},
+        })
+        assert not (preset_dir / "legacy.yml").exists()
+        assert (preset_dir / "legacy.yaml").is_file()
+        assert preset_manager.get_preset("sdxl-txt2img", "legacy")["name"] == "New"
+    finally:
+        preset_manager.get_user_presets_dir = original_func
+
+
 def test_save_preset_overwrites_existing(preset_manager, temp_dir):
     """save_preset() should overwrite existing preset with same ID."""
     original_func = preset_manager.get_user_presets_dir

@@ -63,13 +63,19 @@ export function describeMapping(graph, mapping, synonyms = {}) {
     });
 }
 
+const INVALID_ID_CHARS = /[/\\:*?"<>|\x00-\x1f\x7f]/;
+const RESERVED_ID_NAMES = new Set([
+    "CON", "PRN", "AUX", "NUL",
+    ...Array.from({ length: 9 }, (_, index) => `COM${index + 1}`),
+    ...Array.from({ length: 9 }, (_, index) => `LPT${index + 1}`),
+]);
+
 export function isSafeTemplateId(value) {
-    return typeof value === "string"
-        && value.length > 0
-        && value !== "."
-        && value !== ".."
-        && !value.startsWith("_")
-        && !/[/\\:\x00]/.test(value);
+    if (typeof value !== "string" || !value || value !== value.trim()) return false;
+    if (value === "." || value === "..") return false;
+    if (value.startsWith("_") || value.startsWith(".") || value.endsWith(".")) return false;
+    if (INVALID_ID_CHARS.test(value)) return false;
+    return !RESERVED_ID_NAMES.has(value.split(".", 1)[0].toUpperCase());
 }
 
 /**

@@ -12,9 +12,15 @@ import itertools
 from pathlib import Path
 
 try:
-    from .storage import load_yaml, require_safe_id, save_yaml, scan_yaml, user_dir
+    from .storage import (
+        find_yaml_file, load_yaml, remove_alternate_yaml, require_safe_id, save_yaml,
+        scan_yaml, user_dir,
+    )
 except ImportError:
-    from storage import load_yaml, require_safe_id, save_yaml, scan_yaml, user_dir
+    from storage import (
+        find_yaml_file, load_yaml, remove_alternate_yaml, require_safe_id, save_yaml,
+        scan_yaml, user_dir,
+    )
 
 
 def get_user_sweeps_dir() -> Path:
@@ -79,27 +85,48 @@ def load_sweeps(template_id: str) -> list[dict]:
     ]
 
 
-def _sweep_file(template_id: str, sweep_id: str) -> Path:
+def _sweep_save_path(template_id: str, sweep_id: str) -> Path:
     return get_user_sweeps_dir() / template_id / f"{sweep_id}.yaml"
+
+
+def _find_sweep_file(template_id: str, sweep_id: str) -> Path | None:
+    return find_yaml_file(get_user_sweeps_dir() / template_id, sweep_id)
 
 
 def get_sweep(template_id: str, sweep_id: str) -> dict | None:
     """Load a full sweep config, or None if it does not exist."""
     require_safe_id(template_id, sweep_id)
-    return load_yaml(_sweep_file(template_id, sweep_id))
+    filepath = _find_sweep_file(template_id, sweep_id)
+    if filepath is None:
+        return None
+    data = load_yaml(filepath)
+    if data is None:
+        return None
+    data["id"] = sweep_id
+    data["workflow_template"] = template_id
+    return data
 
 
 def save_sweep(template_id: str, sweep_id: str, data: dict) -> bool:
     """Write a sweep config, overwriting any existing one."""
     require_safe_id(template_id, sweep_id)
-    return save_yaml(_sweep_file(template_id, sweep_id), data)
+    save_data = {
+        key: value
+        for key, value in data.items()
+        if key not in ("id", "workflow_template")
+    }
+    filepath = _sweep_save_path(template_id, sweep_id)
+    if not save_yaml(filepath, save_data):
+        return False
+    remove_alternate_yaml(filepath)
+    return True
 
 
 def delete_sweep(template_id: str, sweep_id: str) -> bool:
     """Delete a sweep config. Returns False if it did not exist."""
     require_safe_id(template_id, sweep_id)
-    filepath = _sweep_file(template_id, sweep_id)
-    if not filepath.is_file():
+    filepath = _find_sweep_file(template_id, sweep_id)
+    if filepath is None:
         return False
     filepath.unlink()
     return True

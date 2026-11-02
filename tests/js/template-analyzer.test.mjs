@@ -323,8 +323,18 @@ test("buildTemplate rejects invalid ids and empty selections", () => {
     };
 
     assert.equal(isSafeTemplateId("my-template"), true);
+    assert.equal(isSafeTemplateId("a b"), true);
     assert.equal(isSafeTemplateId("_shared"), false);
     assert.equal(isSafeTemplateId("../escape"), false);
+    assert.equal(isSafeTemplateId("a?b"), false);
+    assert.equal(isSafeTemplateId("a*b"), false);
+    assert.equal(isSafeTemplateId("a:b"), false);
+    assert.equal(isSafeTemplateId(" a"), false);
+    assert.equal(isSafeTemplateId("a."), false);
+    assert.equal(isSafeTemplateId(".hidden"), false);
+    assert.equal(isSafeTemplateId("CON"), false);
+    assert.equal(isSafeTemplateId("con.txt"), false);
+    assert.equal(isSafeTemplateId("console"), true);
 
     for (const id of ["", "_shared", "a/b"]) {
         assert.throws(() => buildTemplate({ id, name: "Name", candidates: [candidate] }), /模板 ID/);

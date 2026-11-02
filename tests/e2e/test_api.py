@@ -57,6 +57,8 @@ class TestTemplateAPI:
         data = resp.json()
         assert "params" in data
         assert "positive_prompt" in data["params"]
+        assert data["id"] == "_default"
+        assert data["workflow_template"] == "sdxl-txt2img"
 
 
 @pytest.mark.e2e
@@ -169,6 +171,8 @@ class TestSweepAPI:
         data = resp.json()
         assert data["name"] == "E2E Test Sweep"
         assert len(data["axes"]) == 2
+        assert data["id"] == self.SWEEP_ID
+        assert data["workflow_template"] == self.TEMPLATE
 
     def test_saved_sweep_appears_in_list(self, api_base):
         """A saved sweep should appear in the sweeps list."""

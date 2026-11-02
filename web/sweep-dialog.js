@@ -429,6 +429,12 @@ export class SweepDialog {
             .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-")
             .replace(/^-+|-+$/g, "") || `sweep-${Date.now().toString(36)}`;
 
+        const existing = this.sweeps.find(sweep => sweep.id === sweepId);
+        if (!this.currentSweepId && existing
+            && !confirm(`扫描配置「${existing.name}」已存在，覆盖？`)) {
+            return;
+        }
+
         try {
             await saveSweep({
                 workflow_template: this.templateId,

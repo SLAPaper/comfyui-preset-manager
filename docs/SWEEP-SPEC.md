@@ -21,7 +21,7 @@ axes:
     values: [euler, dpmpp_2m]
 ```
 
-接口保存时会同时写入 `workflow_template` 和 `id`。读取时以存储路径为准，不依赖这两个字段。
+保存时剥离 `workflow_template` 和 `id`；读取时由存储路径和文件名注入。`.yaml` 和 `.yml` 都可读取，同 stem 同时存在时 `.yaml` 优先。
 
 - `axes` 的顺序即循环顺序，`axes[0]` 为最外层。
 - 后应用的轴覆盖先应用的轴。预设轴和参数轴使用同一规则。

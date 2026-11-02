@@ -147,12 +147,15 @@ restoreParams(graph, snapshot)   -> void
 
 `storage.py` 统一处理存储：
 
-- `is_safe_id()` 和 `require_safe_id()`：ID 不能包含 `/`、`\`、`:`、空值、`.` 或 `..`。
+- `is_safe_id()` 和 `require_safe_id()`：拒绝路径分隔符、Windows 非法字符、控制字符、首尾空白、首尾点、`.`、`..` 和 Windows 设备名。允许中文和内部空格。
+- `find_yaml_file()`：按 stem 查找 `.yaml` 或 `.yml`，`.yaml` 优先。
 - `save_yaml()`：先写临时文件，再用 `os.replace()` 替换目标文件。
-- `scan_yaml()`：按文件名读取目录下的 YAML。
+- `scan_yaml()`：按文件名读取目录下的 YAML；同 stem 同时存在 `.yaml` 和 `.yml` 时采用 `.yaml`。
 - `user_dir()`：返回 `user/preset-manager/` 下的目录。
 
 业务模块在拼接路径前调用 `require_safe_id()`。路由用 `_match_ids()` 和 `_body_ids()` 检查入参，非法 ID 返回 400。
+
+预设和扫描 YAML 不保存 `id`、`source`、`workflow_template`。这些字段在读取时由目录和文件名注入，避免路径与内容不一致。模板列表的 `source` 取实际能加载的那一层；无效用户文件不会把内置模板标记为用户模板。
 
 ## 测试面
 
@@ -160,7 +163,8 @@ restoreParams(graph, snapshot)   -> void
 - `tests/js/matcher.test.mjs` 覆盖 4 种策略、同义词、检查、应用、快照和读取。
 - `tests/js/templates.test.mjs` 用快照模板和真实结构图验证每个参数的匹配结果。
 - `tests/js/template-analyzer.test.mjs` 用 8 个代表性 workflow 和子图 fixture 验证候选识别、歧义反馈和只读行为。
-- `tests/js/sweep-runner.test.mjs` 覆盖执行顺序、取消和中途失败。
+- `tests/js/sweep-runner.test.mjs` 覆盖执行顺序、逐组恢复、取消和中途失败。
+- `tests/js/graph-lock.test.mjs` 覆盖 graph 写锁的独占和释放。
 - `tests/js/sweep-values.test.mjs` 覆盖轴值解析和总数计算。
 - `tests/js/sweep-trace.test.mjs` 覆盖输出文件名标记、清理和恢复。
 - `tests/test_storage.py` 覆盖 ID 校验和原子读写。

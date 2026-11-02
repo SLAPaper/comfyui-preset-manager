@@ -119,6 +119,33 @@ def test_user_templates_override_bundled(workflow_parser, temp_dir):
         workflow_parser._get_user_workflows_dir = original_func
 
 
+def test_invalid_user_template_does_not_claim_bundled_source(workflow_parser, temp_dir):
+    """A broken user file falls back to the bundled template and source."""
+    with open(temp_dir / "sdxl-txt2img.yaml", "w") as f:
+        yaml.dump({"node_mapping": {}}, f)
+
+    original_func = workflow_parser._get_user_workflows_dir
+    workflow_parser._get_user_workflows_dir = lambda: temp_dir
+    try:
+        assert workflow_parser.get_template("sdxl-txt2img")["name"] == "SDXL Text to Image"
+        assert workflow_parser.template_source("sdxl-txt2img") == "bundled"
+    finally:
+        workflow_parser._get_user_workflows_dir = original_func
+
+
+def test_user_template_can_use_yml_extension(workflow_parser, temp_dir):
+    with open(temp_dir / "custom.yml", "w") as f:
+        yaml.dump(_custom_template(), f)
+
+    original_func = workflow_parser._get_user_workflows_dir
+    workflow_parser._get_user_workflows_dir = lambda: temp_dir
+    try:
+        assert workflow_parser.get_template("custom")["name"] == "Custom workflow"
+        assert workflow_parser.template_source("custom") == "user"
+    finally:
+        workflow_parser._get_user_workflows_dir = original_func
+
+
 # === Tests for save_template() ===
 
 

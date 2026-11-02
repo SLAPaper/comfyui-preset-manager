@@ -69,6 +69,22 @@ class TestPresetWorkflow:
         assert "选择模板后显示预设" in await dialog.locator(".preset-preview").text_content()
 
     @pytest.mark.asyncio
+    async def test_preset_dialog_ignores_unsafe_bound_template_id(self, page):
+        """A bound ID must not be interpolated into a CSS selector."""
+        await page.wait_for_timeout(3000)
+        await page.evaluate("""() => {
+            const app = window.comfyAPI.app.app;
+            app.graph.extra = { ...(app.graph.extra || {}), preset_template: 'bad"id' };
+        }""")
+
+        dialog = await open_presets(page)
+        await dialog.locator('select.comfy-select option:not([value=""])').first.wait_for(
+            state="attached", timeout=10000
+        )
+        assert await dialog.locator("select.comfy-select").first.input_value() == ""
+        assert "请选择 Workflow 模板" in await dialog.locator(".preset-list").text_content()
+
+    @pytest.mark.asyncio
     async def test_template_selector_has_options(self, page):
         """The template selector should have at least one option."""
         await page.wait_for_timeout(3000)
@@ -612,6 +628,44 @@ class TestPresetWorkflow:
 
         custom = next(row for row in result["rows"] if row["nodeType"] == "未匹配")
         assert custom["items"] == [{"name": "missing_param", "checked": True}]
+
+    @pytest.mark.asyncio
+    async def test_editor_confirms_overwriting_existing_preset(self, page):
+        """A new preset whose generated ID exists asks before overwriting."""
+        await page.wait_for_timeout(3000)
+
+        result = await page.evaluate("""async () => {
+            const { PresetEditorDialog } = await import('/extensions/comfyui-preset-manager/preset-editor.js');
+            const editor = new PresetEditorDialog();
+            editor.showForCreate('sdxl-txt2img', [
+                { name: 'steps', nodeType: 'KSampler', nodeId: '1', value: 20, defaultSelected: true },
+            ], [{ id: '同名', name: '同名', source: 'user' }]);
+            editor.nameInput.value = '同名';
+
+            let prompts = 0;
+            const originalConfirm = window.confirm;
+            window.confirm = () => {
+                prompts++;
+                return false;
+            };
+            try {
+                await editor.onSaveClick();
+            } finally {
+                window.confirm = originalConfirm;
+            }
+
+            const outcome = {
+                prompts,
+                visible: editor.element.style.display !== 'none',
+                shouldConfirm: editor.shouldConfirmOverwrite(editor.getPresetData()),
+            };
+            editor.close();
+            return outcome;
+        }""")
+
+        assert result["prompts"] == 1
+        assert result["visible"] is True
+        assert result["shouldConfirm"] is True
 
     @pytest.mark.asyncio
     async def test_bundled_preset_opens_as_copy(self, page):

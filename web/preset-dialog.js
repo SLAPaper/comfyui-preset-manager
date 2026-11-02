@@ -308,7 +308,9 @@ export class PresetDialog extends ComfyDialog {
     
     async selectStoredTemplate() {
         const templateId = app.graph?.extra?.preset_template;
-        if (templateId && this.templateSelect.querySelector(`option[value="${templateId}"]`)) {
+        const hasTemplate = Array.from(this.templateSelect.options)
+            .some(option => option.value === templateId);
+        if (templateId && hasTemplate) {
             this.templateSelect.value = templateId;
             await this.onTemplateChange();
             return;
@@ -416,7 +418,7 @@ export class PresetDialog extends ComfyDialog {
                 return;
             }
 
-            this.editor.showForCreate(this.selectedTemplate, params);
+            this.editor.showForCreate(this.selectedTemplate, params, this.presets);
         } catch (error) {
             alert("加载模板失败: " + error.message);
         }
@@ -437,7 +439,8 @@ export class PresetDialog extends ComfyDialog {
                 preset.id,
                 presetData,
                 params,
-                preset.source === "bundled"
+                preset.source === "bundled",
+                this.presets
             );
         } catch (error) {
             console.error("[PresetManager] Error loading preset for edit:", error);

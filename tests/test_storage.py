@@ -7,13 +7,24 @@ import yaml
 
 
 def test_is_safe_id_accepts_normal_ids(storage):
-    for value in ("_default", "sdxl-txt2img", "测试扫描", "sweep-1", "a.b"):
+    for value in ("_default", "sdxl-txt2img", "测试扫描", "sweep-1", "a.b", "a b"):
         assert storage.is_safe_id(value)
 
 
-def test_is_safe_id_rejects_path_syntax(storage):
-    for value in ("", ".", "..", "a/b", "a\\b", "C:evil", "a\x00b", None, 3):
+def test_is_safe_id_rejects_path_and_platform_syntax(storage):
+    for value in (
+        "", ".", "..", "a/b", "a\\b", "C:evil", "a\x00b", None, 3,
+        "a?b", "a*b", "a<b", "a>b", "a|b", 'a"b',
+        "a\nb", "a\x7fb", " a", "a ", "a.", ".a",
+    ):
         assert not storage.is_safe_id(value)
+
+
+def test_is_safe_id_rejects_windows_device_names(storage):
+    for value in ("CON", "con", "NUL.txt", "COM1", "LPT9"):
+        assert not storage.is_safe_id(value)
+    assert storage.is_safe_id("console")
+    assert storage.is_safe_id("com10")
 
 
 def test_require_safe_id_raises(storage):
@@ -46,6 +57,14 @@ def test_scan_yaml_keys_by_stem(storage, temp_dir):
     (temp_dir / "notes.txt").write_text("ignored", encoding="utf-8")
 
     assert storage.scan_yaml(temp_dir) == {"one": {"name": "one"}, "two": {"name": "two"}}
+
+
+def test_scan_yaml_prefers_yaml_for_duplicate_stem(storage, temp_dir):
+    (temp_dir / "same.yaml").write_text(yaml.safe_dump({"name": "yaml"}), encoding="utf-8")
+    (temp_dir / "same.yml").write_text(yaml.safe_dump({"name": "yml"}), encoding="utf-8")
+
+    assert storage.scan_yaml(temp_dir) == {"same": {"name": "yaml"}}
+    assert storage.find_yaml_file(temp_dir, "same").name == "same.yaml"
 
 
 def test_preset_manager_rejects_unsafe_ids(preset_manager):

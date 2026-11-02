@@ -20,6 +20,7 @@ export class PresetEditorDialog extends ComfyDialog {
         this.onSave = onSave; // Callback when preset is saved
         this.templateId = null;
         this.presetId = null; // null = create new, non-null = edit existing
+        this.existingIds = new Set();
         this.parameters = []; // { name, nodeType, nodeId, value, selected }
         
         this.element = $el("div.comfy-modal.comfy-preset-editor.preset-manager-dialog", { parent: document.body }, [
@@ -242,10 +243,12 @@ export class PresetEditorDialog extends ComfyDialog {
      * Show the dialog for creating a new preset.
      * @param {string} templateId - The template ID
      * @param {Array} parameters - Array of { name, nodeType, nodeId, value }
+     * @param {Array} existingPresets - Presets already stored for this template
      */
-    showForCreate(templateId, parameters) {
+    showForCreate(templateId, parameters, existingPresets = []) {
         this.templateId = templateId;
         this.presetId = null;
+        this.existingIds = new Set(existingPresets.map(preset => preset.id));
         this.parameters = parameters.map(p => ({ ...p, selected: p.defaultSelected !== false }));
         
         this.titleEl.textContent = "创建预设";
@@ -269,10 +272,12 @@ export class PresetEditorDialog extends ComfyDialog {
      * @param {Object} presetData - The preset data
      * @param {Array} parameters - Array of { name, nodeType, nodeId, value }
      * @param {boolean} bundled - Whether the preset comes from the bundled layer
+     * @param {Array} existingPresets - Presets already stored for this template
      */
-    showForEdit(templateId, presetId, presetData, parameters, bundled = false) {
+    showForEdit(templateId, presetId, presetData, parameters, bundled = false, existingPresets = []) {
         this.templateId = templateId;
         this.presetId = bundled ? null : presetId;
+        this.existingIds = new Set(existingPresets.map(preset => preset.id));
 
         const sourceName = presetData.name || presetId;
         this.titleEl.textContent = bundled ? "复制内置预设" : "编辑预设";
@@ -504,6 +509,10 @@ export class PresetEditorDialog extends ComfyDialog {
             .replace(/^_|_$/g, "") || "unnamed";
     }
     
+    shouldConfirmOverwrite(data) {
+        return !this.presetId && this.existingIds.has(data.id);
+    }
+
     /**
      * Handle save button click.
      */
@@ -518,6 +527,11 @@ export class PresetEditorDialog extends ComfyDialog {
         
         if (Object.keys(data.params).length === 0) {
             alert("请至少选择一个参数");
+            return;
+        }
+
+        if (this.shouldConfirmOverwrite(data)
+            && !confirm(`预设 ID「${data.id}」已存在，继续会创建或覆盖同名用户预设。`)) {
             return;
         }
         

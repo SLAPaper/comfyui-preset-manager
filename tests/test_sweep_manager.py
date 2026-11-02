@@ -213,6 +213,49 @@ def test_get_sweep_returns_full_config(sweep_manager, temp_dir):
     assert len(sweep["axes"]) == 1
 
 
+def test_get_sweep_with_yml_extension(sweep_manager, temp_dir):
+    sweep_dir = temp_dir / "sdxl-txt2img"
+    sweep_dir.mkdir(parents=True)
+    (sweep_dir / "legacy.yml").write_text(
+        yaml.dump({"name": "Legacy", "axes": []}), encoding="utf-8"
+    )
+
+    original = sweep_manager.get_user_sweeps_dir
+    sweep_manager.get_user_sweeps_dir = lambda: temp_dir
+    try:
+        sweep = sweep_manager.get_sweep("sdxl-txt2img", "legacy")
+        assert sweep["name"] == "Legacy"
+        assert sweep["id"] == "legacy"
+        assert sweep["workflow_template"] == "sdxl-txt2img"
+        assert sweep_manager.delete_sweep("sdxl-txt2img", "legacy") is True
+        assert not (sweep_dir / "legacy.yml").exists()
+    finally:
+        sweep_manager.get_user_sweeps_dir = original
+
+
+def test_save_sweep_strips_and_injects_derived_fields(sweep_manager, temp_dir):
+    original = sweep_manager.get_user_sweeps_dir
+    sweep_manager.get_user_sweeps_dir = lambda: temp_dir
+    try:
+        sweep_manager.save_sweep("sdxl-txt2img", "mine", {
+            "id": "other",
+            "workflow_template": "other-template",
+            "name": "Mine",
+            "axes": [],
+        })
+        saved = yaml.safe_load(
+            (temp_dir / "sdxl-txt2img" / "mine.yaml").read_text(encoding="utf-8")
+        )
+        assert "id" not in saved
+        assert "workflow_template" not in saved
+
+        sweep = sweep_manager.get_sweep("sdxl-txt2img", "mine")
+        assert sweep["id"] == "mine"
+        assert sweep["workflow_template"] == "sdxl-txt2img"
+    finally:
+        sweep_manager.get_user_sweeps_dir = original
+
+
 def test_get_sweep_returns_none_when_missing(sweep_manager, temp_dir):
     """get_sweep() should return None for a nonexistent sweep."""
     original = sweep_manager.get_user_sweeps_dir
@@ -244,6 +287,27 @@ def test_save_sweep_creates_file(sweep_manager, temp_dir):
     assert saved.exists()
     data = yaml.safe_load(saved.read_text(encoding="utf-8"))
     assert data["name"] == "My Scan"
+
+
+def test_save_sweep_migrates_yml_to_yaml(sweep_manager, temp_dir):
+    sweep_dir = temp_dir / "sdxl-txt2img"
+    sweep_dir.mkdir(parents=True)
+    (sweep_dir / "legacy.yml").write_text(
+        yaml.dump({"name": "Old", "axes": []}), encoding="utf-8"
+    )
+
+    original = sweep_manager.get_user_sweeps_dir
+    sweep_manager.get_user_sweeps_dir = lambda: temp_dir
+    try:
+        assert sweep_manager.save_sweep("sdxl-txt2img", "legacy", {
+            "name": "New",
+            "axes": [],
+        })
+        assert not (sweep_dir / "legacy.yml").exists()
+        assert (sweep_dir / "legacy.yaml").is_file()
+        assert sweep_manager.get_sweep("sdxl-txt2img", "legacy")["name"] == "New"
+    finally:
+        sweep_manager.get_user_sweeps_dir = original
 
 
 def test_save_sweep_overwrites_existing(sweep_manager, temp_dir):

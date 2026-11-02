@@ -11,17 +11,23 @@ from pathlib import Path
 
 import yaml
 
+INVALID_ID_CHARS = frozenset('/\\:*?"<>|\x00')
+WINDOWS_RESERVED_NAMES = frozenset({
+    "CON", "PRN", "AUX", "NUL",
+    *(f"COM{i}" for i in range(1, 10)),
+    *(f"LPT{i}" for i in range(1, 10)),
+})
+
 
 def is_safe_id(value) -> bool:
-    """IDs become file and folder names, so they must not contain path syntax."""
-    return (
-        isinstance(value, str)
-        and value not in ("", ".", "..")
-        and "/" not in value
-        and "\\" not in value
-        and ":" not in value
-        and "\x00" not in value
-    )
+    """IDs become file names, so reject path syntax and platform traps."""
+    if not isinstance(value, str) or value in ("", ".", ".."):
+        return False
+    if value != value.strip() or value.startswith(".") or value.endswith("."):
+        return False
+    if any(ch in INVALID_ID_CHARS or ord(ch) < 32 or ord(ch) == 127 for ch in value):
+        return False
+    return value.split(".", 1)[0].upper() not in WINDOWS_RESERVED_NAMES
 
 
 def require_safe_id(*values) -> None:
@@ -75,14 +81,45 @@ def save_yaml(path: Path, data: dict) -> bool:
         return False
 
 
+def find_yaml_file(directory: Path, stem: str) -> Path | None:
+    """Find a YAML file by stem, preferring .yaml over .yml."""
+    for ext in (".yaml", ".yml"):
+        filepath = directory / f"{stem}{ext}"
+        if filepath.is_file():
+            return filepath
+    return None
+
+
+def remove_alternate_yaml(path: Path) -> None:
+    """Remove the other extension after a .yaml write so the old file cannot resurface."""
+    for ext in (".yaml", ".yml"):
+        alternate = path.with_suffix(ext)
+        if alternate == path or not alternate.is_file():
+            continue
+        try:
+            alternate.unlink()
+        except OSError as e:
+            print(f"[PresetManager] Error removing {alternate}: {e}")
+
+
 def scan_yaml(directory: Path) -> dict[str, dict]:
-    """Load every YAML file in a directory, keyed by filename stem."""
+    """Load every YAML file in a directory, keyed by filename stem.
+    When both extensions exist, .yaml is the effective file.
+    """
     result = {}
     if not directory.is_dir():
         return result
+
+    paths = {}
     for filepath in sorted(directory.iterdir()):
-        if filepath.suffix in (".yaml", ".yml") and filepath.is_file():
-            data = load_yaml(filepath)
-            if data is not None:
-                result[filepath.stem] = data
+        if filepath.suffix not in (".yaml", ".yml") or not filepath.is_file():
+            continue
+        previous = paths.get(filepath.stem)
+        if previous is None or filepath.suffix == ".yaml":
+            paths[filepath.stem] = filepath
+
+    for stem in sorted(paths):
+        data = load_yaml(paths[stem])
+        if data is not None:
+            result[stem] = data
     return result

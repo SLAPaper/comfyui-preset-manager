@@ -8,9 +8,15 @@ user/preset-manager/presets/{template_id}/ and override bundled presets by ID.
 from pathlib import Path
 
 try:
-    from .storage import load_yaml, require_safe_id, save_yaml, scan_yaml, user_dir
+    from .storage import (
+        find_yaml_file, load_yaml, remove_alternate_yaml, require_safe_id, save_yaml,
+        scan_yaml, user_dir,
+    )
 except ImportError:
-    from storage import load_yaml, require_safe_id, save_yaml, scan_yaml, user_dir
+    from storage import (
+        find_yaml_file, load_yaml, remove_alternate_yaml, require_safe_id, save_yaml,
+        scan_yaml, user_dir,
+    )
 
 PLUGIN_DIR = Path(__file__).parent
 PRESETS_DIR = PLUGIN_DIR / "presets"
@@ -25,6 +31,7 @@ def _scan_preset_dir(directory: Path, template_id: str, source: str) -> dict[str
     for preset_id, data in presets.items():
         data["id"] = preset_id
         data["source"] = source
+        data["workflow_template"] = template_id
     return presets
 
 
@@ -37,11 +44,7 @@ def load_presets(template_id: str) -> list[dict]:
 
 
 def _preset_file(directory: Path, template_id: str, preset_id: str) -> Path | None:
-    for ext in (".yaml", ".yml"):
-        filepath = directory / template_id / f"{preset_id}{ext}"
-        if filepath.is_file():
-            return filepath
-    return None
+    return find_yaml_file(directory / template_id, preset_id)
 
 
 def get_preset(template_id: str, preset_id: str) -> dict | None:
@@ -54,6 +57,7 @@ def get_preset(template_id: str, preset_id: str) -> dict | None:
             data = load_yaml(filepath)
             if data is not None:
                 data["id"] = preset_id
+                data["workflow_template"] = template_id
                 return data
 
     return None
@@ -64,9 +68,14 @@ def save_preset(template_id: str, preset_id: str, preset_data: dict) -> bool:
     require_safe_id(template_id, preset_id)
 
     filepath = get_user_presets_dir() / template_id / f"{preset_id}.yaml"
-    save_data = {k: v for k, v in preset_data.items() if k not in ("id", "source")}
+    save_data = {
+        key: value
+        for key, value in preset_data.items()
+        if key not in ("id", "source", "workflow_template")
+    }
 
     if save_yaml(filepath, save_data):
+        remove_alternate_yaml(filepath)
         print(f"[PresetManager] Saved preset: {template_id}/{preset_id}")
         return True
     return False
