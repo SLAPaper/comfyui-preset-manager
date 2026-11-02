@@ -10,12 +10,13 @@
  * @param {Array<{params: Object, label: string}>} options.combos
  * @param {(params: Object) => string[]} [options.check] Returns unmatched parameter names.
  * @param {(params: Object) => Object} options.apply
+ * @param {() => void} options.restore Resets the graph to its pre-sweep state.
  * @param {(combo: Object, index: number) => Promise<void>} options.queue
  * @param {(submitted: number, combo: Object) => void} [options.onProgress]
  * @param {() => boolean} [options.isCancelled]
  * @returns {Promise<{submitted: number, cancelled: boolean}>}
  */
-export async function runSweep({ combos, check, apply, queue, onProgress, isCancelled }) {
+export async function runSweep({ combos, check, apply, restore, queue, onProgress, isCancelled }) {
     let submitted = 0;
 
     for (const combo of combos) {
@@ -28,8 +29,12 @@ export async function runSweep({ combos, check, apply, queue, onProgress, isCanc
             throw new Error(`参数无法匹配到节点: ${failed.join(", ")}`);
         }
 
-        apply(combo.params);
-        await queue(combo, submitted);
+        try {
+            apply(combo.params);
+            await queue(combo, submitted);
+        } finally {
+            restore();
+        }
         submitted++;
         onProgress?.(submitted, combo);
     }

@@ -496,6 +496,10 @@ export class SweepDialog {
                 combos,
                 check: (params) => checkParams(app.graph, this.template, params),
                 apply: (params) => applyParams(app.graph, this.template, params),
+                restore: () => {
+                    restoreParams(app.graph, snapshot);
+                    restorePrefixes(app.graph, tracePrefixes);
+                },
                 queue: (combo, index) => {
                     applyPrefixes(tracePrefixes, index, combo.label);
                     return app.queuePrompt(0, 1);
@@ -512,8 +516,6 @@ export class SweepDialog {
             this.progress.classList.add("error");
             this.progress.textContent = `运行失败: ${error.message}`;
         } finally {
-            restoreParams(app.graph, snapshot);
-            restorePrefixes(app.graph, tracePrefixes);
             this.running = false;
             this.cancelRequested = false;
             this.runButton.textContent = "运行";

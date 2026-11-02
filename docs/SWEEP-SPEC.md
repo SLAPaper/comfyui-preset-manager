@@ -34,7 +34,7 @@ axes:
 3. 检查失败时停止。
 4. 用户确认提交次数后，前端用 `captureParams()` 保存快照。快照覆盖所有组合用到的参数。
 5. `sweep-runner.js` 逐组检查、应用参数，调用 `app.queuePrompt(0, 1)` 提交。
-6. 运行结束后，前端用 `restoreParams()` 写回快照。
+6. 每组提交后，前端用 `restoreParams()` 写回快照并恢复输出文件名；下一组从同一基线应用。
 
 检查只确认参数能否匹配节点和 widget。插件不检查枚举值是否在 `widget.options.values` 内。
 
@@ -60,7 +60,7 @@ axes:
 
 `sweep-axes.js` 负责轴的增删、排序和 DOM 渲染。`sweep-values.js` 负责解析逗号列表、格式化轴值和计算运行总数，不依赖 DOM。
 
-`sweep-dialog.js` 负责配置管理和快照恢复。
+`sweep-dialog.js` 负责配置管理、快照捕获，并给执行器提供逐组恢复回调。
 
 ## 设计决策
 
@@ -82,6 +82,6 @@ axes:
 ## 测试
 
 - `tests/test_sweep_manager.py` 覆盖展开顺序、覆盖规则、预设轴解析和增删改查。
-- `tests/js/sweep-runner.test.mjs` 覆盖执行顺序、取消和中途失败。
+- `tests/js/sweep-runner.test.mjs` 覆盖执行顺序、逐组恢复、取消和中途失败。
 - `tests/e2e/test_api.py` 覆盖扫描配置接口和组合展开。
 - `tests/e2e/test_preset_workflow.py` 覆盖扫描对话框的交互。
