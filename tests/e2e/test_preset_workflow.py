@@ -722,6 +722,72 @@ class TestPresetWorkflow:
         assert "覆盖当前用户预设" in result["edit"]["note"]
 
     @pytest.mark.asyncio
+    async def test_template_analyzer_deletes_user_template(self, page, api_base):
+        """Deleting a user template removes its file and clears the binding."""
+        template_id = "e2e-delete-ui-template"
+        url = f"{api_base}/preset-manager/template/{template_id}"
+        payload = {
+            "id": template_id,
+            "name": "Delete UI Template",
+            "node_mapping": {
+                "steps": {
+                    "match_strategy": "unique_class",
+                    "class_type": "KSampler",
+                    "widget": "steps",
+                },
+            },
+        }
+
+        try:
+            assert httpx.post(
+                f"{api_base}/preset-manager/template", json=payload, timeout=10
+            ).status_code == 200
+
+            await page.wait_for_timeout(3000)
+            await page.evaluate("""(templateId) => {
+                const app = window.comfyAPI.app.app;
+                app.graph.extra = { ...(app.graph.extra || {}), preset_template: templateId };
+            }""", template_id)
+
+            await open_templates(page)
+            dialog = page.locator(".comfy-template-analyzer")
+            await dialog.wait_for(state="visible", timeout=5000)
+            await dialog.locator(".template-analyzer-meta select").select_option(
+                template_id
+            )
+            await page.wait_for_timeout(500)
+
+            delete_btn = dialog.locator("button", has_text="删除模板")
+            assert not await delete_btn.is_disabled()
+            await delete_btn.click()
+            await page.wait_for_timeout(500)
+
+            status = await dialog.locator(".template-analyzer-status").text_content()
+            assert "已删除模板" in status
+            assert httpx.get(url, timeout=10).status_code == 404
+
+            bound = await page.evaluate(
+                "() => window.comfyAPI.app.app.graph.extra?.preset_template"
+            )
+            assert bound is None
+        finally:
+            httpx.delete(url, timeout=10)
+
+    @pytest.mark.asyncio
+    async def test_template_analyzer_disables_delete_for_bundled(self, page):
+        """Bundled templates cannot be deleted from the editor."""
+        await page.wait_for_timeout(3000)
+        await open_templates(page)
+        dialog = page.locator(".comfy-template-analyzer")
+        await dialog.wait_for(state="visible", timeout=5000)
+
+        await dialog.locator(".template-analyzer-meta select").select_option(
+            "sdxl-txt2img"
+        )
+        await page.wait_for_timeout(500)
+        assert await dialog.locator("button", has_text="删除模板").is_disabled()
+
+    @pytest.mark.asyncio
     async def test_template_analyzer_saves_manual_mapping(self, page, api_base):
         """Analyzer save closes the loop: manual param -> user template -> API."""
         await page.wait_for_timeout(3000)

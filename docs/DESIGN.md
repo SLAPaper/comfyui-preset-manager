@@ -94,6 +94,7 @@ restoreParams(graph, snapshot)   -> void
 - 勾选的候选通过 `buildTemplate()` 生成完整模板。模型加载器由 `defaultSelected` 转为 `default_selected: false`；副本保留原 `synonyms`。
 - “手动添加”按策略生成 spec：选择节点和 widget，自动选择唯一类或标题策略；输入槽和上游连接可以指定枢纽/目标输入。
 - 保存调用 `POST /preset-manager/template`，写入 `user/preset-manager/workflows/`。成功后把模板 ID 写入 `app.graph.extra.preset_template`，并使模板列表缓存失效，预设和参数扫描重新加载时即可使用。
+- 删除调用 `DELETE /preset-manager/template/{id}`。只删除用户目录，内置和共享模板不可删除；删除当前绑定模板时同时清除 `app.graph.extra.preset_template`。
 - 顶部只有一个 Presets 入口。Preset 对话框的“模板”和“参数扫描”按钮分别打开模板编辑器和扫描对话框，三个对话框共用同一份模板列表缓存。
 - 内置模板 ID 不能直接覆盖；用户模板 ID 需要确认覆盖。
 
@@ -170,7 +171,7 @@ restoreParams(graph, snapshot)   -> void
 - `tests/test_storage.py` 覆盖 ID 校验和原子读写。
 - `tests/test_templates_snapshot.py` 保证模板快照与 `workflows/` 一致。
 - `tests/test_preset_manager.py`、`tests/test_sweep_manager.py` 覆盖存储行为。
-- `tests/e2e/` 覆盖 HTTP 接口、模板保存、分析编辑器保存/复制和界面流程。
+- `tests/e2e/` 覆盖 HTTP 接口、模板保存/删除、分析编辑器保存/复制/删除和界面流程。
 
 ## 已知限制
 

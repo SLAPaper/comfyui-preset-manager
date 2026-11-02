@@ -5,7 +5,9 @@ from server import PromptServer
 
 try:
     from .storage import is_safe_id
-    from .workflow_parser import get_template, load_templates, save_template, template_source
+    from .workflow_parser import (
+        delete_template, get_template, load_templates, save_template, template_source
+    )
     from .preset_manager import load_presets, get_preset, save_preset, delete_preset
     from .sweep_manager import load_sweeps, get_sweep, save_sweep, delete_sweep, expand
 except ImportError:
@@ -19,7 +21,9 @@ except ImportError:
         _spec.loader.exec_module(_mod)
         sys.modules[_name] = _mod
     from storage import is_safe_id
-    from workflow_parser import get_template, load_templates, save_template, template_source
+    from workflow_parser import (
+        delete_template, get_template, load_templates, save_template, template_source
+    )
     from preset_manager import load_presets, get_preset, save_preset, delete_preset
     from sweep_manager import load_sweeps, get_sweep, save_sweep, delete_sweep, expand
 
@@ -83,6 +87,13 @@ def _register_routes():
         if save_template(template_id, data):
             return web.json_response({"status": "ok", "id": template_id})
         return web.json_response({"error": "Invalid template"}, status=400)
+
+    @routes.delete("/preset-manager/template/{template_id}")
+    async def delete_template_endpoint(request):
+        (template_id,) = _match_ids(request, "template_id")
+        if delete_template(template_id):
+            return web.json_response({"status": "ok"})
+        return web.json_response({"error": "Template not found"}, status=404)
 
     @routes.get("/preset-manager/presets/{template_id}")
     async def get_presets_list(request):

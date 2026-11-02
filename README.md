@@ -46,6 +46,7 @@ ComfyUI 的配置预设与参数扫描插件，用于底模评测。
 3. 在“来源”里选择“当前 workflow”分析当前图，或选择一个已有模板复制它的映射。
 4. 勾选要保存的参数，填写模板 ID 和名称。
 5. 点击 “保存模板”。保存后会关联到当前 workflow，可直接用于预设和参数扫描。
+6. 删除用户模板：在“来源”里选中用户模板，点击 “删除模板”。内置模板的删除按钮不可用；删除当前绑定的模板时，workflow 的模板关联也会清除。
 
 “唯一类”“标题”“输入槽”“上游连接”表示候选参数的匹配方式。识别范围包括提示词、采样参数、宽高、模型加载器，以及子图内的节点。有歧义的候选会标红并显示原因，例如多个同类节点或计算节点的输出无法直接写入。模型加载器候选默认不勾选。
 
@@ -108,6 +109,7 @@ ComfyUI 的配置预设与参数扫描插件，用于底模评测。
 | GET | `/preset-manager/workflows` | 获取模板列表（含 `source`） |
 | GET | `/preset-manager/template/{template_id}` | 获取模板详情 |
 | POST | `/preset-manager/template` | 保存用户模板 |
+| DELETE | `/preset-manager/template/{template_id}` | 删除用户模板 |
 | GET | `/preset-manager/presets/{template_id}` | 获取预设列表 |
 | GET | `/preset-manager/preset/{template_id}/{preset_id}` | 获取预设详情 |
 | POST | `/preset-manager/preset` | 保存预设 |

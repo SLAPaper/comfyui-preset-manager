@@ -193,6 +193,39 @@ def test_save_template_reports_user_source(workflow_parser, temp_dir):
         workflow_parser._get_user_workflows_dir = original_func
 
 
+def test_delete_template_removes_only_user_files(workflow_parser, temp_dir):
+    original_func = workflow_parser._get_user_workflows_dir
+    workflow_parser._get_user_workflows_dir = lambda: temp_dir
+    try:
+        assert workflow_parser.save_template("custom-flow", _custom_template())
+        assert workflow_parser.delete_template("custom-flow") is True
+        assert workflow_parser.get_template("custom-flow") is None
+        assert workflow_parser.template_source("custom-flow") is None
+
+        assert workflow_parser.delete_template("sdxl-txt2img") is False
+        assert workflow_parser.get_template("sdxl-txt2img") is not None
+        assert workflow_parser.delete_template("_loaders") is False
+        assert workflow_parser.delete_template("../escape") is False
+    finally:
+        workflow_parser._get_user_workflows_dir = original_func
+
+
+def test_delete_template_removes_both_extensions(workflow_parser, temp_dir):
+    with open(temp_dir / "legacy.yaml", "w") as f:
+        yaml.dump(_custom_template(), f)
+    with open(temp_dir / "legacy.yml", "w") as f:
+        yaml.dump(_custom_template(), f)
+
+    original_func = workflow_parser._get_user_workflows_dir
+    workflow_parser._get_user_workflows_dir = lambda: temp_dir
+    try:
+        assert workflow_parser.delete_template("legacy") is True
+        assert not (temp_dir / "legacy.yaml").exists()
+        assert not (temp_dir / "legacy.yml").exists()
+    finally:
+        workflow_parser._get_user_workflows_dir = original_func
+
+
 def test_save_template_rejects_invalid_ids_and_data(workflow_parser, temp_dir):
     original_func = workflow_parser._get_user_workflows_dir
     workflow_parser._get_user_workflows_dir = lambda: temp_dir

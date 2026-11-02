@@ -67,6 +67,13 @@ class TestTemplateSaveAPI:
 
     TEMPLATE_ID = "e2e-custom-template"
 
+    @pytest.fixture(autouse=True)
+    def cleanup(self, api_base):
+        url = f"{api_base}/preset-manager/template/{self.TEMPLATE_ID}"
+        httpx.delete(url, timeout=10)
+        yield
+        httpx.delete(url, timeout=10)
+
     def payload(self):
         return {
             "id": self.TEMPLATE_ID,
@@ -123,6 +130,43 @@ class TestTemplateSaveAPI:
 
         resp = httpx.post(f"{api_base}/preset-manager/template", json=payload, timeout=10)
         assert resp.status_code == 400
+
+    def test_delete_user_template(self, api_base):
+        template_id = "e2e-delete-template"
+        payload = self.payload()
+        payload["id"] = template_id
+        payload["name"] = "Delete Me"
+        url = f"{api_base}/preset-manager/template/{template_id}"
+
+        try:
+            assert httpx.post(
+                f"{api_base}/preset-manager/template", json=payload, timeout=10
+            ).status_code == 200
+            assert httpx.get(url, timeout=10).status_code == 200
+
+            assert httpx.delete(url, timeout=10).status_code == 200
+            assert httpx.get(url, timeout=10).status_code == 404
+
+            listed = {
+                item["id"]: item
+                for item in httpx.get(
+                    f"{api_base}/preset-manager/workflows", timeout=10
+                ).json()
+            }
+            assert template_id not in listed
+        finally:
+            httpx.delete(url, timeout=10)
+
+    def test_delete_bundled_or_shared_template_returns_404(self, api_base):
+        for template_id in ("sdxl-txt2img", "_loaders", "missing-template"):
+            resp = httpx.delete(
+                f"{api_base}/preset-manager/template/{template_id}", timeout=10
+            )
+            assert resp.status_code == 404
+
+        assert httpx.get(
+            f"{api_base}/preset-manager/template/sdxl-txt2img", timeout=10
+        ).status_code == 200
 
 
 @pytest.mark.e2e

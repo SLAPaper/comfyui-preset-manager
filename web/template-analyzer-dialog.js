@@ -7,7 +7,7 @@
  */
 
 import { app } from "../../scripts/app.js";
-import { getTemplateDetail, saveTemplate } from "./client.js";
+import { deleteTemplate, getTemplateDetail, saveTemplate } from "./client.js";
 import {
     analyzeGraph,
     buildTemplate,
@@ -67,6 +67,11 @@ export class TemplateAnalyzerDialog extends ComfyDialog {
             onchange: () => this.onSourceChange(),
         });
 
+        this.deleteButton = $el("button.comfy-btn.danger", {
+            textContent: "删除模板",
+            disabled: true,
+            onclick: () => this.onDeleteTemplate(),
+        });
         this.saveButton = $el("button.comfy-btn.primary", {
             textContent: "保存模板",
             onclick: () => this.onSave(),
@@ -108,6 +113,7 @@ export class TemplateAnalyzerDialog extends ComfyDialog {
                         textContent: "手动添加",
                         onclick: () => this.toggleManual()
                     }),
+                    this.deleteButton,
                     this.saveButton,
                     $el("button.comfy-btn", {
                         textContent: "关闭",
@@ -417,6 +423,7 @@ export class TemplateAnalyzerDialog extends ComfyDialog {
         this.nameInput.value = "";
         this.descriptionInput.value = "";
         this.sourceSelect.value = "";
+        this.deleteButton.disabled = true;
         this.toggleManual(false);
         this.loadTemplates().then(() => this.analyzeCurrent());
     }
@@ -449,10 +456,17 @@ export class TemplateAnalyzerDialog extends ComfyDialog {
         if (this.templates.some(template => template.id === selected)) {
             this.sourceSelect.value = selected;
         }
+        this.updateDeleteButton();
+    }
+
+    updateDeleteButton() {
+        const template = this.templates.find(item => item.id === this.sourceSelect.value);
+        this.deleteButton.disabled = !template || template.source !== "user";
     }
 
     async onSourceChange() {
         const templateId = this.sourceSelect.value;
+        this.updateDeleteButton();
         if (!templateId) {
             this.analyzeCurrent();
             return;
@@ -487,6 +501,7 @@ export class TemplateAnalyzerDialog extends ComfyDialog {
                 .map(candidate => candidate.name)
         );
         this.setStatus("");
+        this.updateDeleteButton();
         this.render();
     }
 
@@ -511,6 +526,7 @@ export class TemplateAnalyzerDialog extends ComfyDialog {
         }
 
         this.setStatus(`已载入模板「${template.name || templateId}」的映射，可修改后另存。`);
+        this.updateDeleteButton();
         this.render();
     }
 
@@ -740,6 +756,28 @@ export class TemplateAnalyzerDialog extends ComfyDialog {
             this.manualError.style.display = "none";
             this.manualName.value = "";
             this.setStatus(`已添加参数：${name}`, "success");
+        }
+    }
+
+    async onDeleteTemplate() {
+        const templateId = this.sourceSelect.value;
+        const template = this.templates.find(item => item.id === templateId);
+        if (!template || template.source !== "user") return;
+        if (!confirm(`删除用户模板「${template.name}」？`)) return;
+
+        try {
+            await deleteTemplate(templateId);
+            if (app.graph.extra?.preset_template === templateId) {
+                delete app.graph.extra.preset_template;
+                app.graph.setDirtyCanvas?.(true, true);
+            }
+            invalidateTemplates();
+            await this.loadTemplates();
+            this.sourceSelect.value = "";
+            this.analyzeCurrent();
+            this.setStatus(`已删除模板「${template.name}」`, "success");
+        } catch (error) {
+            this.setStatus(`删除模板失败：${error.message}`, "error");
         }
     }
 

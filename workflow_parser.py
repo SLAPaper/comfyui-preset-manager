@@ -168,6 +168,29 @@ def template_source(template_id: str) -> str | None:
     return None
 
 
+def delete_template(template_id: str) -> bool:
+    """Delete a user template. Bundled and shared templates are never removed."""
+    if not is_safe_id(template_id) or template_id.startswith("_"):
+        return False
+
+    directory = _get_user_workflows_dir()
+    removed = False
+    for ext in (".yaml", ".yml"):
+        filepath = directory / f"{template_id}{ext}"
+        if not filepath.is_file():
+            continue
+        try:
+            filepath.unlink()
+            removed = True
+        except OSError as e:
+            print(f"[PresetManager] Error deleting template {template_id}: {e}")
+            return False
+
+    if removed:
+        print(f"[PresetManager] Deleted template: {template_id}")
+    return removed
+
+
 def save_template(template_id: str, data: dict) -> bool:
     """Save a complete template to the user directory.
 

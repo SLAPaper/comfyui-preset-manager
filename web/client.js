@@ -33,6 +33,14 @@ export function saveTemplate(templateData) {
     }, "保存模板失败");
 }
 
+export function deleteTemplate(templateId) {
+    return request(
+        `/template/${encodeURIComponent(templateId)}`,
+        { method: "DELETE" },
+        "删除模板失败"
+    );
+}
+
 export function getPresets(templateId) {
     return request(`/presets/${encodeURIComponent(templateId)}`, undefined, "加载预设失败");
 }
