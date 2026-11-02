@@ -276,6 +276,37 @@ test("analyzer reports the outer owner of an externally linked subgraph input", 
     assert.equal(candidates.height.nodeType, "EmptyLatentImage");
 });
 
+test("analyzer marks promoted inputs with missing host metadata as errors", () => {
+    const inner = {
+        id: 456,
+        type: "CLIPTextEncode",
+        title: "positive",
+        widgets: { text: "inner prompt" },
+        inputs: { text: 660 },
+    };
+    const instance = makeNode({
+        id: 459,
+        type: "MossImage",
+        inputs: {},
+        subgraph: {
+            nodes: [inner],
+            links: { 660: { origin_id: -10, origin_slot: 0, target_id: 456, target_slot: 0 } },
+            inputs: [{ name: "text", linkIds: [660] }],
+            inputNode: { id: -10 },
+        },
+    });
+    // Deliberately drop the host metadata that makeNode normally adds.
+    instance.inputs[0]._subgraphSlot = undefined;
+    instance.inputs[0]._widget = undefined;
+
+    const graph = { nodes: [instance], links: {} };
+    const result = analyzeGraph(graph);
+    const candidate = byName(result).positive_prompt;
+
+    assert.equal(candidate.status, "error");
+    assert.match(candidate.reason, /由外部连线控制/);
+});
+
 test("mapping descriptions validate against the current graph", () => {
     const fixture = fixtures.find(item => item.sample === "anima-local");
     const candidates = describeMapping(fixture.graph, {

@@ -129,8 +129,8 @@ function nodeTarget(index, frame, node, widgetName) {
                             match: { node, widgetName, widget: host.widget, path: frame.path },
                         };
                     }
-                    return null;
                 }
+                return { error: { code: "external_link", widgetName } };
             }
         }
     }

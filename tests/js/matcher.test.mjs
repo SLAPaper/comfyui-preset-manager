@@ -89,6 +89,46 @@ const STEPS_TEMPLATE = template({
     steps: { match_strategy: "unique_class", class_type: "KSampler", widget: "steps" },
 });
 
+const PROMPT_TEMPLATE = template({
+    positive_prompt: { match_strategy: "unique_class", class_type: "CLIPTextEncode", widget: "text" },
+});
+
+/**
+ * Build a CLIPTextEncode inside a subgraph whose `text` input is promoted.
+ * When `hostReady` is false the owner slot lacks `_widget`/`_subgraphSlot`,
+ * simulating custom subgraph nodes whose host metadata is incomplete.
+ */
+function nestedPrompt(outerLink = null, hostReady = true) {
+    const inner = makeNode(1, "CLIPTextEncode", { text: "inner prompt" });
+    inner.inputs.push({ name: "text", link: 10 });
+
+    const subgraph = {
+        nodes: [inner],
+        links: {
+            10: { origin_id: -1, origin_slot: 0, target_id: 1, target_slot: 0 },
+        },
+        inputs: [{ name: "text", linkIds: [10] }],
+        inputNode: { id: -1 },
+    };
+
+    const ownerInput = { name: "text", link: outerLink };
+    if (hostReady) {
+        ownerInput._subgraphSlot = subgraph.inputs[0];
+        ownerInput._widget = { name: "text", value: "host prompt" };
+    }
+
+    const owner = {
+        id: 2,
+        type: "MossImage",
+        title: "",
+        widgets: [],
+        inputs: [ownerInput],
+        subgraph,
+    };
+
+    return owner;
+}
+
 test("unique_class resolves a single node", () => {
     const graph = makeGraph([makeNode(3, "KSampler", { steps: 20 })]);
     const tpl = template({
@@ -446,6 +486,51 @@ test("computed outer outputs report why the subgraph input is not writable", () 
     assert.equal(resolveParams(graph, STEPS_TEMPLATE).steps, null);
     assert.match(
         explainParams(graph, STEPS_TEMPLATE).steps,
+        /由 ResolutionSelector #60 的输出控制/
+    );
+});
+
+test("promoted input without host metadata is not treated as writable", () => {
+    const owner = nestedPrompt(null, false);
+    const graph = makeGraph([owner]);
+
+    assert.equal(resolveParams(graph, PROMPT_TEMPLATE).positive_prompt, null);
+    assert.match(
+        explainParams(graph, PROMPT_TEMPLATE).positive_prompt,
+        /由外部连线控制/
+    );
+
+    const result = applyParams(graph, PROMPT_TEMPLATE, { positive_prompt: "changed" });
+    assert.equal(result.applied, 0);
+    assert.deepEqual(result.failed, ["positive_prompt"]);
+    assert.equal(owner.subgraph.nodes[0].widgets[0].value, "inner prompt");
+});
+
+test("promoted input still resolves to outer primitive when only host metadata is missing", () => {
+    const owner = nestedPrompt(20, false);
+    const primitive = makeNode(50, "PrimitiveString", { value: "outer prompt" });
+    const graph = makeGraph([primitive, owner], {
+        20: { origin_id: 50, origin_slot: 0 },
+    });
+
+    const resolved = resolveParams(graph, PROMPT_TEMPLATE).positive_prompt;
+    assert.equal(resolved.nodeId, "50");
+    assert.equal(resolved.widgetName, "value");
+
+    applyParams(graph, PROMPT_TEMPLATE, { positive_prompt: "applied" });
+    assert.equal(primitive.widgets[0].value, "applied");
+});
+
+test("promoted input without host metadata reports computed sources", () => {
+    const owner = nestedPrompt(21, false);
+    const selector = makeNode(60, "ResolutionSelector", { megapixels: 1, multiple: 8 });
+    const graph = makeGraph([selector, owner], {
+        21: { origin_id: 60, origin_slot: 0 },
+    });
+
+    assert.equal(resolveParams(graph, PROMPT_TEMPLATE).positive_prompt, null);
+    assert.match(
+        explainParams(graph, PROMPT_TEMPLATE).positive_prompt,
         /由 ResolutionSelector #60 的输出控制/
     );
 });
